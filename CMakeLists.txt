@@ -4,9 +4,13 @@ project(SWFModernRuntime)
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
+set(CMAKE_SKIP_BUILD_RPATH FALSE)
+set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
+set(CMAKE_INSTALL_RPATH "$\{ORIGIN\}")
+
 set(SOURCES
-    ${CMAKE_SOURCE_DIR}/src/libswf/swf.c
-    ${CMAKE_SOURCE_DIR}/src/libswf/tag.c
+    ${PROJECT_SOURCE_DIR}/src/libswf/swf.c
+    ${PROJECT_SOURCE_DIR}/src/libswf/tag.c
 )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
@@ -15,8 +19,8 @@ target_compile_options(${PROJECT_NAME} PRIVATE -O2)
 
 set(RENAME_ZCONF OFF)
 
-add_subdirectory(${CMAKE_SOURCE_DIR}/lib/zlib)
-add_subdirectory(${CMAKE_SOURCE_DIR}/lib/lzma)
+add_subdirectory(${PROJECT_SOURCE_DIR}/lib/zlib)
+add_subdirectory(${PROJECT_SOURCE_DIR}/lib/lzma)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
     zlib
@@ -31,9 +35,9 @@ add_custom_command(
 endif()
 
 target_include_directories(${PROJECT_NAME} PRIVATE
-    ${CMAKE_SOURCE_DIR}/include
-    ${CMAKE_SOURCE_DIR}/include/actionmodern
-    ${CMAKE_SOURCE_DIR}/include/libswf
+    ${PROJECT_SOURCE_DIR}/include
+    ${PROJECT_SOURCE_DIR}/include/actionmodern
+    ${PROJECT_SOURCE_DIR}/include/libswf
     zlib
     lzma/liblzma/api
 )
