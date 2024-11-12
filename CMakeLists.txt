@@ -5,7 +5,8 @@ set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
 set(SOURCES
-    #~ ${CMAKE_SOURCE_DIR}/src/main.c
+    ${CMAKE_SOURCE_DIR}/src/swf.c
+    ${CMAKE_SOURCE_DIR}/src/tag.c
 )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
