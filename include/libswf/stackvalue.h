@@ -1,13 +1,13 @@
 #pragma once
 
-enum ActionStackValueType
+typedef enum
 {
 	ACTION_STACK_VALUE_STRING = 0,
 	ACTION_STACK_VALUE_F32 = 1
-};
+} ActionStackValueType;
 
-struct ActionStackValue
+typedef struct
 {
 	ActionStackValueType type;
 	u64 value;
-};
+} ActionStackValue;
