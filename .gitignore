@@ -4,3 +4,4 @@ out/
 RecompiledTags/
 RecompiledScripts/
 *.swf
+zlib.dll

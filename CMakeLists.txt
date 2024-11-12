@@ -11,6 +11,7 @@ set(CMAKE_INSTALL_RPATH "$\{ORIGIN\}")
 set(SOURCES
     ${PROJECT_SOURCE_DIR}/src/libswf/swf.c
     ${PROJECT_SOURCE_DIR}/src/libswf/tag.c
+    ${PROJECT_SOURCE_DIR}/src/actionmodern/action.c
 )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})

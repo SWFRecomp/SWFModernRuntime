@@ -1,5 +1,7 @@
 #pragma once
 
+#include <common.h>
+
 typedef enum
 {
 	ACTION_STACK_VALUE_STRING = 0,
