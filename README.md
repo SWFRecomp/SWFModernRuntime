@@ -4,7 +4,7 @@ This is still a stupid idea.
 
 # And we're still doing it anyway.
 
-SWFModernRuntime is even more of a rip-off than [SWFRecomp](https://github.com/SWFRecomp/SWFModernRuntime), adding no creativity to the process of writing functions that a recompilation will use.
+SWFModernRuntime is even more of a rip-off than [SWFRecomp](https://github.com/SWFRecomp/SWFRecomp), adding no creativity to the process of writing functions that a recompilation will use.
 
 This repo got its idea from Wiseguy's [N64ModernRuntime](https://github.com/N64Recomp/N64ModernRuntime), which is actually further composed of two libraries: ultramodern and librecomp.
 
