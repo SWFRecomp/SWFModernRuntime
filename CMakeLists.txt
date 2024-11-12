@@ -30,7 +30,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 if (WIN32)
 add_custom_command(
     TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_BINARY_DIR}/lib/zlib/zlib.dll... ${CMAKE_BINARY_DIR}/
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROJECT_BINARY_DIR}/lib/zlib/zlib.dll... ${CMAKE_BINARY_DIR}/
 )
 endif()
 
