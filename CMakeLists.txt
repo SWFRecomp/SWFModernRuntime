@@ -5,8 +5,8 @@ set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
 set(SOURCES
-    ${CMAKE_SOURCE_DIR}/src/swf.c
-    ${CMAKE_SOURCE_DIR}/src/tag.c
+    ${CMAKE_SOURCE_DIR}/src/libswf/swf.c
+    ${CMAKE_SOURCE_DIR}/src/libswf/tag.c
 )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
@@ -32,6 +32,8 @@ endif()
 
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/include/actionmodern
+    ${CMAKE_SOURCE_DIR}/include/libswf
     zlib
     lzma/liblzma/api
 )
