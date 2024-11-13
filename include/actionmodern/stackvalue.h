@@ -2,8 +2,6 @@
 
 #include <common.h>
 
-typedef ActionStackValue var;
-
 typedef enum
 {
 	ACTION_STACK_VALUE_STRING = 0,
@@ -17,3 +15,5 @@ typedef struct
 	ActionStackValueType type;
 	u64 value;
 } ActionStackValue;
+
+typedef ActionStackValue var;
