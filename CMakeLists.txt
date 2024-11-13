@@ -35,7 +35,12 @@ add_custom_command(
 )
 add_custom_command(
     TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROJECT_BINARY_DIR}/lib/zlib/zlib.dll... ${CMAKE_SOURCE_DIR}/
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROJECT_BINARY_DIR}/SWFModernRuntime.lib... ${PROJECT_SOURCE_DIR}/
+)
+else()
+add_custom_command(
+    TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROJECT_BINARY_DIR}/libSWFModernRuntime.a ${PROJECT_SOURCE_DIR}/
 )
 endif()
 

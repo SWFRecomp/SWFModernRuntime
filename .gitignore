@@ -5,3 +5,5 @@ RecompiledTags/
 RecompiledScripts/
 *.swf
 zlib.dll
+*.lib
+*.a
