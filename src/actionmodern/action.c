@@ -17,7 +17,7 @@ void actionTraceVar(var val)
 		
 		case ACTION_STACK_VALUE_F32:
 		{
-			printf("%.15g\n", VAL(float, val.value));
+			printf("%.15g\n", VAL(float, &val.value));
 			break;
 		}
 	}
