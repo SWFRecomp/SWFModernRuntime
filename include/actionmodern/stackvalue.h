@@ -2,6 +2,8 @@
 
 #include <common.h>
 
+typedef u64 var;
+
 typedef enum
 {
 	ACTION_STACK_VALUE_STRING = 0,
