@@ -1,11 +1,6 @@
 #include <action.h>
 
-void actionTrace(const char* str)
-{
-	printf("%s\n", str);
-}
-
-void actionTraceVar(var val)
+void actionTrace(var val)
 {
 	switch (val.type)
 	{
