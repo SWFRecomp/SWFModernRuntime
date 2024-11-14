@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.4)
 project(SWFModernRuntime)
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_SKIP_BUILD_RPATH FALSE)
 set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
@@ -12,6 +14,7 @@ set(SOURCES
     ${PROJECT_SOURCE_DIR}/src/libswf/swf.c
     ${PROJECT_SOURCE_DIR}/src/libswf/tag.c
     ${PROJECT_SOURCE_DIR}/src/actionmodern/action.c
+    ${PROJECT_SOURCE_DIR}/src/actionmodern/variables.cpp
 )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})

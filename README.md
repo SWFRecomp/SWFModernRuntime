@@ -22,6 +22,8 @@ They even went as far as to [donate the Flex 3 SDK to Apache](https://www.pcworl
 
 Currently the runtime handles a couple basic tags, and basic SWF version 4 actions.
 
+It also implements dynamic variables thanks to Ankerl's fantastic [unordered_dense](https://github.com/martinus/unordered_dense) header.
+
 # Special Thanks
 
 All the people that wildly inspire me. 😋

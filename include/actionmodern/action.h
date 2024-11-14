@@ -4,5 +4,4 @@
 
 #define VAL(type, x) *((type*) x)
 
-void actionTrace(const char* str);
-void actionTraceVar(var val);
+void actionTrace(var val);
