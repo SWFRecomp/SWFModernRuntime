@@ -4,4 +4,4 @@
 
 #define VAL(type, x) *((type*) x)
 
-void actionTrace(var val);
+void actionTrace(var* val);
