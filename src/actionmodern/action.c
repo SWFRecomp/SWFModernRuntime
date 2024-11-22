@@ -1,7 +1,18 @@
 #include <stdlib.h>
 #include <math.h>
+#include <string.h>
 
 #include <action.h>
+
+void convertString(var* v, char* v_str)
+{
+	if (v->type == ACTION_STACK_VALUE_F32)
+	{
+		snprintf(v_str, 17, "%.15g", VAL(float, &v->value));
+		v->type = ACTION_STACK_VALUE_STRING;
+		v->value = (u64) v_str;
+	}
+}
 
 void convertFloat(var* v)
 {
@@ -54,12 +65,12 @@ void actionDivide(var* a, var* b)
 		b->value = (u64) "#ERROR#";
 		
 		// SWF 5:
-		//~ if (b->value == 0.0f)
+		//~ if (a->value == 0.0f)
 		//~ {
 			//~ c = NAN;
 		//~ }
 		
-		//~ else if (b->value > 0.0f)
+		//~ else if (a->value > 0.0f)
 		//~ {
 			//~ c = INFINITY;
 		//~ }
@@ -113,12 +124,31 @@ void actionOr(var* a, var* b)
 	b->value = VAL(u64, &result);
 }
 
-void actionNot(var* a)
+void actionNot(var* v)
 {
-	convertFloat(a);
+	convertFloat(v);
 	
-	float result = a->value == 0.0f ? 1.0f : 0.0f;
-	a->value = VAL(u64, &result);
+	float result = v->value == 0.0f ? 1.0f : 0.0f;
+	v->value = VAL(u64, &result);
+}
+
+void actionStringEquals(var* a, var* b, char* a_str, char* b_str)
+{
+	convertString(a, a_str);
+	convertString(b, b_str);
+	
+	float result = strncmp((char*) a->value, (char*) b->value, 1024) == 0 ? 1.0f : 0.0f;
+	b->type = ACTION_STACK_VALUE_F32;
+	b->value = VAL(u64, &result);
+}
+
+void actionStringLength(var* v, char* v_str)
+{
+	convertString(v, v_str);
+	
+	float result = (float) strnlen((char*) v->value, 1024);
+	v->type = ACTION_STACK_VALUE_F32;
+	v->value = VAL(u64, &result);
 }
 
 void actionTrace(var* val)
