@@ -151,6 +151,16 @@ void actionStringLength(var* v, char* v_str)
 	v->value = VAL(u64, &result);
 }
 
+void actionStringAdd(var* a, var* b, char* a_str, char* b_str, char* out_str)
+{
+	convertString(a, a_str);
+	convertString(b, b_str);
+	
+	snprintf(out_str, 1024, "%s%s", (char*) b->value, (char*) a->value);
+	b->type = ACTION_STACK_VALUE_STRING;
+	b->value = (u64) out_str;
+}
+
 void actionTrace(var* val)
 {
 	switch (val->type)
