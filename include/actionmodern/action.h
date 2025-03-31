@@ -17,8 +17,8 @@
 #define STACK_SECOND_TOP stack[sp + 2]
 
 #define SET_STACK_TOP(t, v) \
-	stack[sp + 1].type = t; \
-	stack[sp + 1].value = v; \
+	STACK_TOP.type = t; \
+	STACK_TOP.value = v; \
 
 #define SET(n, t, v) \
 	n->type = t; \
