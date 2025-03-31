@@ -18,9 +18,19 @@ void convertFloat(var* v)
 {
 	if (v->type == ACTION_STACK_VALUE_STRING)
 	{
-		float temp = (float) atof((char*) v->value);
-		v->type = ACTION_STACK_VALUE_F32;
-		v->value = VAL(u32, &temp);
+		double temp = atof((char*) v->value);
+		v->type = ACTION_STACK_VALUE_F64;
+		v->value = VAL(u64, &temp);
+	}
+}
+
+void convertDouble(var* v)
+{
+	if (v->type == ACTION_STACK_VALUE_F32)
+	{
+		double temp = (double) v->value;
+		v->type = ACTION_STACK_VALUE_F64;
+		v->value = VAL(u64, &temp);
 	}
 }
 
@@ -29,8 +39,27 @@ void actionAdd(var* a, var* b)
 	convertFloat(a);
 	convertFloat(b);
 	
-	float c = VAL(float, &a->value) + VAL(float, &b->value);
-	b->value = VAL(u32, &c);
+	if (a->type == ACTION_STACK_VALUE_F64)
+	{
+		convertDouble(b);
+		
+		double c = VAL(double, &a->value) + VAL(double, &b->value);
+		b->value = VAL(u64, &c);
+	}
+	
+	else if (b->type == ACTION_STACK_VALUE_F64)
+	{
+		convertDouble(a);
+		
+		double c = VAL(double, &a->value) + VAL(double, &b->value);
+		b->value = VAL(u64, &c);
+	}
+	
+	else
+	{
+		float c = VAL(float, &a->value) + VAL(float, &b->value);
+		b->value = VAL(u32, &c);
+	}
 }
 
 void actionSubtract(var* a, var* b)
@@ -38,8 +67,27 @@ void actionSubtract(var* a, var* b)
 	convertFloat(a);
 	convertFloat(b);
 	
-	float c = VAL(float, &b->value) - VAL(float, &a->value);
-	b->value = VAL(u32, &c);
+	if (a->type == ACTION_STACK_VALUE_F64)
+	{
+		convertDouble(b);
+		
+		double c = VAL(double, &a->value) - VAL(double, &b->value);
+		b->value = VAL(u64, &c);
+	}
+	
+	else if (b->type == ACTION_STACK_VALUE_F64)
+	{
+		convertDouble(a);
+		
+		double c = VAL(double, &a->value) - VAL(double, &b->value);
+		b->value = VAL(u64, &c);
+	}
+	
+	else
+	{
+		float c = VAL(float, &a->value) - VAL(float, &b->value);
+		b->value = VAL(u32, &c);
+	}
 }
 
 void actionMultiply(var* a, var* b)
@@ -47,16 +95,33 @@ void actionMultiply(var* a, var* b)
 	convertFloat(a);
 	convertFloat(b);
 	
-	float c = VAL(float, &a->value)*VAL(float, &b->value);
-	b->value = VAL(u32, &c);
+	if (a->type == ACTION_STACK_VALUE_F64)
+	{
+		convertDouble(b);
+		
+		double c = VAL(double, &a->value)*VAL(double, &b->value);
+		b->value = VAL(u64, &c);
+	}
+	
+	else if (b->type == ACTION_STACK_VALUE_F64)
+	{
+		convertDouble(a);
+		
+		double c = VAL(double, &a->value)*VAL(double, &b->value);
+		b->value = VAL(u64, &c);
+	}
+	
+	else
+	{
+		float c = VAL(float, &a->value)*VAL(float, &b->value);
+		b->value = VAL(u32, &c);
+	}
 }
 
 void actionDivide(var* a, var* b)
 {
 	convertFloat(a);
 	convertFloat(b);
-	
-	float c;
 	
 	if (a->value == 0.0f)
 	{
@@ -67,24 +132,43 @@ void actionDivide(var* a, var* b)
 		// SWF 5:
 		//~ if (a->value == 0.0f)
 		//~ {
-			//~ c = NAN;
+			//~ float c = NAN;
 		//~ }
 		
 		//~ else if (a->value > 0.0f)
 		//~ {
-			//~ c = INFINITY;
+			//~ float c = INFINITY;
 		//~ }
 		
 		//~ else
 		//~ {
-			//~ c = -INFINITY;
+			//~ float c = -INFINITY;
 		//~ }
 	}
 	
 	else
 	{
-		c = VAL(float, &b->value)/VAL(float, &a->value);
-		b->value = VAL(u32, &c);
+		if (a->type == ACTION_STACK_VALUE_F64)
+		{
+			convertDouble(b);
+			
+			double c = VAL(double, &a->value)/VAL(double, &b->value);
+			b->value = VAL(u64, &c);
+		}
+		
+		else if (b->type == ACTION_STACK_VALUE_F64)
+		{
+			convertDouble(a);
+			
+			double c = VAL(double, &a->value)/VAL(double, &b->value);
+			b->value = VAL(u64, &c);
+		}
+		
+		else
+		{
+			float c = VAL(float, &a->value)/VAL(float, &b->value);
+			b->value = VAL(u32, &c);
+		}
 	}
 }
 
@@ -93,8 +177,27 @@ void actionEquals(var* a, var* b)
 	convertFloat(a);
 	convertFloat(b);
 	
-	float result = a->value == b->value ? 1.0f : 0.0f;
-	b->value = VAL(u64, &result);
+	if (a->type == ACTION_STACK_VALUE_F64)
+	{
+		convertDouble(b);
+		
+		double c = VAL(double, &a->value) == VAL(double, &b->value) ? 1.0f : 0.0f;
+		b->value = VAL(u64, &c);
+	}
+	
+	else if (b->type == ACTION_STACK_VALUE_F64)
+	{
+		convertDouble(a);
+		
+		double c = VAL(double, &a->value) == VAL(double, &b->value) ? 1.0f : 0.0f;
+		b->value = VAL(u64, &c);
+	}
+	
+	else
+	{
+		float c = VAL(float, &a->value) == VAL(float, &b->value) ? 1.0f : 0.0f;
+		b->value = VAL(u32, &c);
+	}
 }
 
 void actionLess(var* a, var* b)
@@ -102,14 +205,55 @@ void actionLess(var* a, var* b)
 	convertFloat(a);
 	convertFloat(b);
 	
-	float result = a->value < b->value ? 1.0f : 0.0f;
-	b->value = VAL(u64, &result);
+	if (a->type == ACTION_STACK_VALUE_F64)
+	{
+		convertDouble(b);
+		
+		double c = VAL(double, &a->value) < VAL(double, &b->value) ? 1.0f : 0.0f;
+		b->value = VAL(u64, &c);
+	}
+	
+	else if (b->type == ACTION_STACK_VALUE_F64)
+	{
+		convertDouble(a);
+		
+		double c = VAL(double, &a->value) < VAL(double, &b->value) ? 1.0f : 0.0f;
+		b->value = VAL(u64, &c);
+	}
+	
+	else
+	{
+		float c = VAL(float, &a->value) < VAL(float, &b->value) ? 1.0f : 0.0f;
+		b->value = VAL(u32, &c);
+	}
 }
 
 void actionAnd(var* a, var* b)
 {
 	convertFloat(a);
 	convertFloat(b);
+	
+	if (a->type == ACTION_STACK_VALUE_F64)
+	{
+		convertDouble(b);
+		
+		double c = VAL(double, &a->value) != 0.0f && VAL(double, &b->value) != 0.0f ? 1.0f : 0.0f;
+		b->value = VAL(u64, &c);
+	}
+	
+	else if (b->type == ACTION_STACK_VALUE_F64)
+	{
+		convertDouble(a);
+		
+		double c = VAL(double, &a->value) != 0.0f && VAL(double, &b->value) != 0.0f ? 1.0f : 0.0f;
+		b->value = VAL(u64, &c);
+	}
+	
+	else
+	{
+		float c = VAL(float, &a->value) != 0.0f && VAL(float, &b->value) != 0.0f ? 1.0f : 0.0f;
+		b->value = VAL(u32, &c);
+	}
 	
 	float result = a->value != 0.0f && b->value != 0.0f ? 1.0f : 0.0f;
 	b->value = VAL(u64, &result);
@@ -120,8 +264,27 @@ void actionOr(var* a, var* b)
 	convertFloat(a);
 	convertFloat(b);
 	
-	float result = a->value != 0.0f || b->value != 0.0f ? 1.0f : 0.0f;
-	b->value = VAL(u64, &result);
+	if (a->type == ACTION_STACK_VALUE_F64)
+	{
+		convertDouble(b);
+		
+		double c = VAL(double, &a->value) != 0.0f || VAL(double, &b->value) != 0.0f ? 1.0f : 0.0f;
+		b->value = VAL(u64, &c);
+	}
+	
+	else if (b->type == ACTION_STACK_VALUE_F64)
+	{
+		convertDouble(a);
+		
+		double c = VAL(double, &a->value) != 0.0f || VAL(double, &b->value) != 0.0f ? 1.0f : 0.0f;
+		b->value = VAL(u64, &c);
+	}
+	
+	else
+	{
+		float c = VAL(float, &a->value) != 0.0f || VAL(float, &b->value) != 0.0f ? 1.0f : 0.0f;
+		b->value = VAL(u32, &c);
+	}
 }
 
 void actionNot(var* v)
@@ -174,6 +337,12 @@ void actionTrace(var* val)
 		case ACTION_STACK_VALUE_F32:
 		{
 			printf("%.15g\n", VAL(float, &val->value));
+			break;
+		}
+		
+		case ACTION_STACK_VALUE_F64:
+		{
+			printf("%.15g\n", VAL(double, &val->value));
 			break;
 		}
 	}
