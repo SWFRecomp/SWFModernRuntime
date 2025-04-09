@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.4)
+cmake_minimum_required(VERSION 3.10)
 
 project(SWFModernRuntime)
 set(CMAKE_C_STANDARD 17)
@@ -15,6 +15,7 @@ set(SOURCES
     ${PROJECT_SOURCE_DIR}/src/libswf/tag.c
     ${PROJECT_SOURCE_DIR}/src/actionmodern/action.c
     ${PROJECT_SOURCE_DIR}/src/actionmodern/variables.cpp
+    ${PROJECT_SOURCE_DIR}/src/utils.c
 )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
