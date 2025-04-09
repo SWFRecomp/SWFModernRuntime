@@ -7,7 +7,14 @@ extern "C"
 {
 #endif
 
-var* getVariable(u64 var_name);
+typedef struct
+{
+	ActionStackValueType type;
+	u32 str_size;
+	u64 value;
+} ActionVar;
+
+ActionVar* getVariable(char* var_name);
 
 #ifdef __cplusplus
 }

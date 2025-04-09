@@ -1,8 +1,9 @@
 #include <swf.h>
 #include <action.h>
+#include <utils.h>
 
-ActionStackValue* stack;
-u64 sp;
+char* stack;
+u32 sp;
 
 int quit_swf;
 size_t next_frame;
@@ -12,7 +13,7 @@ void tagMain();
 
 void swfStart()
 {
-	stack = malloc(INITIAL_STACK_SIZE*sizeof(ActionStackValue));
+	stack = (char*) aligned_alloc(8, INITIAL_STACK_SIZE);
 	sp = INITIAL_SP;
 	
 	quit_swf = 0;

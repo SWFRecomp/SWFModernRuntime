@@ -1,50 +1,79 @@
 #pragma once
 
+#include <variables.h>
 #include <stackvalue.h>
 
 #define PUSH(t, v) \
-	stack[sp].type = t; \
-	stack[sp].value = v; \
-	sp -= 1; \
+	oldSP = *sp; \
+	*sp -= 4 + 4 + 8 + 8; \
+	*sp &= ~8; \
+	stack[*sp] = t; \
+	VAL(u32, &stack[*sp + 4]) = oldSP; \
+	VAL(u64, &stack[*sp + 16]) = v; \
+
+#define PUSH_STR(v, n) \
+	oldSP = *sp; \
+	*sp -= 4 + 4 + 8 + 8; \
+	*sp &= ~8; \
+	stack[*sp] = ACTION_STACK_VALUE_STRING; \
+	VAL(u32, &stack[*sp + 4]) = oldSP; \
+	VAL(u32, &stack[*sp + 8]) = n; \
+	VAL(char*, &stack[*sp + 16]) = v; \
+
+//~ #define PUSH_STR(v, n) \
+	//~ oldSP = sp; \
+	//~ sp -= 1 + 4 + n + 1; \
+	//~ sp &= 0xFFFFFFFFFFFFFFF8; \
+	//~ stack[sp] = ACTION_STACK_VALUE_STRING; \
+	//~ VAL(u32, stack[sp + 4]) = oldSP - sp; \
+
+#define PUSH_VAR(p) pushVar(stack, sp, p);
 
 #define POP() \
-	sp += 1; \
+	*sp = VAL(u32, &stack[*sp + 4]); \
 
 #define POP_2() \
-	sp += 2; \
+	POP(); \
+	POP(); \
 
-#define STACK_TOP stack[sp + 1]
-#define STACK_SECOND_TOP stack[sp + 2]
+#define STACK_TOP_TYPE stack[*sp]
+#define STACK_TOP_N VAL(u32, &stack[*sp + 8])
+#define STACK_TOP_VALUE VAL(u64, &stack[*sp + 16])
 
-#define SET_STACK_TOP(t, v) \
-	STACK_TOP.type = t; \
-	STACK_TOP.value = v; \
+#define SP_SECOND_TOP VAL(u32, &stack[*sp + 4])
+#define STACK_SECOND_TOP_TYPE stack[SP_SECOND_TOP]
+#define STACK_SECOND_TOP_N VAL(u32, &stack[SP_SECOND_TOP + 8])
+#define STACK_SECOND_TOP_VALUE VAL(u64, &stack[SP_SECOND_TOP + 16])
 
-#define SET(n, t, v) \
-	n->type = t; \
-	n->value = v; \
+#define SET_VAR(p, t, n, v) \
+	p->type = t; \
+	p->str_size = n; \
+	p->value = v; \
 
 #define VAL(type, x) *((type*) x)
 
 #ifndef TEMP_VAL
 #define TEMP_VAL
-var* temp_val;
+ActionVar* temp_val;
 #endif
 
-#define INITIAL_STACK_SIZE 256
-#define INITIAL_SP 255
+#define INITIAL_STACK_SIZE 8388608  // 8 MB
+#define INITIAL_SP INITIAL_STACK_SIZE
 
-void actionAdd(var* a, var* b);
-void actionSubtract(var* a, var* b);
-void actionMultiply(var* a, var* b);
-void actionDivide(var* a, var* b);
-void actionEquals(var* a, var* b);
-void actionLess(var* a, var* b);
-void actionAnd(var* a, var* b);
-void actionOr(var* a, var* b);
-void actionNot(var* a);
+void pushVar(char* stack, u32* sp, ActionVar* p);
 
-void actionStringEquals(var* a, var* b, char* a_str, char* b_str);
-void actionStringAdd(var* a, var* b, char* a_str, char* b_str, char* out_str);
+void actionAdd(char* stack, u32* sp);
+//~ void actionSubtract(u64 a, u64 b);
+//~ void actionMultiply(u64 a, u64 b);
+void actionDivide(char* stack, u32* sp);
+void actionEquals(char* stack, u32* sp);
+//~ void actionLess(u64 a, u64 b);
+//~ void actionAnd(u64 a, u64 b);
+//~ void actionOr(u64 a, u64 b);
+//~ void actionNot(u64 a);
 
-void actionTrace(var* val);
+void actionStringEquals(char* stack, u32* sp, char* a_str, char* b_str);
+void actionStringLength(char* stack, u32* sp, char* v_str);
+//~ void actionStringAdd(u64 a, u64 b, char* a_str, char* b_str, char* out_str);
+
+void actionTrace(char* stack, u32* sp);

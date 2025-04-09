@@ -2,15 +2,14 @@
 
 #include <variables.h>
 
-ankerl::unordered_dense::map<char*, var*> var_map;
+ankerl::unordered_dense::map<char*, ActionVar*> var_map;
 
-var* getVariable(u64 var_name)
+ActionVar* getVariable(char* var_name)
 {
-	char* var_str = (char*) var_name;
-	if (var_map.count(var_str) == 0)
+	if (var_map.count(var_name) == 0)
 	{
-		var_map[var_str] = (var*) malloc(sizeof(var));
+		var_map[var_name] = (ActionVar*) malloc(sizeof(ActionVar));
 	}
 	
-	return var_map[var_str];
+	return var_map[var_name];
 }

@@ -2,8 +2,8 @@
 
 #include <stackvalue.h>
 
-extern ActionStackValue* stack;
-extern u64 sp;
+extern char* stack;
+extern u32 sp;
 
 extern int quit_swf;
 extern size_t next_frame;
