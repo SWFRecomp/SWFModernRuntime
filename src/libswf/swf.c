@@ -5,6 +5,7 @@
 
 char* stack;
 u32 sp;
+u32 oldSP;
 
 int quit_swf;
 size_t next_frame;

@@ -2,9 +2,7 @@
 #include <math.h>
 #include <string.h>
 
-#include <action.h>
-
-extern u32 oldSP;
+#include <recomp.h>
 
 ActionStackValueType convertString(char* stack, u32* sp, ActionVar* var, char* var_str)
 {
