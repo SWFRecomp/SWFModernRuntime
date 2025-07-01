@@ -2,6 +2,8 @@
 
 #include <stackvalue.h>
 
+typedef void (*frame_func)();
+
 extern char* stack;
 extern u32 sp;
 

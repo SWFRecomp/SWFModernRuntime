@@ -2,11 +2,6 @@
 
 #include <stackvalue.h>
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-
 typedef struct
 {
 	ActionStackValueType type;
@@ -14,8 +9,6 @@ typedef struct
 	u64 value;
 } ActionVar;
 
-ActionVar* getVariable(char* var_name);
+void initMap();
 
-#ifdef __cplusplus
-}
-#endif
+ActionVar* getVariable(char* var_name, size_t key_size);

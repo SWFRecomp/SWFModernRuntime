@@ -52,13 +52,10 @@
 
 #define VAL(type, x) *((type*) x)
 
-#ifndef TEMP_VAL
-#define TEMP_VAL
-ActionVar* temp_val;
-#endif
-
 #define INITIAL_STACK_SIZE 8388608  // 8 MB
 #define INITIAL_SP INITIAL_STACK_SIZE
+
+extern ActionVar* temp_val;
 
 void pushVar(char* stack, u32* sp, ActionVar* p);
 

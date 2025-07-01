@@ -3,8 +3,6 @@ cmake_minimum_required(VERSION 3.10)
 project(SWFModernRuntime)
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_SKIP_BUILD_RPATH FALSE)
 set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
@@ -14,13 +12,16 @@ set(SOURCES
     ${PROJECT_SOURCE_DIR}/src/libswf/swf.c
     ${PROJECT_SOURCE_DIR}/src/libswf/tag.c
     ${PROJECT_SOURCE_DIR}/src/actionmodern/action.c
-    ${PROJECT_SOURCE_DIR}/src/actionmodern/variables.cpp
+    ${PROJECT_SOURCE_DIR}/src/actionmodern/variables.c
     ${PROJECT_SOURCE_DIR}/src/utils.c
+    
+    # Compile hashmap file directly to avoid undefined symbols on Linux
+    ${PROJECT_SOURCE_DIR}/lib/c-hashmap/map.c
 )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
 
-target_compile_options(${PROJECT_NAME} PRIVATE -O2)
+target_compile_options(${PROJECT_NAME} PRIVATE -O2 -Wno-format-truncation)
 
 set(RENAME_ZCONF OFF)
 
