@@ -18,6 +18,8 @@ void aligned_free(void* memblock)
 #elif defined(__GNUC__)
 // GCC
 
+#include <stdlib.h>
+
 void aligned_free(void* memblock)
 {
 	free(memblock);
