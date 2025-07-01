@@ -60,6 +60,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${PROJECT_SOURCE_DIR}/include
     ${PROJECT_SOURCE_DIR}/include/actionmodern
     ${PROJECT_SOURCE_DIR}/include/libswf
+    ${PROJECT_SOURCE_DIR}/lib/c-hashmap
     zlib
     lzma/liblzma/api
 )
