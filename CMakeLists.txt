@@ -21,7 +21,11 @@ set(SOURCES
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
 
+if (WIN32)
+target_compile_options(${PROJECT_NAME} PRIVATE -O2)
+else()
 target_compile_options(${PROJECT_NAME} PRIVATE -O2 -Wno-format-truncation)
+endif()
 
 set(RENAME_ZCONF OFF)
 
