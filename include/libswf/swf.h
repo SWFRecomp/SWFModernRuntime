@@ -4,6 +4,8 @@
 
 typedef void (*frame_func)();
 
+extern frame_func frame_funcs[];
+
 extern char* stack;
 extern u32 sp;
 extern u32 oldSP;
