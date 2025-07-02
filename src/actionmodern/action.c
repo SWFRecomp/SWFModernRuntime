@@ -17,41 +17,6 @@ ActionStackValueType convertString(char* stack, u32* sp, char* var_str)
 	return ACTION_STACK_VALUE_STRING;
 }
 
-ActionStackValueType concatenateStringList(ActionVar* v, char** out_str)
-{
-	if (v->type != ACTION_STACK_VALUE_STR_LIST)
-	{
-		*out_str = NULL;
-		return v->type;
-	}
-	
-	char** str_list = (char**) v->value;
-	u64 out_str_i = 0;
-	
-	do
-	{
-		*out_str = malloc(v->str_size + 1);
-	} while (errno != 0);
-	
-	for (u64 i = 0; i < ((u64) str_list[0]); ++i)
-	{
-		char c = 1;
-		u64 j = 0;
-		
-		while (c != 0)
-		{
-			c = str_list[i + 1][j];
-			(*out_str)[out_str_i] = c;
-			j += 1;
-			out_str_i += 1;
-		}
-		
-		out_str_i -= 1;
-	}
-	
-	return ACTION_STACK_VALUE_STR_LIST;
-}
-
 ActionStackValueType convertFloat(char* stack, u32* sp)
 {
 	if (STACK_TOP_TYPE == ACTION_STACK_VALUE_STRING)
@@ -403,6 +368,160 @@ void actionEquals(char* stack, u32* sp)
 	//~ v->value = VAL(u64, &result);
 //~ }
 
+int strcmp_list_a_list_b(u64 a_value, u64 b_value)
+{
+	char** a_list = (char**) a_value;
+	char** b_list = (char**) b_value;
+	
+	u64 num_a_strings = (u64) a_list[0];
+	u64 num_b_strings = (u64) b_list[0];
+	
+	u64 a_str_i = 0;
+	u64 b_str_i = 0;
+	
+	u64 a_i = 0;
+	u64 b_i = 0;
+	
+	u64 min_count = (num_a_strings < num_b_strings) ? num_a_strings : num_b_strings;
+	
+	while (1)
+	{
+		char c_a = a_list[a_str_i + 1][a_i];
+		char c_b = b_list[b_str_i + 1][b_i];
+		
+		if (c_a == 0)
+		{
+			if (a_str_i + 1 != min_count)
+			{
+				a_str_i += 1;
+				a_i = 0;
+				continue;
+			}
+			
+			else
+			{
+				return c_a - c_b;
+			}
+		}
+		
+		if (c_b == 0)
+		{
+			if (b_str_i + 1 != min_count)
+			{
+				b_str_i += 1;
+				b_i = 0;
+				continue;
+			}
+			
+			else
+			{
+				return c_a - c_b;
+			}
+		}
+		
+		if (c_a != c_b)
+		{
+			return c_a - c_b;
+		}
+		
+		a_i += 1;
+		b_i += 1;
+	}
+	
+	EXC("um how lol\n");
+	return 0;
+}
+
+int strcmp_list_a_not_b(u64 a_value, u64 b_value)
+{
+	char** a_list = (char**) a_value;
+	char* b_str = (char*) b_value;
+	
+	u64 num_a_strings = (u64) a_list[0];
+	
+	u64 a_str_i = 0;
+	
+	u64 a_i = 0;
+	u64 b_i = 0;
+	
+	while (1)
+	{
+		char c_a = a_list[a_str_i + 1][a_i];
+		char c_b = b_str[b_i];
+		
+		if (c_a == 0)
+		{
+			if (a_str_i + 1 != num_a_strings)
+			{
+				a_str_i += 1;
+				a_i = 0;
+				continue;
+			}
+			
+			else
+			{
+				return c_a - c_b;
+			}
+		}
+		
+		if (c_a != c_b)
+		{
+			return c_a - c_b;
+		}
+		
+		a_i += 1;
+		b_i += 1;
+	}
+	
+	EXC("um how lol\n");
+	return 0;
+}
+
+int strcmp_not_a_list_b(u64 a_value, u64 b_value)
+{
+	char* a_str = (char*) a_value;
+	char** b_list = (char**) b_value;
+	
+	u64 num_b_strings = (u64) b_list[0];
+	
+	u64 b_str_i = 0;
+	
+	u64 a_i = 0;
+	u64 b_i = 0;
+	
+	while (1)
+	{
+		char c_a = a_str[a_i];
+		char c_b = b_list[b_str_i + 1][b_i];
+		
+		if (c_b == 0)
+		{
+			if (b_str_i + 1 != num_b_strings)
+			{
+				b_str_i += 1;
+				b_i = 0;
+				continue;
+			}
+			
+			else
+			{
+				return c_a - c_b;
+			}
+		}
+		
+		if (c_a != c_b)
+		{
+			return c_a - c_b;
+		}
+		
+		a_i += 1;
+		b_i += 1;
+	}
+	
+	EXC("um how lol\n");
+	return 0;
+}
+
 void actionStringEquals(char* stack, u32* sp, char* a_str, char* b_str)
 {
 	ActionVar a;
@@ -413,34 +532,29 @@ void actionStringEquals(char* stack, u32* sp, char* a_str, char* b_str)
 	convertString(stack, sp, b_str);
 	popVar(stack, sp, &b);
 	
-	char* final_a_str;
-	char* final_b_str;
+	int cmp_result;
 	
-	int free_a = 1;
-	int free_b = 1;
+	int a_is_list = a.type == ACTION_STACK_VALUE_STR_LIST;
+	int b_is_list = b.type == ACTION_STACK_VALUE_STR_LIST;
 	
-	if (concatenateStringList(&a, &final_a_str) != ACTION_STACK_VALUE_STR_LIST)
+	if (a_is_list && b_is_list)
 	{
-		final_a_str = (char*) a.value;
-		free_a = 0;
+		cmp_result = strcmp_list_a_list_b(a.value, b.value);
 	}
 	
-	if (concatenateStringList(&b, &final_b_str) != ACTION_STACK_VALUE_STR_LIST)
+	else if (a_is_list && !b_is_list)
 	{
-		final_b_str = (char*) b.value;
-		free_b = 0;
+		cmp_result = strcmp_list_a_not_b(a.value, b.value);
 	}
 	
-	int cmp_result = strcmp(final_a_str, final_b_str);
-	
-	if (free_a)
+	else if (!a_is_list && b_is_list)
 	{
-		free(final_a_str);
+		cmp_result = strcmp_not_a_list_b(a.value, b.value);
 	}
 	
-	if (free_b)
+	else
 	{
-		free(final_b_str);
+		cmp_result = strcmp((char*) a.value, (char*) b.value);
 	}
 	
 	float result = cmp_result == 0 ? 1.0f : 0.0f;
