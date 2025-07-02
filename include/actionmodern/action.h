@@ -6,7 +6,7 @@
 #define PUSH(t, v) \
 	oldSP = *sp; \
 	*sp -= 4 + 4 + 8 + 8; \
-	*sp &= ~8; \
+	*sp &= ~7; \
 	stack[*sp] = t; \
 	VAL(u32, &stack[*sp + 4]) = oldSP; \
 	VAL(u64, &stack[*sp + 16]) = v; \
@@ -14,18 +14,19 @@
 #define PUSH_STR(v, n) \
 	oldSP = *sp; \
 	*sp -= 4 + 4 + 8 + 8; \
-	*sp &= ~8; \
+	*sp &= ~7; \
 	stack[*sp] = ACTION_STACK_VALUE_STRING; \
 	VAL(u32, &stack[*sp + 4]) = oldSP; \
 	VAL(u32, &stack[*sp + 8]) = n; \
 	VAL(char*, &stack[*sp + 16]) = v; \
 
-//~ #define PUSH_STR(v, n) \
-	//~ oldSP = sp; \
-	//~ sp -= 1 + 4 + n + 1; \
-	//~ sp &= 0xFFFFFFFFFFFFFFF8; \
-	//~ stack[sp] = ACTION_STACK_VALUE_STRING; \
-	//~ VAL(u32, stack[sp + 4]) = oldSP - sp; \
+#define PUSH_STR_LIST(n, size) \
+	oldSP = *sp; \
+	*sp -= (u32) (4 + 4 + 8 + size); \
+	*sp &= ~7; \
+	stack[*sp] = ACTION_STACK_VALUE_STR_LIST; \
+	VAL(u32, &stack[*sp + 4]) = oldSP; \
+	VAL(u32, &stack[*sp + 8]) = n; \
 
 #define PUSH_VAR(p) pushVar(stack, sp, p);
 
@@ -71,6 +72,6 @@ void actionEquals(char* stack, u32* sp);
 
 void actionStringEquals(char* stack, u32* sp, char* a_str, char* b_str);
 void actionStringLength(char* stack, u32* sp, char* v_str);
-//~ void actionStringAdd(u64 a, u64 b, char* a_str, char* b_str, char* out_str);
+void actionStringAdd(char* stack, u32* sp, char* a_str, char* b_str);
 
 void actionTrace(char* stack, u32* sp);

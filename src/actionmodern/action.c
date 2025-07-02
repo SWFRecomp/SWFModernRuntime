@@ -67,7 +67,16 @@ void popVar(char* stack, u32* sp, ActionVar* var)
 {
 	var->type = STACK_TOP_TYPE;
 	var->str_size = STACK_TOP_N;
-	var->value = VAL(u64, &STACK_TOP_VALUE);
+	
+	if (STACK_TOP_TYPE == ACTION_STACK_VALUE_STR_LIST)
+	{
+		var->value = (u64) &STACK_TOP_VALUE;
+	}
+	
+	else
+	{
+		var->value = VAL(u64, &STACK_TOP_VALUE);
+	}
 	
 	POP();
 }
@@ -377,15 +386,76 @@ void actionStringLength(char* stack, u32* sp, char* v_str)
 	PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &str_size));
 }
 
-//~ void actionStringAdd(u64 a, u64 b, char* a_str, char* b_str, char* out_str)
-//~ {
-	//~ convertString(a, a_str);
-	//~ convertString(b, b_str);
+void actionStringAdd(char* stack, u32* sp, char* a_str, char* b_str)
+{
+	ActionVar a;
+	convertString(stack, sp, &a, a_str);
+	popVar(stack, sp, &a);
 	
-	//~ snprintf(out_str, 1024, "%s%s", (char*) b->value, (char*) a->value);
-	//~ b->type = ACTION_STACK_VALUE_STRING;
-	//~ b->value = (u64) out_str;
-//~ }
+	ActionVar b;
+	convertString(stack, sp, &b, b_str);
+	popVar(stack, sp, &b);
+	
+	u64 num_b_strings;
+	u64 num_strings = 0;
+	
+	if (b.type == ACTION_STACK_VALUE_STR_LIST)
+	{
+		num_b_strings = *((u64*) b.value);
+	}
+	
+	else
+	{
+		num_b_strings = 1;
+	}
+	
+	num_strings += num_b_strings;
+	
+	if (a.type == ACTION_STACK_VALUE_STR_LIST)
+	{
+		num_strings += *((u64*) a.value);
+	}
+	
+	else
+	{
+		num_strings += 1;
+	}
+	
+	PUSH_STR_LIST(b.str_size + a.str_size, (u32) sizeof(u64)*(num_strings + 1));
+	
+	u64* str_list = (u64*) &STACK_TOP_VALUE;
+	str_list[0] = num_strings;
+	
+	if (b.type == ACTION_STACK_VALUE_STR_LIST)
+	{
+		u64* b_list = (u64*) b.value;
+		
+		for (u64 i = 0; i < b_list[0]; ++i)
+		{
+			str_list[i + 1] = b_list[i + 1];
+		}
+	}
+	
+	else
+	{
+		str_list[1] = b.value;
+	}
+	
+	if (a.type == ACTION_STACK_VALUE_STR_LIST)
+	{
+		u64* a_list = (u64*) a.value;
+		
+		for (u64 i = 0; i < a_list[0]; ++i)
+		{
+			str_list[i + 1 + num_b_strings] = a_list[i + 1];
+		}
+	}
+	
+	else
+	{
+		str_list[1 + num_b_strings] = a.value;
+	}
+}
 
 void actionTrace(char* stack, u32* sp)
 {
@@ -396,6 +466,20 @@ void actionTrace(char* stack, u32* sp)
 		case ACTION_STACK_VALUE_STRING:
 		{
 			printf("%s\n", (char*) STACK_TOP_VALUE);
+			break;
+		}
+		
+		case ACTION_STACK_VALUE_STR_LIST:
+		{
+			u64* str_list = (u64*) &STACK_TOP_VALUE;
+			
+			for (u64 i = 0; i < str_list[0]; ++i)
+			{
+				printf("%s", (char*) str_list[i + 1]);
+			}
+			
+			printf("\n");
+			
 			break;
 		}
 		
