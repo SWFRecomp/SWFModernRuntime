@@ -21,7 +21,7 @@
 	VAL(char*, &stack[*sp + 16]) = v; \
 
 #define PUSH_STR_LIST(n, size) \
-	oldSP = *sp; \
+	oldSP = VAL(u32, &stack[SP_SECOND_TOP + 4]); \
 	*sp -= (u32) (4 + 4 + 8 + size); \
 	*sp &= ~7; \
 	stack[*sp] = ACTION_STACK_VALUE_STR_LIST; \

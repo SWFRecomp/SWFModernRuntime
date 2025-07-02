@@ -63,7 +63,7 @@ void pushVar(char* stack, u32* sp, ActionVar* var)
 	}
 }
 
-void popVar(char* stack, u32* sp, ActionVar* var)
+void peekVar(char* stack, u32* sp, ActionVar* var)
 {
 	var->type = STACK_TOP_TYPE;
 	var->str_size = STACK_TOP_N;
@@ -77,6 +77,11 @@ void popVar(char* stack, u32* sp, ActionVar* var)
 	{
 		var->value = VAL(u64, &STACK_TOP_VALUE);
 	}
+}
+
+void popVar(char* stack, u32* sp, ActionVar* var)
+{
+	peekVar(stack, sp, var);
 	
 	POP();
 }
@@ -390,12 +395,13 @@ void actionStringAdd(char* stack, u32* sp, char* a_str, char* b_str)
 {
 	ActionVar a;
 	convertString(stack, sp, &a, a_str);
-	popVar(stack, sp, &a);
+	peekVar(stack, sp, &a);
 	
 	ActionVar b;
 	convertString(stack, sp, &b, b_str);
-	popVar(stack, sp, &b);
+	peekVar(stack, &SP_SECOND_TOP, &b);
 	
+	u64 num_a_strings;
 	u64 num_b_strings;
 	u64 num_strings = 0;
 	
@@ -413,13 +419,15 @@ void actionStringAdd(char* stack, u32* sp, char* a_str, char* b_str)
 	
 	if (a.type == ACTION_STACK_VALUE_STR_LIST)
 	{
-		num_strings += *((u64*) a.value);
+		num_a_strings = *((u64*) a.value);
 	}
 	
 	else
 	{
-		num_strings += 1;
+		num_a_strings = 1;
 	}
+	
+	num_strings += num_a_strings;
 	
 	PUSH_STR_LIST(b.str_size + a.str_size, (u32) sizeof(u64)*(num_strings + 1));
 	
@@ -430,7 +438,7 @@ void actionStringAdd(char* stack, u32* sp, char* a_str, char* b_str)
 	{
 		u64* b_list = (u64*) b.value;
 		
-		for (u64 i = 0; i < b_list[0]; ++i)
+		for (u64 i = 0; i < num_b_strings; ++i)
 		{
 			str_list[i + 1] = b_list[i + 1];
 		}
@@ -445,7 +453,7 @@ void actionStringAdd(char* stack, u32* sp, char* a_str, char* b_str)
 	{
 		u64* a_list = (u64*) a.value;
 		
-		for (u64 i = 0; i < a_list[0]; ++i)
+		for (u64 i = 0; i < num_a_strings; ++i)
 		{
 			str_list[i + 1 + num_b_strings] = a_list[i + 1];
 		}
