@@ -23,7 +23,11 @@ ActionVar* getVariable(char* var_name, size_t key_size)
 		return var;
 	}
 	
-	var = (ActionVar*) malloc(sizeof(ActionVar));
+	do
+	{
+		var = (ActionVar*) malloc(sizeof(ActionVar));
+	} while (errno != 0);
+	
 	hashmap_set(var_map, var_name, key_size, (uintptr_t) var);
 	
 	return var;
