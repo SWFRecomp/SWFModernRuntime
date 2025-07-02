@@ -1,6 +1,8 @@
-#include <variables.h>
+#include <errno.h>
 
 #include <map.h>
+
+#include <variables.h>
 
 hashmap* var_map = NULL;
 
