@@ -1,6 +1,9 @@
-[submodule "lib/lzma"]
-	path = lib/lzma
-	url = https://github.com/chemfiles/lzma.git
 [submodule "lib/zlib"]
 	path = lib/zlib
 	url = https://github.com/madler/zlib.git
+[submodule "lib/lzma"]
+	path = lib/lzma
+	url = https://github.com/SWFRecomp/lzma.git
+[submodule "lib/c-hashmap"]
+	path = lib/c-hashmap
+	url = https://github.com/Mashpoe/c-hashmap.git

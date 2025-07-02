@@ -2,13 +2,14 @@
 
 #include <stackvalue.h>
 
-#ifdef __cplusplus
-extern "C"
+typedef struct
 {
-#endif
+	ActionStackValueType type;
+	u32 str_size;
+	u64 value;
+} ActionVar;
 
-var* getVariable(u64 var_name);
+void initMap();
+void freeMap();
 
-#ifdef __cplusplus
-}
-#endif
+ActionVar* getVariable(char* var_name, size_t key_size);

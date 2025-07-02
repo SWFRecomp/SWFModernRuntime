@@ -2,8 +2,13 @@
 
 #include <stackvalue.h>
 
-extern ActionStackValue* stack;
-extern u64 sp;
+typedef void (*frame_func)();
+
+extern frame_func frame_funcs[];
+
+extern char* stack;
+extern u32 sp;
+extern u32 oldSP;
 
 extern int quit_swf;
 extern size_t next_frame;
