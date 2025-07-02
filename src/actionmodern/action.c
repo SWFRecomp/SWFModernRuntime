@@ -122,61 +122,75 @@ void actionAdd(char* stack, u32* sp)
 	}
 }
 
-//~ void actionSubtract(u64 a, u64 b)
-//~ {
-	//~ convertFloat(a);
-	//~ convertFloat(b);
+void actionSubtract(char* stack, u32* sp)
+{
+	convertFloat(stack, sp);
+	ActionVar a;
+	popVar(stack, sp, &a);
 	
-	//~ if (a->type == ACTION_STACK_VALUE_F64)
-	//~ {
-		//~ convertDouble(b);
+	convertFloat(stack, sp);
+	ActionVar b;
+	popVar(stack, sp, &b);
+	
+	if (a.type == ACTION_STACK_VALUE_F64)
+	{
+		double a_val = VAL(double, &a.value);
+		double b_val = b.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &b.value) : VAL(double, &b.value);
 		
-		//~ double c = VAL(double, &a->value) - VAL(double, &b->value);
-		//~ b->value = VAL(u64, &c);
-	//~ }
+		double c = b_val - a_val;
+		PUSH(ACTION_STACK_VALUE_F64, VAL(u64, &c));
+	}
 	
-	//~ else if (b->type == ACTION_STACK_VALUE_F64)
-	//~ {
-		//~ convertDouble(a);
+	else if (b.type == ACTION_STACK_VALUE_F64)
+	{
+		double a_val = a.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &a.value) : VAL(double, &a.value);
+		double b_val = VAL(double, &b.value);
 		
-		//~ double c = VAL(double, &a->value) - VAL(double, &b->value);
-		//~ b->value = VAL(u64, &c);
-	//~ }
+		double c = b_val - a_val;
+		PUSH(ACTION_STACK_VALUE_F64, VAL(u64, &c));
+	}
 	
-	//~ else
-	//~ {
-		//~ float c = VAL(float, &a->value) - VAL(float, &b->value);
-		//~ b->value = VAL(u32, &c);
-	//~ }
-//~ }
+	else
+	{
+		float c = VAL(float, &b.value) - VAL(float, &a.value);
+		PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &c));
+	}
+}
 
-//~ void actionMultiply(u64 a, u64 b)
-//~ {
-	//~ convertFloat(a);
-	//~ convertFloat(b);
+void actionMultiply(char* stack, u32* sp)
+{
+	convertFloat(stack, sp);
+	ActionVar a;
+	popVar(stack, sp, &a);
 	
-	//~ if (a->type == ACTION_STACK_VALUE_F64)
-	//~ {
-		//~ convertDouble(b);
+	convertFloat(stack, sp);
+	ActionVar b;
+	popVar(stack, sp, &b);
+	
+	if (a.type == ACTION_STACK_VALUE_F64)
+	{
+		double a_val = VAL(double, &a.value);
+		double b_val = b.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &b.value) : VAL(double, &b.value);
 		
-		//~ double c = VAL(double, &a->value)*VAL(double, &b->value);
-		//~ b->value = VAL(u64, &c);
-	//~ }
+		double c = b_val*a_val;
+		PUSH(ACTION_STACK_VALUE_F64, VAL(u64, &c));
+	}
 	
-	//~ else if (b->type == ACTION_STACK_VALUE_F64)
-	//~ {
-		//~ convertDouble(a);
+	else if (b.type == ACTION_STACK_VALUE_F64)
+	{
+		double a_val = a.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &a.value) : VAL(double, &a.value);
+		double b_val = VAL(double, &b.value);
 		
-		//~ double c = VAL(double, &a->value)*VAL(double, &b->value);
-		//~ b->value = VAL(u64, &c);
-	//~ }
+		double c = b_val*a_val;
+		PUSH(ACTION_STACK_VALUE_F64, VAL(u64, &c));
+	}
 	
-	//~ else
-	//~ {
-		//~ float c = VAL(float, &a->value)*VAL(float, &b->value);
-		//~ b->value = VAL(u32, &c);
-	//~ }
-//~ }
+	else
+	{
+		float c = VAL(float, &b.value)*VAL(float, &a.value);
+		PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &c));
+	}
+}
 
 void actionDivide(char* stack, u32* sp)
 {
@@ -273,100 +287,120 @@ void actionEquals(char* stack, u32* sp)
 	}
 }
 
-//~ void actionLess(u64 a, u64 b)
-//~ {
-	//~ convertFloat(a);
-	//~ convertFloat(b);
+void actionLess(char* stack, u32* sp)
+{
+	ActionVar a;
+	convertFloat(stack, sp);
+	popVar(stack, sp, &a);
 	
-	//~ if (a->type == ACTION_STACK_VALUE_F64)
-	//~ {
-		//~ convertDouble(b);
+	ActionVar b;
+	convertFloat(stack, sp);
+	popVar(stack, sp, &b);
+	
+	if (a.type == ACTION_STACK_VALUE_F64)
+	{
+		double a_val = VAL(double, &a.value);
+		double b_val = b.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &b.value) : VAL(double, &b.value);
 		
-		//~ double c = VAL(double, &a->value) < VAL(double, &b->value) ? 1.0f : 0.0f;
-		//~ b->value = VAL(u64, &c);
-	//~ }
+		float c = b_val < a_val ? 1.0f : 0.0f;
+		PUSH(ACTION_STACK_VALUE_F64, VAL(u64, &c));
+	}
 	
-	//~ else if (b->type == ACTION_STACK_VALUE_F64)
-	//~ {
-		//~ convertDouble(a);
+	else if (b.type == ACTION_STACK_VALUE_F64)
+	{
+		double a_val = a.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &a.value) : VAL(double, &a.value);
+		double b_val = VAL(double, &b.value);
 		
-		//~ double c = VAL(double, &a->value) < VAL(double, &b->value) ? 1.0f : 0.0f;
-		//~ b->value = VAL(u64, &c);
-	//~ }
+		float c = b_val < a_val ? 1.0f : 0.0f;
+		PUSH(ACTION_STACK_VALUE_F64, VAL(u64, &c));
+	}
 	
-	//~ else
-	//~ {
-		//~ float c = VAL(float, &a->value) < VAL(float, &b->value) ? 1.0f : 0.0f;
-		//~ b->value = VAL(u32, &c);
-	//~ }
-//~ }
+	else
+	{
+		float c = VAL(float, &b.value) < VAL(float, &a.value) ? 1.0f : 0.0f;
+		PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &c));
+	}
+}
 
-//~ void actionAnd(u64 a, u64 b)
-//~ {
-	//~ convertFloat(a);
-	//~ convertFloat(b);
+void actionAnd(char* stack, u32* sp)
+{
+	ActionVar a;
+	convertFloat(stack, sp);
+	popVar(stack, sp, &a);
 	
-	//~ if (a->type == ACTION_STACK_VALUE_F64)
-	//~ {
-		//~ convertDouble(b);
+	ActionVar b;
+	convertFloat(stack, sp);
+	popVar(stack, sp, &b);
+	
+	if (a.type == ACTION_STACK_VALUE_F64)
+	{
+		double a_val = VAL(double, &a.value);
+		double b_val = b.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &b.value) : VAL(double, &b.value);
 		
-		//~ double c = VAL(double, &a->value) != 0.0f && VAL(double, &b->value) != 0.0f ? 1.0f : 0.0f;
-		//~ b->value = VAL(u64, &c);
-	//~ }
+		float c = b_val != 0.0 && a_val != 0.0 ? 1.0f : 0.0f;
+		PUSH(ACTION_STACK_VALUE_F64, VAL(u64, &c));
+	}
 	
-	//~ else if (b->type == ACTION_STACK_VALUE_F64)
-	//~ {
-		//~ convertDouble(a);
+	else if (b.type == ACTION_STACK_VALUE_F64)
+	{
+		double a_val = a.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &a.value) : VAL(double, &a.value);
+		double b_val = VAL(double, &b.value);
 		
-		//~ double c = VAL(double, &a->value) != 0.0f && VAL(double, &b->value) != 0.0f ? 1.0f : 0.0f;
-		//~ b->value = VAL(u64, &c);
-	//~ }
+		float c = b_val != 0.0 && a_val != 0.0 ? 1.0f : 0.0f;
+		PUSH(ACTION_STACK_VALUE_F64, VAL(u64, &c));
+	}
 	
-	//~ else
-	//~ {
-		//~ float c = VAL(float, &a->value) != 0.0f && VAL(float, &b->value) != 0.0f ? 1.0f : 0.0f;
-		//~ b->value = VAL(u32, &c);
-	//~ }
-	
-	//~ float result = a->value != 0.0f && b->value != 0.0f ? 1.0f : 0.0f;
-	//~ b->value = VAL(u64, &result);
-//~ }
+	else
+	{
+		float c = VAL(float, &b.value) != 0.0f && VAL(float, &a.value) != 0.0f ? 1.0f : 0.0f;
+		PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &c));
+	}
+}
 
-//~ void actionOr(u64 a, u64 b)
-//~ {
-	//~ convertFloat(a);
-	//~ convertFloat(b);
+void actionOr(char* stack, u32* sp)
+{
+	ActionVar a;
+	convertFloat(stack, sp);
+	popVar(stack, sp, &a);
 	
-	//~ if (a->type == ACTION_STACK_VALUE_F64)
-	//~ {
-		//~ convertDouble(b);
+	ActionVar b;
+	convertFloat(stack, sp);
+	popVar(stack, sp, &b);
+	
+	if (a.type == ACTION_STACK_VALUE_F64)
+	{
+		double a_val = VAL(double, &a.value);
+		double b_val = b.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &b.value) : VAL(double, &b.value);
 		
-		//~ double c = VAL(double, &a->value) != 0.0f || VAL(double, &b->value) != 0.0f ? 1.0f : 0.0f;
-		//~ b->value = VAL(u64, &c);
-	//~ }
+		float c = b_val != 0.0 || a_val != 0.0 ? 1.0f : 0.0f;
+		PUSH(ACTION_STACK_VALUE_F64, VAL(u64, &c));
+	}
 	
-	//~ else if (b->type == ACTION_STACK_VALUE_F64)
-	//~ {
-		//~ convertDouble(a);
+	else if (b.type == ACTION_STACK_VALUE_F64)
+	{
+		double a_val = a.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &a.value) : VAL(double, &a.value);
+		double b_val = VAL(double, &b.value);
 		
-		//~ double c = VAL(double, &a->value) != 0.0f || VAL(double, &b->value) != 0.0f ? 1.0f : 0.0f;
-		//~ b->value = VAL(u64, &c);
-	//~ }
+		float c = b_val != 0.0 || a_val != 0.0 ? 1.0f : 0.0f;
+		PUSH(ACTION_STACK_VALUE_F64, VAL(u64, &c));
+	}
 	
-	//~ else
-	//~ {
-		//~ float c = VAL(float, &a->value) != 0.0f || VAL(float, &b->value) != 0.0f ? 1.0f : 0.0f;
-		//~ b->value = VAL(u32, &c);
-	//~ }
-//~ }
+	else
+	{
+		float c = VAL(float, &b.value) != 0.0f || VAL(float, &a.value) != 0.0f ? 1.0f : 0.0f;
+		PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &c));
+	}
+}
 
-//~ void actionNot(u64 v)
-//~ {
-	//~ convertFloat(v);
+void actionNot(char* stack, u32* sp)
+{
+	ActionVar v;
+	convertFloat(stack, sp);
+	popVar(stack, sp, &v);
 	
-	//~ float result = v->value == 0.0f ? 1.0f : 0.0f;
-	//~ v->value = VAL(u64, &result);
-//~ }
+	float result = v.value == 0.0f ? 1.0f : 0.0f;
+	PUSH(ACTION_STACK_VALUE_F32, VAL(u64, &result));
+}
 
 int strcmp_list_a_list_b(u64 a_value, u64 b_value)
 {
