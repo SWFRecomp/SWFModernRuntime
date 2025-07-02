@@ -38,4 +38,6 @@ void swfStart(frame_func* frame_funcs)
 	tagMain(frame_funcs);
 	
 	freeMap();
+	
+	aligned_free(stack);
 }
