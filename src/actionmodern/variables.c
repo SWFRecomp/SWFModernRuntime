@@ -9,6 +9,11 @@ void initMap()
 	var_map = hashmap_create();
 }
 
+void freeMap()
+{
+	hashmap_free(var_map);
+}
+
 ActionVar* getVariable(char* var_name, size_t key_size)
 {
 	ActionVar* var;

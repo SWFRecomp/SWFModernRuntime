@@ -10,5 +10,6 @@ typedef struct
 } ActionVar;
 
 void initMap();
+void freeMap();
 
 ActionVar* getVariable(char* var_name, size_t key_size);

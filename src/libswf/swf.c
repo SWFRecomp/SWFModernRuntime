@@ -36,4 +36,6 @@ void swfStart(frame_func* frame_funcs)
 	initMap();
 	
 	tagMain(frame_funcs);
+	
+	freeMap();
 }
