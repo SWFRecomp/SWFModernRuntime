@@ -61,14 +61,14 @@ extern ActionVar* temp_val;
 void pushVar(char* stack, u32* sp, ActionVar* p);
 
 void actionAdd(char* stack, u32* sp);
-//~ void actionSubtract(u64 a, u64 b);
-//~ void actionMultiply(u64 a, u64 b);
+void actionSubtract(char* stack, u32* sp);
+void actionMultiply(char* stack, u32* sp);
 void actionDivide(char* stack, u32* sp);
 void actionEquals(char* stack, u32* sp);
-//~ void actionLess(u64 a, u64 b);
-//~ void actionAnd(u64 a, u64 b);
-//~ void actionOr(u64 a, u64 b);
-//~ void actionNot(u64 a);
+void actionLess(char* stack, u32* sp);
+void actionAnd(char* stack, u32* sp);
+void actionOr(char* stack, u32* sp);
+void actionNot(char* stack, u32* sp);
 
 void actionStringEquals(char* stack, u32* sp, char* a_str, char* b_str);
 void actionStringLength(char* stack, u32* sp, char* v_str);
