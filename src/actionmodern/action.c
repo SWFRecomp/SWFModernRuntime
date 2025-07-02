@@ -4,16 +4,51 @@
 
 #include <recomp.h>
 
-ActionStackValueType convertString(char* stack, u32* sp, ActionVar* var, char* var_str)
+ActionStackValueType convertString(char* stack, u32* sp, char* var_str)
 {
 	if (STACK_TOP_TYPE == ACTION_STACK_VALUE_F32)
 	{
-		var->type = ACTION_STACK_VALUE_STRING;
-		var->value = (u64) var_str;
+		STACK_TOP_TYPE = ACTION_STACK_VALUE_STRING;
+		VAL(u64, &STACK_TOP_VALUE) = (u64) var_str;
 		snprintf(var_str, 17, "%.15g", VAL(float, &STACK_TOP_VALUE));
 	}
 	
 	return ACTION_STACK_VALUE_STRING;
+}
+
+ActionStackValueType concatenateStringList(ActionVar* v, char** out_str)
+{
+	if (v->type != ACTION_STACK_VALUE_STR_LIST)
+	{
+		*out_str = NULL;
+		return v->type;
+	}
+	
+	char** str_list = (char**) v->value;
+	u64 out_str_i = 0;
+	
+	do
+	{
+		*out_str = malloc(v->str_size + 1);
+	} while (errno != 0);
+	
+	for (u64 i = 0; i < ((u64) str_list[0]); ++i)
+	{
+		char c = 1;
+		u64 j = 0;
+		
+		while (c != 0)
+		{
+			c = str_list[i + 1][j];
+			(*out_str)[out_str_i] = c;
+			j += 1;
+			out_str_i += 1;
+		}
+		
+		out_str_i -= 1;
+	}
+	
+	return ACTION_STACK_VALUE_STR_LIST;
 }
 
 ActionStackValueType convertFloat(char* stack, u32* sp)
@@ -370,21 +405,51 @@ void actionEquals(char* stack, u32* sp)
 void actionStringEquals(char* stack, u32* sp, char* a_str, char* b_str)
 {
 	ActionVar a;
-	convertString(stack, sp, &a, a_str);
+	convertString(stack, sp, a_str);
 	popVar(stack, sp, &a);
 	
 	ActionVar b;
-	convertString(stack, sp, &b, b_str);
+	convertString(stack, sp, b_str);
 	popVar(stack, sp, &b);
 	
-	float result = strcmp((char*) a.value, (char*) b.value) == 0 ? 1.0f : 0.0f;
+	char* final_a_str;
+	char* final_b_str;
+	
+	int free_a = 1;
+	int free_b = 1;
+	
+	if (concatenateStringList(&a, &final_a_str) != ACTION_STACK_VALUE_STR_LIST)
+	{
+		final_a_str = (char*) a.value;
+		free_a = 0;
+	}
+	
+	if (concatenateStringList(&b, &final_b_str) != ACTION_STACK_VALUE_STR_LIST)
+	{
+		final_b_str = (char*) b.value;
+		free_b = 0;
+	}
+	
+	int cmp_result = strcmp(final_a_str, final_b_str);
+	
+	if (free_a)
+	{
+		free(final_a_str);
+	}
+	
+	if (free_b)
+	{
+		free(final_b_str);
+	}
+	
+	float result = cmp_result == 0 ? 1.0f : 0.0f;
 	PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &result));
 }
 
 void actionStringLength(char* stack, u32* sp, char* v_str)
 {
 	ActionVar v;
-	convertString(stack, sp, &v, v_str);
+	convertString(stack, sp, v_str);
 	popVar(stack, sp, &v);
 	
 	float str_size = (float) v.str_size;
@@ -394,11 +459,11 @@ void actionStringLength(char* stack, u32* sp, char* v_str)
 void actionStringAdd(char* stack, u32* sp, char* a_str, char* b_str)
 {
 	ActionVar a;
-	convertString(stack, sp, &a, a_str);
+	convertString(stack, sp, a_str);
 	peekVar(stack, sp, &a);
 	
 	ActionVar b;
-	convertString(stack, sp, &b, b_str);
+	convertString(stack, sp, b_str);
 	peekVar(stack, &SP_SECOND_TOP, &b);
 	
 	u64 num_a_strings;
