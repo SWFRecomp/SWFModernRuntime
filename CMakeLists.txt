@@ -33,7 +33,7 @@ add_subdirectory(${PROJECT_SOURCE_DIR}/lib/zlib)
 add_subdirectory(${PROJECT_SOURCE_DIR}/lib/lzma)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
-    zlib
+    zlibstatic
     lzma
 )
 
@@ -48,10 +48,6 @@ if (WIN32)
 add_custom_command(
     TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_BINARY_DIR}/${CONFIG_DIR}/SWFModernRuntime.lib ${PROJECT_SOURCE_DIR}/
-)
-add_custom_command(
-    TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_BINARY_DIR}/lib/zlib/${CONFIG_DIR}/zlib.dll ${CMAKE_BINARY_DIR}/
 )
 else()
 add_custom_command(
