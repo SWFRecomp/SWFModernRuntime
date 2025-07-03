@@ -411,6 +411,15 @@ void actionNot(char* stack, u32* sp)
 	PUSH(ACTION_STACK_VALUE_F32, VAL(u64, &result));
 }
 
+int evaluateCondition(char* stack, u32* sp)
+{
+	ActionVar v;
+	convertFloat(stack, sp);
+	popVar(stack, sp, &v);
+	
+	return v.value != 0.0f;
+}
+
 int strcmp_list_a_list_b(u64 a_value, u64 b_value)
 {
 	char** a_list = (char**) a_value;
