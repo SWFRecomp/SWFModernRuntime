@@ -2,8 +2,16 @@
 #include <errno.h>
 #include <math.h>
 #include <string.h>
+#include <time.h>
 
 #include <recomp.h>
+
+struct timespec start_time;
+
+void initTime()
+{
+	clock_gettime(CLOCK_MONOTONIC_RAW, &start_time);
+}
 
 ActionStackValueType convertString(char* stack, u32* sp, char* var_str)
 {
@@ -677,6 +685,16 @@ void actionStringAdd(char* stack, u32* sp, char* a_str, char* b_str)
 	{
 		str_list[1 + num_b_strings] = a.value;
 	}
+}
+
+void actionGetTime(char* stack, u32* sp)
+{
+	struct timespec now;
+	clock_gettime(CLOCK_MONOTONIC_RAW, &now);
+	u32 delta_ms = (now.tv_sec - start_time.tv_sec)*1000 + (now.tv_nsec - start_time.tv_nsec)/1000000;
+	float delta_ms_f32 = (float) delta_ms;
+	
+	PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &delta_ms_f32));
 }
 
 void actionTrace(char* stack, u32* sp)

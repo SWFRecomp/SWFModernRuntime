@@ -33,6 +33,7 @@ void swfStart(frame_func* frame_funcs)
 	quit_swf = 0;
 	next_frame = 0;
 	
+	initTime();
 	initMap();
 	
 	tagMain(frame_funcs);

@@ -58,6 +58,8 @@
 
 extern ActionVar* temp_val;
 
+void initTime();
+
 void pushVar(char* stack, u32* sp, ActionVar* p);
 
 void actionAdd(char* stack, u32* sp);
@@ -74,4 +76,5 @@ void actionStringEquals(char* stack, u32* sp, char* a_str, char* b_str);
 void actionStringLength(char* stack, u32* sp, char* v_str);
 void actionStringAdd(char* stack, u32* sp, char* a_str, char* b_str);
 
+void actionGetTime(char* stack, u32* sp);
 void actionTrace(char* stack, u32* sp);
