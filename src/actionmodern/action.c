@@ -687,16 +687,6 @@ void actionStringAdd(char* stack, u32* sp, char* a_str, char* b_str)
 	}
 }
 
-void actionGetTime(char* stack, u32* sp)
-{
-	struct timespec now;
-	clock_gettime(CLOCK_MONOTONIC_RAW, &now);
-	u32 delta_ms = (now.tv_sec - start_time.tv_sec)*1000 + (now.tv_nsec - start_time.tv_nsec)/1000000;
-	float delta_ms_f32 = (float) delta_ms;
-	
-	PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &delta_ms_f32));
-}
-
 void actionTrace(char* stack, u32* sp)
 {
 	ActionStackValueType type = STACK_TOP_TYPE;
@@ -737,4 +727,14 @@ void actionTrace(char* stack, u32* sp)
 	}
 	
 	POP();
+}
+
+void actionGetTime(char* stack, u32* sp)
+{
+	struct timespec now;
+	clock_gettime(CLOCK_MONOTONIC_RAW, &now);
+	u32 delta_ms = (now.tv_sec - start_time.tv_sec)*1000 + (now.tv_nsec - start_time.tv_nsec)/1000000;
+	float delta_ms_f32 = (float) delta_ms;
+	
+	PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &delta_ms_f32));
 }
