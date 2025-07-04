@@ -736,6 +736,8 @@ void actionTrace(char* stack, u32* sp)
 		}
 	}
 	
+	fflush(stdout);
+	
 	POP();
 }
 
