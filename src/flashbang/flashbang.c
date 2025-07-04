@@ -3,8 +3,15 @@
 #include <stdlib.h>
 #include <assert.h>
 
+#include <common.h>
+
 SDL_Window* window;
 SDL_GPUDevice* device;
+
+// Window background color
+u8 red;
+u8 green;
+u8 blue;
 
 void flashbang_init()
 {
@@ -49,6 +56,18 @@ int flashbang_poll()
 		}
 	}
 	
+	return 0;
+}
+
+void flashbang_set_window_background(u8 r, u8 g, u8 b)
+{
+	red = r;
+	green = g;
+	blue = b;
+}
+
+void flashbang_draw()
+{
 	// acquire the command buffer
 	SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(device);
 	
@@ -69,9 +88,9 @@ int flashbang_poll()
 	{
 		// create the color target
 		SDL_GPUColorTargetInfo colorTargetInfo = {0};
-		colorTargetInfo.clear_color.r = 0xFF/255.0f;
-		colorTargetInfo.clear_color.g = 0x5F/255.0f;
-		colorTargetInfo.clear_color.b = 0x00/255.0f;
+		colorTargetInfo.clear_color.r = red/255.0f;
+		colorTargetInfo.clear_color.g = green/255.0f;
+		colorTargetInfo.clear_color.b = blue/255.0f;
 		colorTargetInfo.clear_color.a = 255/255.0f;
 		colorTargetInfo.load_op = SDL_GPU_LOADOP_CLEAR;
 		colorTargetInfo.store_op = SDL_GPU_STOREOP_STORE;
@@ -88,8 +107,6 @@ int flashbang_poll()
 	
 	// submit the command buffer
 	SDL_SubmitGPUCommandBuffer(commandBuffer);
-	
-	return 0;
 }
 
 void flashbang_quit()
