@@ -7,3 +7,6 @@
 [submodule "lib/c-hashmap"]
 	path = lib/c-hashmap
 	url = https://github.com/Mashpoe/c-hashmap.git
+[submodule "lib/SDL3"]
+	path = lib/SDL3
+	url = https://github.com/libsdl-org/SDL.git
