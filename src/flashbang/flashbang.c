@@ -72,7 +72,7 @@ void flashbang_draw()
 	SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(device);
 	
 	assert(commandBuffer != NULL);
-
+	
 	// get the swapchain texture
 	SDL_GPUTexture* swapchainTexture;
 	Uint32 width, height;
