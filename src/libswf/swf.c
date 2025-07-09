@@ -15,6 +15,8 @@ size_t next_frame;
 int manual_next_frame;
 ActionVar* temp_val;
 
+FlashbangContext* context;
+
 void tagMain(frame_func* frame_funcs)
 {
 	while (!quit_swf)
@@ -39,7 +41,8 @@ void tagMain(frame_func* frame_funcs)
 
 void swfStart(frame_func* frame_funcs)
 {
-	flashbang_init();
+	context = flashbang_new();
+	flashbang_init(context);
 	
 	stack = (char*) aligned_alloc(8, INITIAL_STACK_SIZE);
 	sp = INITIAL_SP;
@@ -57,5 +60,5 @@ void swfStart(frame_func* frame_funcs)
 	
 	aligned_free(stack);
 	
-	flashbang_quit();
+	flashbang_free(context);
 }

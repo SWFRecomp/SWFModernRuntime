@@ -7,3 +7,4 @@ RecompiledScripts/
 zlib.dll
 *.lib
 *.a
+*.spv
