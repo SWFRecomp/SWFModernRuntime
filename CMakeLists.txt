@@ -34,10 +34,10 @@ add_subdirectory(${PROJECT_SOURCE_DIR}/lib/zlib)
 add_subdirectory(${PROJECT_SOURCE_DIR}/lib/lzma)
 add_subdirectory(${PROJECT_SOURCE_DIR}/lib/SDL3)
 
-target_link_libraries(${PROJECT_NAME} PRIVATE
+target_link_libraries(${PROJECT_NAME} PUBLIC
     zlibstatic
     lzma
-    SDL3
+    SDL3::SDL3
 )
 
 # frick u ninja
@@ -45,18 +45,6 @@ if (${CMAKE_GENERATOR} MATCHES "Ninja")
 set(CONFIG_DIR .)
 else()
 set(CONFIG_DIR $<CONFIG>)
-endif()
-
-if (WIN32)
-add_custom_command(
-    TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_BINARY_DIR}/${CONFIG_DIR}/SWFModernRuntime.lib ${PROJECT_SOURCE_DIR}/
-)
-else()
-add_custom_command(
-    TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_BINARY_DIR}/${CONFIG_DIR}/libSWFModernRuntime.a ${PROJECT_SOURCE_DIR}/
-)
 endif()
 
 target_include_directories(${PROJECT_NAME} PRIVATE

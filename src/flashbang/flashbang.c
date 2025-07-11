@@ -16,27 +16,14 @@ struct FlashbangContext
 	SDL_GPUBuffer* vertexBuffer;
 	SDL_GPUTransferBuffer* transferBuffer;
 	
+	size_t current_data_offset;
+	
 	SDL_GPUGraphicsPipeline* graphicsPipeline;
 	
 	// Window background color
 	u8 red;
 	u8 green;
 	u8 blue;
-};
-
-// the vertex input layout
-typedef struct Vertex
-{
-    float x, y, z;      //vec3 position
-    float r, g, b, a;   //vec4 color
-} Vertex;
-
-// a list of vertices
-Vertex vertices[] =
-{
-    {0.0f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f},     // top vertex
-    {-0.5f, -0.5f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f},   // bottom left vertex
-    {0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f}     // bottom right vertex
 };
 
 FlashbangContext* flashbang_new()
@@ -53,6 +40,8 @@ void flashbang_init(FlashbangContext* context)
 	}
 	
 	once = 1;
+	
+	context->current_data_offset = 0;
 	
 	// create a window
 	context->window = SDL_CreateWindow("TestSWFRecompiled", 800, 600, SDL_WINDOW_RESIZABLE);
@@ -74,46 +63,15 @@ void flashbang_init(FlashbangContext* context)
 	
 	// create the vertex buffer
 	SDL_GPUBufferCreateInfo bufferInfo = {0};
-	bufferInfo.size = sizeof(vertices);
+	bufferInfo.size = 7*1024;
 	bufferInfo.usage = SDL_GPU_BUFFERUSAGE_VERTEX;
 	context->vertexBuffer = SDL_CreateGPUBuffer(context->device, &bufferInfo);
 	
 	// create a transfer buffer to upload to the vertex buffer
 	SDL_GPUTransferBufferCreateInfo transferInfo = {0};
-	transferInfo.size = sizeof(vertices);
+	transferInfo.size = 7*1024;
 	transferInfo.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
 	context->transferBuffer = SDL_CreateGPUTransferBuffer(context->device, &transferInfo);
-	
-	// map the transfer buffer to a pointer
-	Vertex* data = (Vertex*) SDL_MapGPUTransferBuffer(context->device, context->transferBuffer, false);
-	
-	SDL_memcpy(data, vertices, sizeof(vertices));
-	
-	// unmap the pointer when you are done updating the transfer buffer
-	SDL_UnmapGPUTransferBuffer(context->device, context->transferBuffer);
-	
-	// start a copy pass
-	SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(context->device);
-	SDL_GPUCopyPass* copyPass = SDL_BeginGPUCopyPass(commandBuffer);
-	
-	// where is the data
-	SDL_GPUTransferBufferLocation location = {0};
-	location.transfer_buffer = context->transferBuffer;
-	location.offset = 0; // start from the beginning
-	
-	// where to upload the data
-	SDL_GPUBufferRegion region = {0};
-	region.buffer = context->vertexBuffer;
-	region.size = sizeof(vertices); // size of the data in bytes
-	region.offset = 0; // begin writing from the first vertex
-	
-	// upload the data
-	SDL_UploadToGPUBuffer(copyPass, &location, &region, true);
-	
-	// end the copy pass
-	SDL_EndGPUCopyPass(copyPass);
-	
-	SDL_SubmitGPUCommandBuffer(commandBuffer);
 	
 	// load the vertex shader code
 	size_t vertexCodeSize;
@@ -171,7 +129,7 @@ void flashbang_init(FlashbangContext* context)
 	vertexBufferDescriptions[0].slot = 0;
 	vertexBufferDescriptions[0].input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX;
 	vertexBufferDescriptions[0].instance_step_rate = 0;
-	vertexBufferDescriptions[0].pitch = sizeof(Vertex);
+	vertexBufferDescriptions[0].pitch = sizeof(float) * 7;
 	
 	pipelineInfo.vertex_input_state.num_vertex_buffers = 1;
 	pipelineInfo.vertex_input_state.vertex_buffer_descriptions = vertexBufferDescriptions;
@@ -242,6 +200,19 @@ void flashbang_set_window_background(FlashbangContext* context, u8 r, u8 g, u8 b
 	context->blue = b;
 }
 
+void flashbang_upload_tris(FlashbangContext* context, char* tris, size_t tris_size)
+{
+	// map the transfer buffer to a pointer
+	char* data = (char*) SDL_MapGPUTransferBuffer(context->device, context->transferBuffer, false);
+	
+	SDL_memcpy(data + context->current_data_offset, tris, tris_size);
+	
+	// unmap the pointer when you are done updating the transfer buffer
+	SDL_UnmapGPUTransferBuffer(context->device, context->transferBuffer);
+	
+	context->current_data_offset += tris_size;
+}
+
 void flashbang_draw(FlashbangContext* context)
 {
 	// acquire the command buffer
@@ -262,6 +233,27 @@ void flashbang_draw(FlashbangContext* context)
 	
 	else
 	{
+		// start a copy pass
+		SDL_GPUCopyPass* copyPass = SDL_BeginGPUCopyPass(commandBuffer);
+		
+		// where is the data
+		SDL_GPUTransferBufferLocation location = {0};
+		location.transfer_buffer = context->transferBuffer;
+		location.offset = 0; // start from the beginning
+		
+		// where to upload the data
+		SDL_GPUBufferRegion region = {0};
+		region.buffer = context->vertexBuffer;
+		region.size = (Uint32) context->current_data_offset; // size of the data in bytes
+		
+		region.offset = 0; // begin writing from the first vertex
+		
+		// upload the data
+		SDL_UploadToGPUBuffer(copyPass, &location, &region, true);
+		
+		// end the copy pass
+		SDL_EndGPUCopyPass(copyPass);
+		
 		// create the color target
 		SDL_GPUColorTargetInfo colorTargetInfo = {0};
 		colorTargetInfo.clear_color.r = context->red/255.0f;
@@ -292,6 +284,8 @@ void flashbang_draw(FlashbangContext* context)
 		
 		// end the render pass
 		SDL_EndGPURenderPass(renderPass);
+		
+		context->current_data_offset = 0;
 	}
 	
 	// submit the command buffer

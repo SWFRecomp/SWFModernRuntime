@@ -14,4 +14,10 @@ extern int quit_swf;
 extern size_t next_frame;
 extern int manual_next_frame;
 
+extern char* dictionary[];
+extern size_t dictionary_sizes[];
+
+extern size_t display_list[];
+extern size_t max_depth;
+
 void swfStart();
