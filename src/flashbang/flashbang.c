@@ -279,8 +279,10 @@ void flashbang_draw(FlashbangContext* context)
 		
 		SDL_BindGPUVertexBuffers(renderPass, 0, bufferBindings, 1); // bind one buffer starting from slot 0
 		
+		Uint32 num_verts = (Uint32) context->current_data_offset/(7*sizeof(float));
+		
 		// issue a draw call
-		SDL_DrawGPUPrimitives(renderPass, 3, 1, 0, 0);
+		SDL_DrawGPUPrimitives(renderPass, num_verts, num_verts/3, 0, 0);
 		
 		// end the render pass
 		SDL_EndGPURenderPass(renderPass);
