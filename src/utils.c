@@ -22,6 +22,14 @@ u32 get_elapsed_ms()
 	return (u32) GetTickCount();
 }
 
+u32 getpagesize()
+{
+	SYSTEM_INFO si;
+	GetSystemInfo(&si);
+	
+	return si.dwPageSize;
+}
+
 #elif defined(__GNUC__)
 // GCC
 
