@@ -63,13 +63,13 @@ void flashbang_init(FlashbangContext* context)
 	
 	// create the vertex buffer
 	SDL_GPUBufferCreateInfo bufferInfo = {0};
-	bufferInfo.size = 7*1024;
+	bufferInfo.size = 4*7*32768;
 	bufferInfo.usage = SDL_GPU_BUFFERUSAGE_VERTEX;
 	context->vertexBuffer = SDL_CreateGPUBuffer(context->device, &bufferInfo);
 	
 	// create a transfer buffer to upload to the vertex buffer
 	SDL_GPUTransferBufferCreateInfo transferInfo = {0};
-	transferInfo.size = 7*1024;
+	transferInfo.size = 4*7*32768;
 	transferInfo.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
 	context->transferBuffer = SDL_CreateGPUTransferBuffer(context->device, &transferInfo);
 	
@@ -203,7 +203,7 @@ void flashbang_set_window_background(FlashbangContext* context, u8 r, u8 g, u8 b
 void flashbang_upload_tris(FlashbangContext* context, char* tris, size_t tris_size)
 {
 	// map the transfer buffer to a pointer
-	char* data = (char*) SDL_MapGPUTransferBuffer(context->device, context->transferBuffer, false);
+	char* data = (char*) SDL_MapGPUTransferBuffer(context->device, context->transferBuffer, 0);
 	
 	SDL_memcpy(data + context->current_data_offset, tris, tris_size);
 	
