@@ -5,6 +5,7 @@
 
 #include <common.h>
 #include <flashbang.h>
+#include <utils.h>
 
 int once = 0;
 
@@ -13,12 +14,15 @@ struct FlashbangContext
 	SDL_Window* window;
 	SDL_GPUDevice* device;
 	
-	SDL_GPUBuffer* vertexBuffer;
-	SDL_GPUTransferBuffer* transferBuffer;
+	SDL_GPUBuffer* vertex_buffer;
+	SDL_GPUBuffer* xform_buffer;
+	SDL_GPUTransferBuffer* vertex_transfer_buffer;
+	SDL_GPUTransferBuffer* xform_transfer_buffer;
 	
-	size_t current_data_offset;
+	size_t current_vertex_offset;
+	size_t current_xform_offset;
 	
-	SDL_GPUGraphicsPipeline* graphicsPipeline;
+	SDL_GPUGraphicsPipeline* graphics_pipeline;
 	
 	// Window background color
 	u8 red;
@@ -31,7 +35,7 @@ FlashbangContext* flashbang_new()
 	return malloc(sizeof(FlashbangContext));
 }
 
-void flashbang_init(FlashbangContext* context)
+void flashbang_init(FlashbangContext* context, int width, int height)
 {
 	if (!once && !SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD))
 	{
@@ -41,10 +45,11 @@ void flashbang_init(FlashbangContext* context)
 	
 	once = 1;
 	
-	context->current_data_offset = 0;
+	context->current_vertex_offset = 0;
+	context->current_xform_offset = 0;
 	
 	// create a window
-	context->window = SDL_CreateWindow("TestSWFRecompiled", 800, 600, SDL_WINDOW_RESIZABLE);
+	context->window = SDL_CreateWindow("TestSWFRecompiled", width, height, SDL_WINDOW_RESIZABLE);
 	
 	// create the device
 	context->device = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV, false, NULL);
@@ -63,32 +68,42 @@ void flashbang_init(FlashbangContext* context)
 	
 	// create the vertex buffer
 	SDL_GPUBufferCreateInfo bufferInfo = {0};
-	bufferInfo.size = 4*7*32768;
+	bufferInfo.size = sizeof(float)*7*32768;
 	bufferInfo.usage = SDL_GPU_BUFFERUSAGE_VERTEX;
-	context->vertexBuffer = SDL_CreateGPUBuffer(context->device, &bufferInfo);
+	context->vertex_buffer = SDL_CreateGPUBuffer(context->device, &bufferInfo);
+	
+	// create a storage buffer for transform matrices
+	bufferInfo.size = sizeof(float)*16*32768;
+	bufferInfo.usage = SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ;
+	context->xform_buffer = SDL_CreateGPUBuffer(context->device, &bufferInfo);
 	
 	// create a transfer buffer to upload to the vertex buffer
 	SDL_GPUTransferBufferCreateInfo transferInfo = {0};
-	transferInfo.size = 4*7*32768;
+	transferInfo.size = sizeof(float)*7*32768;
 	transferInfo.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
-	context->transferBuffer = SDL_CreateGPUTransferBuffer(context->device, &transferInfo);
+	context->vertex_transfer_buffer = SDL_CreateGPUTransferBuffer(context->device, &transferInfo);
+	
+	// create a transfer buffer to upload to the transform buffer
+	transferInfo.size = sizeof(float)*16*32768;
+	transferInfo.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
+	context->xform_transfer_buffer = SDL_CreateGPUTransferBuffer(context->device, &transferInfo);
 	
 	// load the vertex shader code
 	size_t vertexCodeSize;
 	void* vertexCode = SDL_LoadFile("shaders/vertex.spv", &vertexCodeSize);
 	
 	// create the vertex shader
-	SDL_GPUShaderCreateInfo vertexInfo = {0};
-	vertexInfo.code = (Uint8*) vertexCode; //convert to an array of bytes
-	vertexInfo.code_size = vertexCodeSize;
-	vertexInfo.entrypoint = "main";
-	vertexInfo.format = SDL_GPU_SHADERFORMAT_SPIRV; // loading .spv shaders
-	vertexInfo.stage = SDL_GPU_SHADERSTAGE_VERTEX; // vertex shader
-	vertexInfo.num_samplers = 0;
-	vertexInfo.num_storage_buffers = 0;
-	vertexInfo.num_storage_textures = 0;
-	vertexInfo.num_uniform_buffers = 0;
-	SDL_GPUShader* vertexShader = SDL_CreateGPUShader(context->device, &vertexInfo);
+	SDL_GPUShaderCreateInfo vertexShaderInfo = {0};
+	vertexShaderInfo.code = (Uint8*) vertexCode; //convert to an array of bytes
+	vertexShaderInfo.code_size = vertexCodeSize;
+	vertexShaderInfo.entrypoint = "main";
+	vertexShaderInfo.format = SDL_GPU_SHADERFORMAT_SPIRV; // loading .spv shaders
+	vertexShaderInfo.stage = SDL_GPU_SHADERSTAGE_VERTEX; // vertex shader
+	vertexShaderInfo.num_samplers = 0;
+	vertexShaderInfo.num_storage_buffers = 1;
+	vertexShaderInfo.num_storage_textures = 0;
+	vertexShaderInfo.num_uniform_buffers = 0;
+	SDL_GPUShader* vertexShader = SDL_CreateGPUShader(context->device, &vertexShaderInfo);
 	
 	// free the file
 	SDL_free(vertexCode);
@@ -125,14 +140,14 @@ void flashbang_init(FlashbangContext* context)
 	pipelineInfo.primitive_type = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
 	
 	// describe the vertex buffers
-	SDL_GPUVertexBufferDescription vertexBufferDescriptions[1] = {0};
-	vertexBufferDescriptions[0].slot = 0;
-	vertexBufferDescriptions[0].input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX;
-	vertexBufferDescriptions[0].instance_step_rate = 0;
-	vertexBufferDescriptions[0].pitch = sizeof(float) * 7;
+	SDL_GPUVertexBufferDescription vertex_buffer_descriptions[1] = {0};
+	vertex_buffer_descriptions[0].slot = 0;
+	vertex_buffer_descriptions[0].input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX;
+	vertex_buffer_descriptions[0].instance_step_rate = 0;
+	vertex_buffer_descriptions[0].pitch = sizeof(float) * 7;
 	
 	pipelineInfo.vertex_input_state.num_vertex_buffers = 1;
-	pipelineInfo.vertex_input_state.vertex_buffer_descriptions = vertexBufferDescriptions;
+	pipelineInfo.vertex_input_state.vertex_buffer_descriptions = vertex_buffer_descriptions;
 	
 	// describe the vertex attribute
 	SDL_GPUVertexAttribute vertexAttributes[2] = {0};
@@ -167,7 +182,7 @@ void flashbang_init(FlashbangContext* context)
 	pipelineInfo.target_info.color_target_descriptions = colorTargetDescriptions;
 	
 	// create the pipeline
-	context->graphicsPipeline = SDL_CreateGPUGraphicsPipeline(context->device, &pipelineInfo);
+	context->graphics_pipeline = SDL_CreateGPUGraphicsPipeline(context->device, &pipelineInfo);
 	
 	// we don't need to store the shaders after creating the pipeline
 	SDL_ReleaseGPUShader(context->device, vertexShader);
@@ -200,17 +215,43 @@ void flashbang_set_window_background(FlashbangContext* context, u8 r, u8 g, u8 b
 	context->blue = b;
 }
 
-void flashbang_upload_tris(FlashbangContext* context, char* tris, size_t tris_size)
+char* flashbang_map_vertex_transfer_buffer(FlashbangContext* context)
 {
 	// map the transfer buffer to a pointer
-	char* data = (char*) SDL_MapGPUTransferBuffer(context->device, context->transferBuffer, 0);
+	return (char*) SDL_MapGPUTransferBuffer(context->device, context->vertex_transfer_buffer, 0);
+}
+
+char* flashbang_map_xform_transfer_buffer(FlashbangContext* context)
+{
+	// map the transfer buffer to a pointer
+	return (char*) SDL_MapGPUTransferBuffer(context->device, context->xform_transfer_buffer, 0);
+}
+
+void flashbang_upload_vertices(FlashbangContext* context, char* buffer, char* data, size_t data_size)
+{
+	SDL_memcpy(buffer + context->current_vertex_offset, data, data_size);
 	
-	SDL_memcpy(data + context->current_data_offset, tris, tris_size);
+	context->current_vertex_offset += data_size;
+}
+
+void flashbang_upload_xform(FlashbangContext* context, char* buffer, char* data)
+{
+	size_t transform_size = 16*sizeof(float);
+	SDL_memcpy(buffer + context->current_xform_offset, data, transform_size);
 	
+	context->current_xform_offset += transform_size;
+}
+
+void flashbang_unmap_vertex_transfer_buffer(FlashbangContext* context)
+{
 	// unmap the pointer when you are done updating the transfer buffer
-	SDL_UnmapGPUTransferBuffer(context->device, context->transferBuffer);
-	
-	context->current_data_offset += tris_size;
+	SDL_UnmapGPUTransferBuffer(context->device, context->vertex_transfer_buffer);
+}
+
+void flashbang_unmap_xform_transfer_buffer(FlashbangContext* context)
+{
+	// unmap the pointer when you are done updating the transfer buffer
+	SDL_UnmapGPUTransferBuffer(context->device, context->xform_transfer_buffer);
 }
 
 void flashbang_draw(FlashbangContext* context)
@@ -238,18 +279,29 @@ void flashbang_draw(FlashbangContext* context)
 		
 		// where is the data
 		SDL_GPUTransferBufferLocation location = {0};
-		location.transfer_buffer = context->transferBuffer;
+		location.transfer_buffer = context->vertex_transfer_buffer;
 		location.offset = 0; // start from the beginning
 		
 		// where to upload the data
 		SDL_GPUBufferRegion region = {0};
-		region.buffer = context->vertexBuffer;
-		region.size = (Uint32) context->current_data_offset; // size of the data in bytes
-		
+		region.buffer = context->vertex_buffer;
+		region.size = (Uint32) context->current_vertex_offset; // size of the data in bytes
 		region.offset = 0; // begin writing from the first vertex
 		
-		// upload the data
-		SDL_UploadToGPUBuffer(copyPass, &location, &region, true);
+		// upload vertices
+		SDL_UploadToGPUBuffer(copyPass, &location, &region, false);
+		
+		// where is the data
+		location.transfer_buffer = context->xform_transfer_buffer;
+		location.offset = 0;
+		
+		// where to upload the data
+		region.buffer = context->xform_buffer;
+		region.size = (Uint32) context->current_xform_offset; // size of the data in bytes
+		region.offset = 0; // begin writing from the first transform
+		
+		// upload transforms
+		SDL_UploadToGPUBuffer(copyPass, &location, &region, false);
 		
 		// end the copy pass
 		SDL_EndGPUCopyPass(copyPass);
@@ -270,16 +322,17 @@ void flashbang_draw(FlashbangContext* context)
 		assert(renderPass != NULL);
 		
 		// bind the graphics pipeline
-		SDL_BindGPUGraphicsPipeline(renderPass, context->graphicsPipeline);
+		SDL_BindGPUGraphicsPipeline(renderPass, context->graphics_pipeline);
 		
 		// bind the vertex buffer
 		SDL_GPUBufferBinding bufferBindings[1];
-		bufferBindings[0].buffer = context->vertexBuffer; // index 0 is slot 0 in this example
+		bufferBindings[0].buffer = context->vertex_buffer; // index 0 is slot 0 in this example
 		bufferBindings[0].offset = 0; // start from the first byte
 		
 		SDL_BindGPUVertexBuffers(renderPass, 0, bufferBindings, 1); // bind one buffer starting from slot 0
+		SDL_BindGPUVertexStorageBuffers(renderPass, 0, &context->xform_buffer, 1);
 		
-		Uint32 num_verts = (Uint32) context->current_data_offset/(7*sizeof(float));
+		Uint32 num_verts = (Uint32) context->current_vertex_offset/(7*sizeof(float));
 		
 		// issue a draw call
 		SDL_DrawGPUPrimitives(renderPass, num_verts, num_verts/3, 0, 0);
@@ -287,7 +340,8 @@ void flashbang_draw(FlashbangContext* context)
 		// end the render pass
 		SDL_EndGPURenderPass(renderPass);
 		
-		context->current_data_offset = 0;
+		context->current_vertex_offset = 0;
+		context->current_xform_offset = 0;
 	}
 	
 	// submit the command buffer
@@ -297,11 +351,12 @@ void flashbang_draw(FlashbangContext* context)
 void flashbang_free(FlashbangContext* context)
 {
 	// release the pipeline
-	SDL_ReleaseGPUGraphicsPipeline(context->device, context->graphicsPipeline);
+	SDL_ReleaseGPUGraphicsPipeline(context->device, context->graphics_pipeline);
 	
 	// destroy the buffers
-	SDL_ReleaseGPUBuffer(context->device, context->vertexBuffer);
-	SDL_ReleaseGPUTransferBuffer(context->device, context->transferBuffer);
+	SDL_ReleaseGPUBuffer(context->device, context->vertex_buffer);
+	SDL_ReleaseGPUTransferBuffer(context->device, context->vertex_transfer_buffer);
+	SDL_ReleaseGPUTransferBuffer(context->device, context->xform_transfer_buffer);
 	
 	// destroy the GPU device
 	SDL_DestroyGPUDevice(context->device);

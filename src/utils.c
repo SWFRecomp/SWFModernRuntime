@@ -1,5 +1,21 @@
 #include <utils.h>
 
+void grow_ptr(char** ptr, size_t* capacity_ptr, size_t elem_size)
+{
+	char* data = *ptr;
+	size_t capacity = *capacity_ptr;
+	size_t old_data_size = capacity*elem_size;
+	
+	char* new_data = malloc(old_data_size << 1);
+	
+	memcpy(new_data, data, old_data_size);
+	
+	free(data);
+	
+	*ptr = new_data;
+	*capacity_ptr = capacity << 1;
+}
+
 #if defined(_MSC_VER)
 //  Microsoft
 

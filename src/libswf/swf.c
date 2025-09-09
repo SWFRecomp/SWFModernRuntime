@@ -2,9 +2,8 @@
 #include <tag.h>
 #include <action.h>
 #include <variables.h>
-#include <utils.h>
-
 #include <flashbang.h>
+#include <utils.h>
 
 char* stack;
 u32 sp;
@@ -16,10 +15,9 @@ size_t next_frame;
 int manual_next_frame;
 ActionVar* temp_val;
 
-char* dictionary[1024];
-size_t dictionary_sizes[1024];
+Character* dictionary = NULL;
 
-size_t display_list[1024];
+DisplayObject* display_list = NULL;
 size_t max_depth = 0;
 
 FlashbangContext* context;
@@ -49,10 +47,13 @@ void tagMain(frame_func* frame_funcs)
 	}
 }
 
-void swfStart(frame_func* frame_funcs)
+void swfStart(frame_func* frame_funcs, int width, int height)
 {
 	context = flashbang_new();
-	flashbang_init(context);
+	flashbang_init(context, width, height);
+	
+	dictionary = malloc(INITIAL_DICTIONARY_CAPACITY*sizeof(Character));
+	display_list = malloc(INITIAL_DISPLAYLIST_CAPACITY*sizeof(DisplayObject));
 	
 	stack = (char*) aligned_alloc(8, INITIAL_STACK_SIZE);
 	sp = INITIAL_SP;
@@ -69,6 +70,9 @@ void swfStart(frame_func* frame_funcs)
 	freeMap();
 	
 	aligned_free(stack);
+	
+	free(dictionary);
+	free(display_list);
 	
 	flashbang_free(context);
 }
