@@ -47,10 +47,20 @@ void tagMain(frame_func* frame_funcs)
 	}
 }
 
-void swfStart(frame_func* frame_funcs, int width, int height)
+void swfStart(SWFAppContext* app_context)
 {
 	context = flashbang_new();
-	flashbang_init(context, width, height);
+	
+	context->width = app_context->width;
+	context->height = app_context->height;
+	context->stage_to_ndc = app_context->stage_to_ndc;
+	
+	context->shape_data = app_context->shape_data;
+	context->shape_data_size = app_context->shape_data_size;
+	context->transform_data = app_context->transform_data;
+	context->transform_data_size = app_context->transform_data_size;
+	
+	flashbang_init(context);
 	
 	dictionary = malloc(INITIAL_DICTIONARY_CAPACITY*sizeof(Character));
 	display_list = malloc(INITIAL_DISPLAYLIST_CAPACITY*sizeof(DisplayObject));

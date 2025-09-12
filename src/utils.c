@@ -8,7 +8,10 @@ void grow_ptr(char** ptr, size_t* capacity_ptr, size_t elem_size)
 	
 	char* new_data = malloc(old_data_size << 1);
 	
-	memcpy(new_data, data, old_data_size);
+	for (size_t i = 0; i < old_data_size; ++i)
+	{
+		new_data[i] = data[i];
+	}
 	
 	free(data);
 	

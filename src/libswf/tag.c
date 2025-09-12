@@ -15,8 +15,10 @@ void tagSetBackgroundColor(u8 red, u8 green, u8 blue)
 
 void tagShowFrame()
 {
-	char* v_buffer = flashbang_map_vertex_transfer_buffer(context);
-	char* x_buffer = flashbang_map_xform_transfer_buffer(context);
+	if (!flashbang_open_pass(context))
+	{
+		return;
+	}
 	
 	for (size_t i = 1; i <= max_depth; ++i)
 	{
@@ -28,28 +30,24 @@ void tagShowFrame()
 		}
 		
 		Character* ch = &dictionary[obj->char_id];
-		flashbang_upload_vertices(context, v_buffer, ch->tris, ch->size);
-		flashbang_upload_xform(context, x_buffer, (char*) obj->transform);
+		flashbang_draw_shape(context, ch->shape_offset, ch->size, obj->transform_id);
 	}
 	
-	flashbang_unmap_vertex_transfer_buffer(context);
-	flashbang_unmap_xform_transfer_buffer(context);
-	
-	flashbang_draw(context);
+	flashbang_close_pass(context);
 }
 
-void tagDefineShape(size_t char_id, char* tris, size_t tris_size)
+void tagDefineShape(size_t char_id, size_t shape_offset, size_t shape_size)
 {
 	if (char_id >= dictionary_capacity)
 	{
 		grow_ptr((char**) &dictionary, &dictionary_capacity, sizeof(Character));
 	}
 	
-	dictionary[char_id].tris = tris;
-	dictionary[char_id].size = tris_size;
+	dictionary[char_id].shape_offset = shape_offset;
+	dictionary[char_id].size = shape_size;
 }
 
-void tagPlaceObject2(size_t depth, size_t char_id, float* transform)
+void tagPlaceObject2(size_t depth, size_t char_id, u32 transform_id)
 {
 	if (depth >= display_list_capacity)
 	{
@@ -57,7 +55,7 @@ void tagPlaceObject2(size_t depth, size_t char_id, float* transform)
 	}
 	
 	display_list[depth].char_id = char_id;
-	display_list[depth].transform = transform;
+	display_list[depth].transform_id = transform_id;
 	
 	if (depth > max_depth)
 	{

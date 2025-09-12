@@ -9,10 +9,18 @@ layout(std430, set = 0, binding = 0) readonly buffer GlobalTransforms
 	mat4 transforms[];
 };
 
+layout(set = 1, binding = 0) uniform Globals {
+	mat4 stage_to_ndc;
+};
+
+layout(set = 1, binding = 1) uniform CurrentTransformID {
+	uint transform_id;
+};
+
 void main()
 {
-	mat4 transform = transforms[gl_InstanceIndex];
+	mat4 transform = transforms[transform_id];
 	vec4 pos = vec4(a_position, 1.0f);
-	gl_Position = transform*pos;
+	gl_Position = stage_to_ndc*transform*pos;
 	v_color = a_color;
 }
