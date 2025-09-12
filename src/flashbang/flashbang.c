@@ -311,7 +311,7 @@ void flashbang_draw_shape(FlashbangContext* context, size_t offset, size_t num_v
 	SDL_PushGPUVertexUniformData(context->command_buffer, 1, &transform_id, sizeof(u32));
 	
 	// issue a draw call
-	SDL_DrawGPUPrimitives(context->render_pass, (Uint32) num_verts, (Uint32) num_verts/3, 0, 0);
+	SDL_DrawGPUPrimitives(context->render_pass, (Uint32) num_verts, 1, 0, 0);
 }
 
 void flashbang_close_pass(FlashbangContext* context)
