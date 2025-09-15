@@ -9,16 +9,20 @@ struct FlashbangContext
 	int width;
 	int height;
 	const float* stage_to_ndc;
+    
 	char* shape_data;
 	size_t shape_data_size;
 	char* transform_data;
 	size_t transform_data_size;
+	char* color_data;
+	size_t color_data_size;
 	
 	SDL_Window* window;
 	SDL_GPUDevice* device;
 	
 	SDL_GPUBuffer* vertex_buffer;
 	SDL_GPUBuffer* xform_buffer;
+	SDL_GPUBuffer* color_buffer;
 	
 	SDL_GPUGraphicsPipeline* graphics_pipeline;
 	

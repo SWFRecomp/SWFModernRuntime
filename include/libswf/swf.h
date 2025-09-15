@@ -31,6 +31,8 @@ typedef struct SWFAppContext
 	size_t shape_data_size;
 	char* transform_data;
 	size_t transform_data_size;
+	char* color_data;
+	size_t color_data_size;
 } SWFAppContext;
 
 extern char* stack;
