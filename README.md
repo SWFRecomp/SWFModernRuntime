@@ -32,9 +32,13 @@ to a read-only storage buffer to be accessed easily later. The renderer accepts
 the current shapes on the screen as arguments from the runtime and passes them
 to a very small and efficient vertex shader:
 
+<img width="801" height="639" alt="testswf" src="https://github.com/user-attachments/assets/82f36718-c718-46b1-a563-dfb11853ab7e" />
+
 This shader also handles the use of transforms through the single static
 storage buffer, and a per-shape uniform with a `uint` to specify a transform
 index:
+
+<img width="801" height="639" alt="testswftransform" src="https://github.com/user-attachments/assets/c90e46b0-3319-4d64-8deb-eb52762a5e17" />
 
 Handling all of the uploads once on initialization results in almost zero
 per-frame overhead once the SWF is running.
