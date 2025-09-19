@@ -20,7 +20,24 @@ They even went as far as to [donate the Flex 3 SDK to Apache](https://www.pcworl
 
 ## So what can this do right now?
 
-Currently the runtime handles a couple basic tags, and basic SWF version 4 actions.
+Currently the runtime handles basic SWF version 4 actions, and some primitive
+tags, including much of the `DefineShape` tag functionality.
+
+It handles rendering of solid fills through the GPU, with no CPU calculations
+or manual framebuffer writes.
+
+Once on initialization, the runtime uploads all vertex data outputted by the
+recompiler to the vertex buffer and transform data outputted by the recompiler
+to a read-only storage buffer to be accessed easily later. The renderer accepts
+the current shapes on the screen as arguments from the runtime and passes them
+to a very small and efficient vertex shader:
+
+This shader also handles the use of transforms through the single static
+storage buffer, and a per-shape uniform with a `uint` to specify a transform
+index:
+
+Handling all of the uploads once on initialization results in almost zero
+per-frame overhead once the SWF is running.
 
 # Special Thanks
 
