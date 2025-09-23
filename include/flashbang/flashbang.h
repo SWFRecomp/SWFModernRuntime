@@ -16,6 +16,8 @@ struct FlashbangContext
 	size_t transform_data_size;
 	char* color_data;
 	size_t color_data_size;
+	char* gradmat_data;
+	size_t gradmat_data_size;
 	
 	SDL_Window* window;
 	SDL_GPUDevice* device;
@@ -23,6 +25,8 @@ struct FlashbangContext
 	SDL_GPUBuffer* vertex_buffer;
 	SDL_GPUBuffer* xform_buffer;
 	SDL_GPUBuffer* color_buffer;
+	SDL_GPUBuffer* gradmat_buffer;
+	SDL_GPUBuffer* inv_gradmat_buffer;
 	
 	SDL_GPUGraphicsPipeline* graphics_pipeline;
 	
@@ -41,7 +45,7 @@ FlashbangContext* flashbang_new();
 void flashbang_init(FlashbangContext* context);
 int flashbang_poll();
 void flashbang_set_window_background(FlashbangContext* context, u8 r, u8 g, u8 b);
-int flashbang_open_pass(FlashbangContext* context);
+void flashbang_open_pass(FlashbangContext* context);
 void flashbang_draw_shape(FlashbangContext* context, size_t offset, size_t num_verts, u32 transform_id);
 void flashbang_close_pass(FlashbangContext* context);
 void flashbang_free(FlashbangContext* context);

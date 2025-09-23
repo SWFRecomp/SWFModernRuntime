@@ -15,10 +15,7 @@ void tagSetBackgroundColor(u8 red, u8 green, u8 blue)
 
 void tagShowFrame()
 {
-	if (!flashbang_open_pass(context))
-	{
-		return;
-	}
+	flashbang_open_pass(context);
 	
 	for (size_t i = 1; i <= max_depth; ++i)
 	{

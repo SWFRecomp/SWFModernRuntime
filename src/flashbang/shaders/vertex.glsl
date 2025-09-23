@@ -14,11 +14,13 @@ layout(std430, set = 0, binding = 1) readonly buffer GlobalColors
 	vec4 colors[];
 };
 
-layout(set = 1, binding = 0) uniform StageTransform {
+layout(set = 1, binding = 0) uniform StageTransform
+{
 	mat4 stage_to_ndc;
 };
 
-layout(set = 1, binding = 1) uniform CurrentTransformID {
+layout(set = 1, binding = 1) uniform CurrentTransformID
+{
 	uint transform_id;
 };
 
@@ -26,6 +28,7 @@ void main()
 {
 	mat4 transform = transforms[transform_id];
 	vec4 pos = vec4(a_position, 0.0f, 1.0f);
+	uint style_id = style.y;
 	gl_Position = stage_to_ndc*transform*pos;
-	v_color = colors[style.y];
+	v_color = colors[style_id];
 }

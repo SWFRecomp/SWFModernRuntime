@@ -61,6 +61,8 @@ void swfStart(SWFAppContext* app_context)
 	context->transform_data_size = app_context->transform_data_size;
 	context->color_data = app_context->color_data;
 	context->color_data_size = app_context->color_data_size;
+	context->gradmat_data = app_context->gradmat_data;
+	context->gradmat_data_size = app_context->gradmat_data_size;
 	
 	flashbang_init(context);
 	
