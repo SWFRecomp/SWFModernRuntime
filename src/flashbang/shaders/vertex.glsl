@@ -4,14 +4,19 @@ layout (location = 0) in vec2 a_position;
 layout (location = 1) in uvec2 style;
 layout (location = 0) out vec4 v_color;
 
-layout(std430, set = 0, binding = 0) readonly buffer GlobalTransforms
+layout(std430, set = 0, binding = 0) readonly buffer Transforms
 {
 	mat4 transforms[];
 };
 
-layout(std430, set = 0, binding = 1) readonly buffer GlobalColors
+layout(std430, set = 0, binding = 1) readonly buffer Colors
 {
 	vec4 colors[];
+};
+
+layout(std430, set = 0, binding = 2) readonly buffer InverseGradientMatrices
+{
+	mat4 inv_gradmats[];
 };
 
 layout(set = 1, binding = 0) uniform StageTransform

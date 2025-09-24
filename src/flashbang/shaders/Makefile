@@ -1,12 +1,9 @@
 .PHONY: all clean
 
-all: vertex.spv fragment.spv
+all: compute.spv vertex.spv fragment.spv
 
-vertex.spv: vertex.glsl
-	glslc -fshader-stage=vertex $< -o $@
-
-fragment.spv: fragment.glsl
-	glslc -fshader-stage=fragment $< -o $@
+%.spv: %.glsl
+	glslc -fshader-stage=$* $< -o $@
 
 clean:
 	rm *.spv

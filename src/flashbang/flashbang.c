@@ -249,13 +249,23 @@ void flashbang_init(FlashbangContext* context)
 	
 	SDL_UnmapGPUTransferBuffer(context->device, color_transfer_buffer);
 	
-	// acquire the command buffer
-	SDL_GPUCommandBuffer* command_buffer = SDL_AcquireGPUCommandBuffer(context->device);
+	// upload all DefineShape gradient matrix data once on init
+	buffer = (char*) SDL_MapGPUTransferBuffer(context->device, gradmat_transfer_buffer, 0);
 	
-	assert(command_buffer != NULL);
+	for (size_t i = 0; i < context->gradmat_data_size; ++i)
+	{
+		buffer[i] = context->gradmat_data[i];
+	}
+	
+	SDL_UnmapGPUTransferBuffer(context->device, gradmat_transfer_buffer);
+	
+	// acquire the command buffer
+	context->command_buffer = SDL_AcquireGPUCommandBuffer(context->device);
+	
+	assert(context->command_buffer != NULL);
 	
 	// start a copy pass
-	SDL_GPUCopyPass* copy_pass = SDL_BeginGPUCopyPass(command_buffer);
+	SDL_GPUCopyPass* copy_pass = SDL_BeginGPUCopyPass(context->command_buffer);
 	
 	// where is the data
 	SDL_GPUTransferBufferLocation location = {0};
@@ -295,15 +305,39 @@ void flashbang_init(FlashbangContext* context)
 	// upload colors
 	SDL_UploadToGPUBuffer(copy_pass, &location, &region, false);
 	
+	// where is the data
+	location.transfer_buffer = gradmat_transfer_buffer;
+	location.offset = 0;
+	
+	// where to upload the data
+	region.buffer = context->gradmat_buffer;
+	region.size = (Uint32) context->gradmat_data_size; // size of the data in bytes
+	region.offset = 0; // begin writing from the first byte
+	
+	// upload gradient matrices
+	SDL_UploadToGPUBuffer(copy_pass, &location, &region, false);
+	
 	// end the copy pass
 	SDL_EndGPUCopyPass(copy_pass);
 	
+	SDL_GPUStorageBufferReadWriteBinding compute_buffer_bindings[1] = {0};
+	
+	compute_buffer_bindings[0].buffer = context->inv_gradmat_buffer;
+	compute_buffer_bindings[0].cycle = false;
+	
+	SDL_GPUComputePass* compute_pass = SDL_BeginGPUComputePass(context->command_buffer, NULL, 0, compute_buffer_bindings, 1);
+	SDL_BindGPUComputePipeline(compute_pass, compute_pipeline);
+	SDL_BindGPUComputeStorageBuffers(compute_pass, 0, &context->gradmat_buffer, 1);
+	SDL_DispatchGPUCompute(compute_pass, 1, 0, 0);
+	SDL_EndGPUComputePass(compute_pass);
+	
 	// submit the command buffer
-	SDL_SubmitGPUCommandBuffer(command_buffer);
+	SDL_SubmitGPUCommandBuffer(context->command_buffer);
 	
 	SDL_ReleaseGPUTransferBuffer(context->device, vertex_transfer_buffer);
 	SDL_ReleaseGPUTransferBuffer(context->device, xform_transfer_buffer);
 	SDL_ReleaseGPUTransferBuffer(context->device, color_transfer_buffer);
+	SDL_ReleaseGPUTransferBuffer(context->device, gradmat_transfer_buffer);
 }
 
 int flashbang_poll()
@@ -367,6 +401,7 @@ void flashbang_open_pass(FlashbangContext* context)
 	SDL_PushGPUVertexUniformData(context->command_buffer, 0, context->stage_to_ndc, 16*sizeof(float));
 	SDL_BindGPUVertexStorageBuffers(context->render_pass, 0, &context->xform_buffer, 1);
 	SDL_BindGPUVertexStorageBuffers(context->render_pass, 1, &context->color_buffer, 1);
+	SDL_BindGPUVertexStorageBuffers(context->render_pass, 2, &context->inv_gradmat_buffer, 1);
 }
 
 void flashbang_draw_shape(FlashbangContext* context, size_t offset, size_t num_verts, u32 transform_id)
