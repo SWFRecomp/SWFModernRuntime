@@ -18,6 +18,8 @@ struct FlashbangContext
 	size_t color_data_size;
 	char* gradmat_data;
 	size_t gradmat_data_size;
+	char* gradient_data;
+	size_t gradient_data_size;
 	
 	SDL_Window* window;
 	SDL_GPUDevice* device;
@@ -27,6 +29,9 @@ struct FlashbangContext
 	SDL_GPUBuffer* color_buffer;
 	SDL_GPUBuffer* gradmat_buffer;
 	SDL_GPUBuffer* inv_gradmat_buffer;
+	
+	SDL_GPUTexture* gradient_tex_array;
+	SDL_GPUSampler* gradient_sampler;
 	
 	SDL_GPUGraphicsPipeline* graphics_pipeline;
 	

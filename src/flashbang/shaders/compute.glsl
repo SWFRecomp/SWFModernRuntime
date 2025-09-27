@@ -1,13 +1,15 @@
 #version 460
 
 layout(local_size_x = 64) in;
+layout(local_size_y = 1) in;
+layout(local_size_z = 1) in;
 
 layout(std430, set = 0, binding = 0) readonly buffer GradientMatrices
 {
 	mat4 gradmats[];
 };
 
-layout(std430, set = 1, binding = 0) writeonly buffer InverseGradientMatrices
+layout(std430, set = 1, binding = 0) buffer InverseGradientMatrices
 {
 	mat4 inv_gradmats[];
 };
