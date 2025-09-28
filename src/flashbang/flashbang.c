@@ -102,18 +102,21 @@ void flashbang_init(FlashbangContext* context)
 	size_t sizeof_gradient = 256*4*sizeof(float);
 	size_t num_gradient_textures = context->gradient_data_size/sizeof_gradient;
 	
-	SDL_GPUTextureCreateInfo texture_info = {0};
-	
-	texture_info.type = SDL_GPU_TEXTURETYPE_2D_ARRAY;
-	texture_info.format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM;
-	texture_info.usage = SDL_GPU_TEXTUREUSAGE_SAMPLER;
-	texture_info.width = 256;
-	texture_info.height = 1;
-	texture_info.layer_count_or_depth = (Uint32) num_gradient_textures;
-	texture_info.num_levels = 1;
-	texture_info.sample_count = SDL_GPU_SAMPLECOUNT_1;
-	
-	context->gradient_tex_array = SDL_CreateGPUTexture(context->device, &texture_info);
+	if (num_gradient_textures)
+	{
+		SDL_GPUTextureCreateInfo texture_info = {0};
+		
+		texture_info.type = SDL_GPU_TEXTURETYPE_2D_ARRAY;
+		texture_info.format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM;
+		texture_info.usage = SDL_GPU_TEXTUREUSAGE_SAMPLER;
+		texture_info.width = 256;
+		texture_info.height = 1;
+		texture_info.layer_count_or_depth = (Uint32) num_gradient_textures;
+		texture_info.num_levels = 1;
+		texture_info.sample_count = SDL_GPU_SAMPLECOUNT_1;
+		
+		context->gradient_tex_array = SDL_CreateGPUTexture(context->device, &texture_info);
+	}
 	
 	// load the compute shader code
 	size_t compute_code_size;
@@ -271,46 +274,49 @@ void flashbang_init(FlashbangContext* context)
 	
 	SDL_UnmapGPUTransferBuffer(context->device, color_transfer_buffer);
 	
-	// upload all DefineShape gradient matrix data once on init
-	buffer = (char*) SDL_MapGPUTransferBuffer(context->device, gradmat_transfer_buffer, 0);
-	
-	for (size_t i = 0; i < context->gradmat_data_size; ++i)
+	if (num_gradient_textures)
 	{
-		buffer[i] = context->gradmat_data[i];
+		// upload all DefineShape gradient matrix data once on init
+		buffer = (char*) SDL_MapGPUTransferBuffer(context->device, gradmat_transfer_buffer, 0);
+		
+		for (size_t i = 0; i < context->gradmat_data_size; ++i)
+		{
+			buffer[i] = context->gradmat_data[i];
+		}
+		
+		SDL_UnmapGPUTransferBuffer(context->device, gradmat_transfer_buffer);
+		
+		// upload all DefineShape gradient data once on init
+		buffer = (char*) SDL_MapGPUTransferBuffer(context->device, gradient_transfer_buffer, 0);
+		
+		for (size_t i = 0; i < context->gradient_data_size; ++i)
+		{
+			buffer[i] = context->gradient_data[i];
+		}
+		
+		SDL_UnmapGPUTransferBuffer(context->device, gradient_transfer_buffer);
+		
+		SDL_GPUSamplerCreateInfo sampler_create_info = {0};
+		
+		// TODO: use different sampler address modes for different gradient spreads
+		sampler_create_info.min_filter = SDL_GPU_FILTER_LINEAR;
+		sampler_create_info.mag_filter = SDL_GPU_FILTER_LINEAR;
+		sampler_create_info.mipmap_mode = SDL_GPU_SAMPLERMIPMAPMODE_LINEAR;
+		sampler_create_info.address_mode_u = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
+		sampler_create_info.address_mode_v = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
+		sampler_create_info.address_mode_w = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
+		sampler_create_info.mip_lod_bias = 0.0f;
+		sampler_create_info.max_anisotropy = 0.0f;
+		sampler_create_info.compare_op = SDL_GPU_COMPAREOP_NEVER;
+		sampler_create_info.min_lod = 0.0f;
+		sampler_create_info.max_lod = 0.0f;
+		sampler_create_info.enable_anisotropy = false;
+		sampler_create_info.enable_compare = false;
+		
+		context->gradient_sampler = SDL_CreateGPUSampler(context->device, &sampler_create_info);
+		
+		assert(context->gradient_sampler != NULL);
 	}
-	
-	SDL_UnmapGPUTransferBuffer(context->device, gradmat_transfer_buffer);
-	
-	// upload all DefineShape gradient data once on init
-	buffer = (char*) SDL_MapGPUTransferBuffer(context->device, gradient_transfer_buffer, 0);
-	
-	for (size_t i = 0; i < context->gradient_data_size; ++i)
-	{
-		buffer[i] = context->gradient_data[i];
-	}
-	
-	SDL_UnmapGPUTransferBuffer(context->device, gradient_transfer_buffer);
-	
-	SDL_GPUSamplerCreateInfo sampler_create_info = {0};
-	
-	// TODO: use different sampler address modes for different gradient spreads
-	sampler_create_info.min_filter = SDL_GPU_FILTER_LINEAR;
-	sampler_create_info.mag_filter = SDL_GPU_FILTER_LINEAR;
-	sampler_create_info.mipmap_mode = SDL_GPU_SAMPLERMIPMAPMODE_LINEAR;
-	sampler_create_info.address_mode_u = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
-	sampler_create_info.address_mode_v = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
-	sampler_create_info.address_mode_w = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
-	sampler_create_info.mip_lod_bias = 0.0f;
-	sampler_create_info.max_anisotropy = 0.0f;
-	sampler_create_info.compare_op = SDL_GPU_COMPAREOP_NEVER;
-	sampler_create_info.min_lod = 0.0f;
-	sampler_create_info.max_lod = 0.0f;
-	sampler_create_info.enable_anisotropy = false;
-	sampler_create_info.enable_compare = false;
-	
-	context->gradient_sampler = SDL_CreateGPUSampler(context->device, &sampler_create_info);
-	
-	assert(context->gradient_sampler != NULL);
 	
 	// acquire the command buffer
 	context->command_buffer = SDL_AcquireGPUCommandBuffer(context->device);
@@ -358,41 +364,44 @@ void flashbang_init(FlashbangContext* context)
 	// upload colors
 	SDL_UploadToGPUBuffer(copy_pass, &location, &region, false);
 	
-	// where is the data
-	location.transfer_buffer = gradmat_transfer_buffer;
-	location.offset = 0;
-	
-	// where to upload the data
-	region.buffer = context->gradmat_buffer;
-	region.size = (Uint32) context->gradmat_data_size; // size of the data in bytes
-	region.offset = 0; // begin writing from the first byte
-	
-	// upload gradient matrices
-	SDL_UploadToGPUBuffer(copy_pass, &location, &region, false);
-	
-	for (size_t i = 0; i < num_gradient_textures; ++i)
+	if (num_gradient_textures)
 	{
-		// where is the texture
-		SDL_GPUTextureTransferInfo texture_transfer_info = {0};
-		texture_transfer_info.transfer_buffer = gradient_transfer_buffer;
-		texture_transfer_info.offset = (Uint32) (i*sizeof_gradient);
-		texture_transfer_info.pixels_per_row = 0; // set as 0 to use the width
-		texture_transfer_info.rows_per_layer = 0; // set as 0 to use the height
+		// where is the data
+		location.transfer_buffer = gradmat_transfer_buffer;
+		location.offset = 0;
 		
 		// where to upload the data
-		SDL_GPUTextureRegion texture_region = {0};
-		texture_region.texture = context->gradient_tex_array;
-		texture_region.mip_level = 0;
-		texture_region.layer = (Uint32) i;
-		texture_region.x = 0;
-		texture_region.y = 0;
-		texture_region.z = 0;
-		texture_region.w = 256;
-		texture_region.h = 1;
-		texture_region.d = 1;
+		region.buffer = context->gradmat_buffer;
+		region.size = (Uint32) context->gradmat_data_size; // size of the data in bytes
+		region.offset = 0; // begin writing from the first byte
 		
-		// upload a gradient
-		SDL_UploadToGPUTexture(copy_pass, &texture_transfer_info, &texture_region, false);
+		// upload gradient matrices
+		SDL_UploadToGPUBuffer(copy_pass, &location, &region, false);
+		
+		for (size_t i = 0; i < num_gradient_textures; ++i)
+		{
+			// where is the texture
+			SDL_GPUTextureTransferInfo texture_transfer_info = {0};
+			texture_transfer_info.transfer_buffer = gradient_transfer_buffer;
+			texture_transfer_info.offset = (Uint32) (i*sizeof_gradient);
+			texture_transfer_info.pixels_per_row = 0; // set as 0 to use the width
+			texture_transfer_info.rows_per_layer = 0; // set as 0 to use the height
+			
+			// where to upload the data
+			SDL_GPUTextureRegion texture_region = {0};
+			texture_region.texture = context->gradient_tex_array;
+			texture_region.mip_level = 0;
+			texture_region.layer = (Uint32) i;
+			texture_region.x = 0;
+			texture_region.y = 0;
+			texture_region.z = 0;
+			texture_region.w = 256;
+			texture_region.h = 1;
+			texture_region.d = 1;
+			
+			// upload a gradient
+			SDL_UploadToGPUTexture(copy_pass, &texture_transfer_info, &texture_region, false);
+		}
 	}
 	
 	// end the copy pass
@@ -402,27 +411,31 @@ void flashbang_init(FlashbangContext* context)
 	SDL_WaitForGPUFences(context->device, true, &fence, 1);
 	SDL_ReleaseGPUFence(context->device, fence);
 	
-	context->command_buffer = SDL_AcquireGPUCommandBuffer(context->device);
-	
-	SDL_GPUStorageBufferReadWriteBinding compute_buffer_bindings[1] = {0};
-	
-	compute_buffer_bindings[0].buffer = context->inv_gradmat_buffer;
-	compute_buffer_bindings[0].cycle = false;
-	
-	SDL_GPUComputePass* compute_pass = SDL_BeginGPUComputePass(context->command_buffer, NULL, 0, compute_buffer_bindings, 1);
-	SDL_BindGPUComputePipeline(compute_pass, compute_pipeline);
-	SDL_BindGPUComputeStorageBuffers(compute_pass, 0, &context->gradmat_buffer, 1);
-	SDL_DispatchGPUCompute(compute_pass, (Uint32) (num_gradient_textures/64 + 1), 1, 1); // "we have ceil at home"
-	SDL_EndGPUComputePass(compute_pass);
-	
-	// submit the command buffer
-	SDL_SubmitGPUCommandBuffer(context->command_buffer);
+	if (num_gradient_textures)
+	{
+		context->command_buffer = SDL_AcquireGPUCommandBuffer(context->device);
+		
+		SDL_GPUStorageBufferReadWriteBinding compute_buffer_bindings[1] = {0};
+		
+		compute_buffer_bindings[0].buffer = context->inv_gradmat_buffer;
+		compute_buffer_bindings[0].cycle = false;
+		
+		SDL_GPUComputePass* compute_pass = SDL_BeginGPUComputePass(context->command_buffer, NULL, 0, compute_buffer_bindings, 1);
+		SDL_BindGPUComputePipeline(compute_pass, compute_pipeline);
+		SDL_BindGPUComputeStorageBuffers(compute_pass, 0, &context->gradmat_buffer, 1);
+		SDL_DispatchGPUCompute(compute_pass, (Uint32) (num_gradient_textures/64 + 1), 1, 1); // "we have ceil at home"
+		SDL_EndGPUComputePass(compute_pass);
+		
+		// submit the command buffer
+		SDL_SubmitGPUCommandBuffer(context->command_buffer);
+		
+		SDL_ReleaseGPUTransferBuffer(context->device, gradmat_transfer_buffer);
+		SDL_ReleaseGPUTransferBuffer(context->device, gradient_transfer_buffer);
+	}
 	
 	SDL_ReleaseGPUTransferBuffer(context->device, vertex_transfer_buffer);
 	SDL_ReleaseGPUTransferBuffer(context->device, xform_transfer_buffer);
 	SDL_ReleaseGPUTransferBuffer(context->device, color_transfer_buffer);
-	SDL_ReleaseGPUTransferBuffer(context->device, gradmat_transfer_buffer);
-	SDL_ReleaseGPUTransferBuffer(context->device, gradient_transfer_buffer);
 }
 
 int flashbang_poll()
@@ -488,12 +501,18 @@ void flashbang_open_pass(FlashbangContext* context)
 	SDL_BindGPUVertexStorageBuffers(context->render_pass, 1, &context->color_buffer, 1);
 	SDL_BindGPUVertexStorageBuffers(context->render_pass, 2, &context->inv_gradmat_buffer, 1);
 	
-	SDL_GPUTextureSamplerBinding gradient_sampler_binding = {0};
+	size_t sizeof_gradient = 256*4*sizeof(float);
+	size_t num_gradient_textures = context->gradient_data_size/sizeof_gradient;
 	
-	gradient_sampler_binding.texture = context->gradient_tex_array;
-	gradient_sampler_binding.sampler = context->gradient_sampler;
-	
-	SDL_BindGPUFragmentSamplers(context->render_pass, 0, &gradient_sampler_binding, 1);
+	if (num_gradient_textures)
+	{
+		SDL_GPUTextureSamplerBinding gradient_sampler_binding = {0};
+		
+		gradient_sampler_binding.texture = context->gradient_tex_array;
+		gradient_sampler_binding.sampler = context->gradient_sampler;
+		
+		SDL_BindGPUFragmentSamplers(context->render_pass, 0, &gradient_sampler_binding, 1);
+	}
 }
 
 void flashbang_draw_shape(FlashbangContext* context, size_t offset, size_t num_verts, u32 transform_id)

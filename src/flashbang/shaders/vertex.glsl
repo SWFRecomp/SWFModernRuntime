@@ -43,9 +43,6 @@ void main()
 	
 	vec2 v_uv = (inv_gradmats[v_style_id]*pos).xy;
 	
-	float start = v_uv.x + 16384.0f;
-	float t = start/32768.0f;
-	
 	v_args = (v_style_type == 0x00) ? colors[v_style_id] :
-									  vec4(t, 0.0f, 0.0f, 0.0f);
+									  vec4(v_uv, 0.0f, 0.0f);
 }
