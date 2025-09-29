@@ -44,7 +44,7 @@ void flashbang_init(FlashbangContext* context)
 	SDL_GPUTransferBuffer* vertex_transfer_buffer;
 	SDL_GPUTransferBuffer* xform_transfer_buffer;
 	SDL_GPUTransferBuffer* color_transfer_buffer;
-	SDL_GPUTransferBuffer* gradmat_transfer_buffer;
+	SDL_GPUTransferBuffer* uninv_mat_transfer_buffer;
 	SDL_GPUTransferBuffer* gradient_transfer_buffer;
 	
 	// create the vertex buffer
@@ -64,14 +64,14 @@ void flashbang_init(FlashbangContext* context)
 	context->color_buffer = SDL_CreateGPUBuffer(context->device, &bufferInfo);
 	
 	// create a storage buffer for gradient matrices
-	bufferInfo.size = (Uint32) context->gradmat_data_size;
+	bufferInfo.size = (Uint32) context->uninv_mat_data_size;
 	bufferInfo.usage = SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ;
-	context->gradmat_buffer = SDL_CreateGPUBuffer(context->device, &bufferInfo);
+	context->uninv_mat_buffer = SDL_CreateGPUBuffer(context->device, &bufferInfo);
 	
 	// create a storage buffer for inverse gradient matrices
-	bufferInfo.size = (Uint32) context->gradmat_data_size;
+	bufferInfo.size = (Uint32) context->uninv_mat_data_size;
 	bufferInfo.usage = SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ | SDL_GPU_BUFFERUSAGE_COMPUTE_STORAGE_WRITE;
-	context->inv_gradmat_buffer = SDL_CreateGPUBuffer(context->device, &bufferInfo);
+	context->inv_mat_buffer = SDL_CreateGPUBuffer(context->device, &bufferInfo);
 	
 	// create a transfer buffer to upload to the vertex buffer
 	SDL_GPUTransferBufferCreateInfo transfer_info = {0};
@@ -90,9 +90,9 @@ void flashbang_init(FlashbangContext* context)
 	color_transfer_buffer = SDL_CreateGPUTransferBuffer(context->device, &transfer_info);
 	
 	// create a transfer buffer to upload to the gradient matrix buffer
-	transfer_info.size = (Uint32) context->gradmat_data_size;
+	transfer_info.size = (Uint32) context->uninv_mat_data_size;
 	transfer_info.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
-	gradmat_transfer_buffer = SDL_CreateGPUTransferBuffer(context->device, &transfer_info);
+	uninv_mat_transfer_buffer = SDL_CreateGPUTransferBuffer(context->device, &transfer_info);
 	
 	// create a transfer buffer to upload to the gradient texture
 	transfer_info.size = (Uint32) context->gradient_data_size;
@@ -234,11 +234,36 @@ void flashbang_init(FlashbangContext* context)
 	color_target_descriptions[0].blend_state.dst_alpha_blendfactor = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
 	color_target_descriptions[0].format = SDL_GetGPUSwapchainTextureFormat(context->device, context->window);
 	
+	SDL_GPUSampleCount sample_count = SDL_GPU_SAMPLECOUNT_8;
+	
+	pipeline_info.multisample_state.sample_count = sample_count;
+	
 	pipeline_info.target_info.num_color_targets = 1;
 	pipeline_info.target_info.color_target_descriptions = color_target_descriptions;
 	
 	// create the pipeline
 	context->graphics_pipeline = SDL_CreateGPUGraphicsPipeline(context->device, &pipeline_info);
+	
+	SDL_GPUTextureCreateInfo color_info = {0};
+	color_info.type = SDL_GPU_TEXTURETYPE_2D;
+	color_info.format = SDL_GetGPUSwapchainTextureFormat(context->device, context->window);
+	color_info.usage = SDL_GPU_TEXTUREUSAGE_COLOR_TARGET | SDL_GPU_TEXTUREUSAGE_SAMPLER;
+	color_info.sample_count = sample_count;
+	color_info.width = context->width;
+	color_info.height = context->height;
+	color_info.layer_count_or_depth = 1;
+	color_info.num_levels = 1;
+	context->msaa_texture = SDL_CreateGPUTexture(context->device, &color_info);
+	
+	color_info.type = SDL_GPU_TEXTURETYPE_2D;
+	color_info.format = SDL_GetGPUSwapchainTextureFormat(context->device, context->window);
+	color_info.usage = SDL_GPU_TEXTUREUSAGE_COLOR_TARGET | SDL_GPU_TEXTUREUSAGE_SAMPLER;
+	color_info.sample_count = SDL_GPU_SAMPLECOUNT_1;
+	color_info.width = context->width;
+	color_info.height = context->height;
+	color_info.layer_count_or_depth = 1;
+	color_info.num_levels = 1;
+	context->resolve_texture = SDL_CreateGPUTexture(context->device, &color_info);
 	
 	// we don't need to store the shaders after creating the pipeline
 	SDL_ReleaseGPUShader(context->device, vertex_shader);
@@ -277,14 +302,14 @@ void flashbang_init(FlashbangContext* context)
 	if (num_gradient_textures)
 	{
 		// upload all DefineShape gradient matrix data once on init
-		buffer = (char*) SDL_MapGPUTransferBuffer(context->device, gradmat_transfer_buffer, 0);
+		buffer = (char*) SDL_MapGPUTransferBuffer(context->device, uninv_mat_transfer_buffer, 0);
 		
-		for (size_t i = 0; i < context->gradmat_data_size; ++i)
+		for (size_t i = 0; i < context->uninv_mat_data_size; ++i)
 		{
-			buffer[i] = context->gradmat_data[i];
+			buffer[i] = context->uninv_mat_data[i];
 		}
 		
-		SDL_UnmapGPUTransferBuffer(context->device, gradmat_transfer_buffer);
+		SDL_UnmapGPUTransferBuffer(context->device, uninv_mat_transfer_buffer);
 		
 		// upload all DefineShape gradient data once on init
 		buffer = (char*) SDL_MapGPUTransferBuffer(context->device, gradient_transfer_buffer, 0);
@@ -367,12 +392,12 @@ void flashbang_init(FlashbangContext* context)
 	if (num_gradient_textures)
 	{
 		// where is the data
-		location.transfer_buffer = gradmat_transfer_buffer;
+		location.transfer_buffer = uninv_mat_transfer_buffer;
 		location.offset = 0;
 		
 		// where to upload the data
-		region.buffer = context->gradmat_buffer;
-		region.size = (Uint32) context->gradmat_data_size; // size of the data in bytes
+		region.buffer = context->uninv_mat_buffer;
+		region.size = (Uint32) context->uninv_mat_data_size; // size of the data in bytes
 		region.offset = 0; // begin writing from the first byte
 		
 		// upload gradient matrices
@@ -417,19 +442,19 @@ void flashbang_init(FlashbangContext* context)
 		
 		SDL_GPUStorageBufferReadWriteBinding compute_buffer_bindings[1] = {0};
 		
-		compute_buffer_bindings[0].buffer = context->inv_gradmat_buffer;
+		compute_buffer_bindings[0].buffer = context->inv_mat_buffer;
 		compute_buffer_bindings[0].cycle = false;
 		
 		SDL_GPUComputePass* compute_pass = SDL_BeginGPUComputePass(context->command_buffer, NULL, 0, compute_buffer_bindings, 1);
 		SDL_BindGPUComputePipeline(compute_pass, compute_pipeline);
-		SDL_BindGPUComputeStorageBuffers(compute_pass, 0, &context->gradmat_buffer, 1);
+		SDL_BindGPUComputeStorageBuffers(compute_pass, 0, &context->uninv_mat_buffer, 1);
 		SDL_DispatchGPUCompute(compute_pass, (Uint32) (num_gradient_textures/64 + 1), 1, 1); // "we have ceil at home"
 		SDL_EndGPUComputePass(compute_pass);
 		
 		// submit the command buffer
 		SDL_SubmitGPUCommandBuffer(context->command_buffer);
 		
-		SDL_ReleaseGPUTransferBuffer(context->device, gradmat_transfer_buffer);
+		SDL_ReleaseGPUTransferBuffer(context->device, uninv_mat_transfer_buffer);
 		SDL_ReleaseGPUTransferBuffer(context->device, gradient_transfer_buffer);
 	}
 	
@@ -471,13 +496,6 @@ void flashbang_open_pass(FlashbangContext* context)
 	
 	assert(context->command_buffer != NULL);
 	
-	// get the swapchain texture
-	SDL_GPUTexture* swapchainTexture;
-	Uint32 width, height;
-	SDL_WaitAndAcquireGPUSwapchainTexture(context->command_buffer, context->window, &swapchainTexture, &width, &height);
-	
-	assert(swapchainTexture != NULL);
-	
 	// create the color target
 	SDL_GPUColorTargetInfo colorTargetInfo = {0};
 	colorTargetInfo.clear_color.r = context->red/255.0f;
@@ -485,8 +503,9 @@ void flashbang_open_pass(FlashbangContext* context)
 	colorTargetInfo.clear_color.b = context->blue/255.0f;
 	colorTargetInfo.clear_color.a = 255/255.0f;
 	colorTargetInfo.load_op = SDL_GPU_LOADOP_CLEAR;
-	colorTargetInfo.store_op = SDL_GPU_STOREOP_STORE;
-	colorTargetInfo.texture = swapchainTexture;
+	colorTargetInfo.store_op = SDL_GPU_STOREOP_RESOLVE;
+	colorTargetInfo.texture = context->msaa_texture;
+	colorTargetInfo.resolve_texture = context->resolve_texture;
 	
 	// begin a render pass
 	context->render_pass = SDL_BeginGPURenderPass(context->command_buffer, &colorTargetInfo, 1, NULL);
@@ -499,7 +518,7 @@ void flashbang_open_pass(FlashbangContext* context)
 	SDL_PushGPUVertexUniformData(context->command_buffer, 0, context->stage_to_ndc, 16*sizeof(float));
 	SDL_BindGPUVertexStorageBuffers(context->render_pass, 0, &context->xform_buffer, 1);
 	SDL_BindGPUVertexStorageBuffers(context->render_pass, 1, &context->color_buffer, 1);
-	SDL_BindGPUVertexStorageBuffers(context->render_pass, 2, &context->inv_gradmat_buffer, 1);
+	SDL_BindGPUVertexStorageBuffers(context->render_pass, 2, &context->inv_mat_buffer, 1);
 	
 	size_t sizeof_gradient = 256*4*sizeof(float);
 	size_t num_gradient_textures = context->gradient_data_size/sizeof_gradient;
@@ -534,6 +553,37 @@ void flashbang_close_pass(FlashbangContext* context)
 {
 	// end the render pass
 	SDL_EndGPURenderPass(context->render_pass);
+	
+	// get the swapchain texture
+	SDL_GPUTexture* swapchain_texture;
+	Uint32 width, height;
+	SDL_WaitAndAcquireGPUSwapchainTexture(context->command_buffer, context->window, &swapchain_texture, &width, &height);
+	
+	assert(swapchain_texture != NULL);
+	
+	SDL_GPUBlitInfo blit_info = {0};
+	blit_info.source.texture = context->resolve_texture;
+	blit_info.source.mip_level = 0;
+	blit_info.source.layer_or_depth_plane = 0;
+	blit_info.source.x = 0;
+	blit_info.source.y = 0;
+	blit_info.source.w = context->width;
+	blit_info.source.h = context->height;
+	
+	blit_info.destination.texture = swapchain_texture;
+	blit_info.destination.mip_level = 0;
+	blit_info.destination.layer_or_depth_plane = 0;
+	blit_info.destination.x = 0;
+	blit_info.destination.y = 0;
+	blit_info.destination.w = width;
+	blit_info.destination.h = height;
+	
+	blit_info.load_op = SDL_GPU_LOADOP_DONT_CARE;
+	blit_info.flip_mode = SDL_FLIP_NONE;
+	blit_info.filter = SDL_GPU_FILTER_LINEAR;
+	blit_info.cycle = false;
+	
+	SDL_BlitGPUTexture(context->command_buffer, &blit_info);
 	
 	// submit the command buffer
 	SDL_SubmitGPUCommandBuffer(context->command_buffer);

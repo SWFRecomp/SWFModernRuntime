@@ -61,8 +61,8 @@ void swfStart(SWFAppContext* app_context)
 	context->transform_data_size = app_context->transform_data_size;
 	context->color_data = app_context->color_data;
 	context->color_data_size = app_context->color_data_size;
-	context->gradmat_data = app_context->gradmat_data;
-	context->gradmat_data_size = app_context->gradmat_data_size;
+	context->uninv_mat_data = app_context->uninv_mat_data;
+	context->uninv_mat_data_size = app_context->uninv_mat_data_size;
 	context->gradient_data = app_context->gradient_data;
 	context->gradient_data_size = app_context->gradient_data_size;
 	

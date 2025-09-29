@@ -16,8 +16,8 @@ struct FlashbangContext
 	size_t transform_data_size;
 	char* color_data;
 	size_t color_data_size;
-	char* gradmat_data;
-	size_t gradmat_data_size;
+	char* uninv_mat_data;
+	size_t uninv_mat_data_size;
 	char* gradient_data;
 	size_t gradient_data_size;
 	
@@ -27,11 +27,14 @@ struct FlashbangContext
 	SDL_GPUBuffer* vertex_buffer;
 	SDL_GPUBuffer* xform_buffer;
 	SDL_GPUBuffer* color_buffer;
-	SDL_GPUBuffer* gradmat_buffer;
-	SDL_GPUBuffer* inv_gradmat_buffer;
+	SDL_GPUBuffer* uninv_mat_buffer;
+	SDL_GPUBuffer* inv_mat_buffer;
 	
 	SDL_GPUTexture* gradient_tex_array;
 	SDL_GPUSampler* gradient_sampler;
+	
+	SDL_GPUTexture* msaa_texture;
+	SDL_GPUTexture* resolve_texture;
 	
 	SDL_GPUGraphicsPipeline* graphics_pipeline;
 	
