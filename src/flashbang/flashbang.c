@@ -244,26 +244,26 @@ void flashbang_init(FlashbangContext* context)
 	// create the pipeline
 	context->graphics_pipeline = SDL_CreateGPUGraphicsPipeline(context->device, &pipeline_info);
 	
-	SDL_GPUTextureCreateInfo color_info = {0};
-	color_info.type = SDL_GPU_TEXTURETYPE_2D;
-	color_info.format = SDL_GetGPUSwapchainTextureFormat(context->device, context->window);
-	color_info.usage = SDL_GPU_TEXTUREUSAGE_COLOR_TARGET | SDL_GPU_TEXTUREUSAGE_SAMPLER;
-	color_info.sample_count = sample_count;
-	color_info.width = context->width;
-	color_info.height = context->height;
-	color_info.layer_count_or_depth = 1;
-	color_info.num_levels = 1;
-	context->msaa_texture = SDL_CreateGPUTexture(context->device, &color_info);
+	SDL_GPUTextureCreateInfo texture_info = {0};
+	texture_info.type = SDL_GPU_TEXTURETYPE_2D;
+	texture_info.format = SDL_GetGPUSwapchainTextureFormat(context->device, context->window);
+	texture_info.usage = SDL_GPU_TEXTUREUSAGE_COLOR_TARGET | SDL_GPU_TEXTUREUSAGE_SAMPLER;
+	texture_info.sample_count = sample_count;
+	texture_info.width = context->width;
+	texture_info.height = context->height;
+	texture_info.layer_count_or_depth = 1;
+	texture_info.num_levels = 1;
+	context->msaa_texture = SDL_CreateGPUTexture(context->device, &texture_info);
 	
-	color_info.type = SDL_GPU_TEXTURETYPE_2D;
-	color_info.format = SDL_GetGPUSwapchainTextureFormat(context->device, context->window);
-	color_info.usage = SDL_GPU_TEXTUREUSAGE_COLOR_TARGET | SDL_GPU_TEXTUREUSAGE_SAMPLER;
-	color_info.sample_count = SDL_GPU_SAMPLECOUNT_1;
-	color_info.width = context->width;
-	color_info.height = context->height;
-	color_info.layer_count_or_depth = 1;
-	color_info.num_levels = 1;
-	context->resolve_texture = SDL_CreateGPUTexture(context->device, &color_info);
+	texture_info.type = SDL_GPU_TEXTURETYPE_2D;
+	texture_info.format = SDL_GetGPUSwapchainTextureFormat(context->device, context->window);
+	texture_info.usage = SDL_GPU_TEXTUREUSAGE_COLOR_TARGET | SDL_GPU_TEXTUREUSAGE_SAMPLER;
+	texture_info.sample_count = SDL_GPU_SAMPLECOUNT_1;
+	texture_info.width = context->width;
+	texture_info.height = context->height;
+	texture_info.layer_count_or_depth = 1;
+	texture_info.num_levels = 1;
+	context->resolve_texture = SDL_CreateGPUTexture(context->device, &texture_info);
 	
 	// we don't need to store the shaders after creating the pipeline
 	SDL_ReleaseGPUShader(context->device, vertex_shader);
