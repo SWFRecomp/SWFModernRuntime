@@ -52,7 +52,12 @@ per-frame overhead once the SWF is running.
 
 All the people that wildly inspire me. 😋
 
-My very dear friend BlazinWarior.
+My very dear friend Stave.
+
+From RecompRando:
+- ThatHypedPerson
+- PixelShake92
+- Muervo_
 
 From N64Recomp:
 
@@ -66,8 +71,6 @@ From N64Recomp:
 
 From Archipelago:
 
-- TheRealPixelShake
-- Muervo_
 - seto10987
 - Rogue
 - ArsonAssassin
