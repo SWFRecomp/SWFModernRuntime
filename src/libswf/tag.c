@@ -59,3 +59,13 @@ void tagPlaceObject2(size_t depth, size_t char_id, u32 transform_id)
 		max_depth = depth;
 	}
 }
+
+void defineBitmap(size_t offset, size_t size, u32 width, u32 height)
+{
+	flashbang_upload_bitmap(context, offset, size, width, height);
+}
+
+void finalizeBitmaps()
+{
+	flashbang_finalize_bitmaps(context);
+}

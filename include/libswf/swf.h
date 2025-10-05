@@ -24,9 +24,16 @@ extern frame_func frame_funcs[];
 typedef struct SWFAppContext
 {
 	frame_func* frame_funcs;
+	
 	int width;
 	int height;
+	
 	const float* stage_to_ndc;
+	
+	size_t bitmap_count;
+	size_t bitmap_highest_w;
+	size_t bitmap_highest_h;
+	
 	char* shape_data;
 	size_t shape_data_size;
 	char* transform_data;
@@ -37,6 +44,8 @@ typedef struct SWFAppContext
 	size_t uninv_mat_data_size;
 	char* gradient_data;
 	size_t gradient_data_size;
+	char* bitmap_data;
+	size_t bitmap_data_size;
 } SWFAppContext;
 
 extern char* stack;

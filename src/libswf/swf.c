@@ -22,6 +22,8 @@ size_t max_depth = 0;
 
 FlashbangContext* context;
 
+void tagInit();
+
 void tagMain(frame_func* frame_funcs)
 {
 	while (!quit_swf)
@@ -53,7 +55,12 @@ void swfStart(SWFAppContext* app_context)
 	
 	context->width = app_context->width;
 	context->height = app_context->height;
+	
 	context->stage_to_ndc = app_context->stage_to_ndc;
+	
+	context->bitmap_count = app_context->bitmap_count;
+	context->bitmap_highest_w = app_context->bitmap_highest_w;
+	context->bitmap_highest_h = app_context->bitmap_highest_h;
 	
 	context->shape_data = app_context->shape_data;
 	context->shape_data_size = app_context->shape_data_size;
@@ -65,6 +72,8 @@ void swfStart(SWFAppContext* app_context)
 	context->uninv_mat_data_size = app_context->uninv_mat_data_size;
 	context->gradient_data = app_context->gradient_data;
 	context->gradient_data_size = app_context->gradient_data_size;
+	context->bitmap_data = app_context->bitmap_data;
+	context->bitmap_data_size = app_context->bitmap_data_size;
 	
 	flashbang_init(context);
 	
@@ -80,6 +89,8 @@ void swfStart(SWFAppContext* app_context)
 	
 	initTime();
 	initMap();
+	
+	tagInit();
 	
 	tagMain(frame_funcs);
 	
