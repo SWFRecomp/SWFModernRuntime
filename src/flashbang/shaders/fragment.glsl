@@ -17,6 +17,6 @@ void main()
 	FragColor = (v_style_type == 0x00) ? v_args :
 				(v_style_type == 0x10) ? texture(gradient_tex, vec3(LINEAR_T(v_args), 0.5f, float(v_style_id))) :
 				(v_style_type == 0x12) ? texture(gradient_tex, vec3(RADIAL_T(v_args), 0.5f, float(v_style_id))) :
-				(v_style_type == 0x41) ? texture(bitmap_tex, vec3(BITMAP_UV(v_args), 0.0f)) :
+				(v_style_type == 0x41) ? texture(bitmap_tex, vec3(BITMAP_UV(v_args), float(v_style_id))) :
 										 vec4(0.0f);
 }
