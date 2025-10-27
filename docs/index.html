@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SWFModernRuntime-WASM - Flash to WebAssembly</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+            color: #e0e0e0;
+            line-height: 1.6;
+        }
+        header {
+            background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+            padding: 2rem;
+            border-bottom: 3px solid #4CAF50;
+            text-align: center;
+        }
+        h1 {
+            color: #4CAF50;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .tagline {
+            color: #888;
+            font-size: 1.2rem;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        .hero {
+            background: #2a2a2a;
+            padding: 3rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            border-left: 5px solid #4CAF50;
+        }
+        .hero h2 {
+            color: #4CAF50;
+            margin-bottom: 1rem;
+        }
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+        .status-card {
+            background: #2a2a2a;
+            padding: 1.5rem;
+            border-radius: 8px;
+            border-left: 4px solid #4CAF50;
+        }
+        .status-card h3 {
+            color: #4CAF50;
+            margin-bottom: 0.5rem;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            margin-top: 0.5rem;
+        }
+        .status-working {
+            background: #4CAF50;
+            color: #fff;
+        }
+        .status-progress {
+            background: #ff9800;
+            color: #000;
+        }
+        .status-planned {
+            background: #666;
+            color: #fff;
+        }
+        .examples {
+            margin: 3rem 0;
+        }
+        .example-card {
+            background: #2a2a2a;
+            padding: 2rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            border: 1px solid #333;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        .example-card:hover {
+            transform: translateY(-2px);
+            border-color: #4CAF50;
+        }
+        .example-card h3 {
+            color: #4CAF50;
+            margin-bottom: 1rem;
+        }
+        .btn {
+            display: inline-block;
+            background: #4CAF50;
+            color: white;
+            padding: 0.8rem 1.5rem;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-right: 1rem;
+            margin-top: 1rem;
+            transition: background 0.3s;
+        }
+        .btn:hover {
+            background: #45a049;
+        }
+        .btn-secondary {
+            background: #666;
+        }
+        .btn-secondary:hover {
+            background: #555;
+        }
+        footer {
+            text-align: center;
+            padding: 2rem;
+            background: #1a1a1a;
+            border-top: 1px solid #333;
+            margin-top: 3rem;
+        }
+        footer a {
+            color: #4CAF50;
+            text-decoration: none;
+        }
+        footer a:hover {
+            text-decoration: underline;
+        }
+        code {
+            background: #1a1a1a;
+            padding: 0.2rem 0.5rem;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>SWFModernRuntime-WASM</h1>
+        <p class="tagline">Flash SWF files running natively in WebAssembly</p>
+    </header>
+
+    <div class="container">
+        <section class="hero">
+            <h2>What is this?</h2>
+            <p>
+                This project brings <strong>Adobe Flash SWF files</strong> to modern web browsers
+                through <strong>static recompilation to WebAssembly</strong>.
+            </p>
+            <p style="margin-top: 1rem;">
+                No Flash Player. No emulation. Just pure native code compiled from SWF bytecode.
+            </p>
+            <a href="https://github.com/PeerInfinity/SWFModernRuntime-WASM" class="btn">View on GitHub</a>
+            <a href="examples/trace-swf-test/index.html" class="btn">Try Live Demo</a>
+        </section>
+
+        <h2 style="color: #4CAF50; margin: 2rem 0 1rem;">Current Status</h2>
+        <div class="status-grid">
+            <div class="status-card">
+                <h3>ActionScript Execution</h3>
+                <p>Complete ActionScript 1/2 VM working in WASM</p>
+                <span class="status-badge status-working">Working</span>
+            </div>
+            <div class="status-card">
+                <h3>Frame Management</h3>
+                <p>Frame-by-frame SWF playback functional</p>
+                <span class="status-badge status-working">Working</span>
+            </div>
+            <div class="status-card">
+                <h3>Canvas2D Rendering</h3>
+                <p>Basic shape rendering backend</p>
+                <span class="status-badge status-progress">In Progress</span>
+            </div>
+            <div class="status-card">
+                <h3>WebGL2/WebGPU</h3>
+                <p>GPU-accelerated rendering</p>
+                <span class="status-badge status-planned">Planned</span>
+            </div>
+        </div>
+
+        <section class="examples">
+            <h2 style="color: #4CAF50; margin-bottom: 1.5rem;">Working Examples</h2>
+
+            <div class="example-card">
+                <h3>trace_swf_4 - ActionScript Test</h3>
+                <p>
+                    A simple Flash SWF that demonstrates ActionScript execution,
+                    string operations, and console output running in pure WebAssembly.
+                </p>
+                <p style="margin-top: 0.5rem; color: #888;">
+                    <strong>Features:</strong> ActionScript VM, String operations, Frame execution
+                </p>
+                <p style="margin-top: 0.5rem; color: #888;">
+                    <strong>Size:</strong> ~20KB (WASM + JS)
+                </p>
+                <a href="examples/trace-swf-test/index.html" class="btn">Run Example</a>
+                <a href="https://github.com/PeerInfinity/SWFModernRuntime-WASM/tree/wasm-support/wasm/examples/trace-swf-test" class="btn btn-secondary">View Code</a>
+            </div>
+
+            <div class="example-card" style="opacity: 0.6;">
+                <h3>mess - Graphics Test</h3>
+                <p>
+                    Complex shape rendering test demonstrating Canvas2D backend.
+                </p>
+                <p style="margin-top: 0.5rem; color: #888;">
+                    <strong>Status:</strong> Coming soon...
+                </p>
+                <span class="status-badge status-progress">In Progress</span>
+            </div>
+        </section>
+
+        <section style="margin-top: 3rem; background: #2a2a2a; padding: 2rem; border-radius: 8px;">
+            <h2 style="color: #4CAF50; margin-bottom: 1rem;">How It Works</h2>
+            <ol style="margin-left: 2rem; line-height: 2;">
+                <li><strong>SWFRecomp</strong> parses SWF bytecode and generates C code</li>
+                <li><strong>Emscripten</strong> compiles the C code to WebAssembly</li>
+                <li><strong>This runtime</strong> executes ActionScript and renders graphics in browser</li>
+                <li>Result: Native performance with no Flash Player needed!</li>
+            </ol>
+        </section>
+
+        <section style="margin-top: 3rem; background: #2a2a2a; padding: 2rem; border-radius: 8px;">
+            <h2 style="color: #4CAF50; margin-bottom: 1rem;">Credits</h2>
+            <p><strong>Upstream:</strong> <a href="https://github.com/SWFRecomp/SWFModernRuntime">SWFModernRuntime</a> & <a href="https://github.com/SWFRecomp/SWFRecomp">SWFRecomp</a> by LittleCube</p>
+            <p><strong>Inspiration:</strong> <a href="https://github.com/N64Recomp/N64Recomp">N64Recomp</a> by Wiseguy</p>
+        </section>
+    </div>
+
+    <footer>
+        <p>
+            <a href="https://github.com/PeerInfinity/SWFModernRuntime-WASM">GitHub Repository</a> |
+            <a href="https://github.com/PeerInfinity/SWFModernRuntime-WASM/blob/wasm-support/WASM_PROJECT_PLAN.md">Project Plan</a> |
+            <a href="https://github.com/SWFRecomp/SWFModernRuntime">Upstream Project</a>
+        </p>
+        <p style="margin-top: 1rem; color: #666;">
+            This is a community fork. Flash and ActionScript are trademarks of Adobe.
+        </p>
+    </footer>
+</body>
+</html>
