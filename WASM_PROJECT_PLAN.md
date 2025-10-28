@@ -102,7 +102,7 @@
 **Recommended Approach:** Fork with clear upstream tracking
 
 ```
-Your Fork: SWFRecomp-WASM
+Your Fork: SWFRecomp
 ├── Upstream: SWFRecomp (LittleCube)
 └── Upstream: SWFModernRuntime (LittleCube)
 ```
@@ -111,8 +111,8 @@ Your Fork: SWFRecomp-WASM
 
 ```bash
 # Initial setup
-git clone https://github.com/SWFRecomp/SWFRecomp.git SWFRecomp-WASM
-cd SWFRecomp-WASM
+git clone https://github.com/SWFRecomp/SWFRecomp.git SWFRecomp
+cd SWFRecomp
 git remote rename origin upstream
 git remote add origin <your-fork-url>
 
@@ -219,7 +219,7 @@ Build Target Selection
 - Basic runtime infrastructure (runtime.c)
 - Build scripts and HTML templates
 - GitHub Pages deployment
-- Live demo at https://peerinfinity.github.io/SWFModernRuntime-WASM/
+- Live demo at https://peerinfinity.github.io/SWFModernRuntime/
 
 **⏳ In Progress:**
 - Canvas2D rendering backend implementation
@@ -940,7 +940,7 @@ jobs:
 ### Directory Structure
 
 ```
-SWFRecomp-WASM/
+SWFRecomp/
 ├── SWFRecomp/                  # Unchanged - recompiler tool (native only)
 │   ├── src/
 │   ├── CMakeLists.txt
@@ -1842,7 +1842,7 @@ This fork tracks upstream regularly. All native functionality remains unchanged.
 - String operations, variables, stack management
 - Frame-by-frame execution
 - Console output via printf/trace
-- Example: `trace_swf_4` running at https://peerinfinity.github.io/SWFModernRuntime-WASM/
+- Example: `trace_swf_4` running at https://peerinfinity.github.io/SWFModernRuntime/
 
 **✅ Build Infrastructure**
 - Emscripten compilation working

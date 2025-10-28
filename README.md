@@ -1,4 +1,4 @@
-# SWFModernRuntime-WASM
+# SWFModernRuntime
 
 WebAssembly port of [SWFModernRuntime](https://github.com/SWFRecomp/SWFModernRuntime) by LittleCube.
 
@@ -6,7 +6,7 @@ WebAssembly port of [SWFModernRuntime](https://github.com/SWFRecomp/SWFModernRun
 
 This fork adds **WebAssembly compilation support** to SWFModernRuntime, enabling Flash SWF files to run natively in web browsers without Flash Player or emulation.
 
-**Live Demos:** https://peerinfinity.github.io/SWFModernRuntime-WASM/
+**Live Demos:** https://peerinfinity.github.io/SWFModernRuntime/
 
 ## Quick Demo
 
@@ -15,7 +15,7 @@ The `trace_swf_4` example is already working! It demonstrates:
 - ActionScript execution in browser
 - String operations and console output
 
-[Try it live!](https://peerinfinity.github.io/SWFModernRuntime-WASM/examples/trace-swf-test/)
+[Try it live!](https://peerinfinity.github.io/SWFModernRuntime/examples/trace-swf-test/)
 
 ## Project Goals
 
@@ -37,7 +37,7 @@ The generated C code is **100% portable** - it compiles to both native and WASM 
 ## Repository Structure
 
 ```
-SWFModernRuntime-WASM/
+SWFModernRuntime/
 ├── src/                    # Runtime source (mostly from upstream)
 │   ├── libswf/            # Core SWF execution (unchanged)
 │   ├── actionmodern/      # ActionScript VM (unchanged)
@@ -113,11 +113,6 @@ Same as upstream SWFModernRuntime (check upstream LICENSE file).
 - **Upstream:** [SWFModernRuntime](https://github.com/SWFRecomp/SWFModernRuntime) by LittleCube
 - **Upstream:** [SWFRecomp](https://github.com/SWFRecomp/SWFRecomp) by LittleCube
 - **Inspiration:** [N64Recomp](https://github.com/N64Recomp/N64Recomp) by Wiseguy
-
-## Contact
-
-- **Issues:** https://github.com/PeerInfinity/SWFModernRuntime-WASM/issues
-- **Upstream Issues:** https://github.com/SWFRecomp/SWFModernRuntime/issues
 
 ---
 

@@ -24,7 +24,7 @@ wasm/
 
 ## Live Demos
 
-Visit the [GitHub Pages](https://peerinfinity.github.io/SWFModernRuntime-WASM/) to see working demos!
+Visit the [GitHub Pages](https://peerinfinity.github.io/SWFModernRuntime/) to see working demos!
 
 ## Building Examples
 
@@ -55,7 +55,7 @@ python3 -m http.server 8000
 - **Status:** Working
 - **Features:** ActionScript execution, string operations, console output
 - **Size:** ~20KB (WASM + JS)
-- **Demo:** [Live Demo](https://peerinfinity.github.io/SWFModernRuntime-WASM/examples/trace-swf-test/)
+- **Demo:** [Live Demo](https://peerinfinity.github.io/SWFModernRuntime/examples/trace-swf-test/)
 
 ## Roadmap
 

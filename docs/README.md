@@ -1,6 +1,6 @@
 # GitHub Pages Content
 
-This directory contains the GitHub Pages website for SWFModernRuntime-WASM.
+This directory contains the GitHub Pages website for SWFModernRuntime.
 
 ## Structure
 
@@ -18,7 +18,7 @@ docs/
 
 ## Deployment
 
-The site will be available at: https://peerinfinity.github.io/SWFModernRuntime-WASM/
+The site will be available at: https://peerinfinity.github.io/SWFModernRuntime/
 
 ## Adding New Examples
 
