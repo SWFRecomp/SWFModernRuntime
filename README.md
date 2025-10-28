@@ -8,14 +8,26 @@ This fork adds **WebAssembly compilation support** to SWFModernRuntime, enabling
 
 **Live Demos:** https://peerinfinity.github.io/SWFModernRuntime/
 
+## Documentation
+
+### This Repository
+
+- **[WASM_PROJECT_PLAN.md](WASM_PROJECT_PLAN.md)** - Complete WASM development plan and roadmap
+- **[TRACE_SWF_4_WASM_GENERATION_GUIDE.md](TRACE_SWF_4_WASM_GENERATION_GUIDE.md)** - Detailed guide to SWF → WASM compilation
+
+### Upstream
+
+- **[Upstream README](https://github.com/SWFRecomp/SWFModernRuntime/blob/master/README.md)** - Original SWFModernRuntime documentation
+
 ## Quick Demo
 
-The `trace_swf_4` example is already working! It demonstrates:
-- SWF bytecode to C code to WebAssembly compilation
+The `trace_swf_4` example is working! It demonstrates:
+- SWF bytecode → C code → WebAssembly compilation pipeline
 - ActionScript execution in browser
 - String operations and console output
+- Native performance without Flash Player
 
-[Try it live!](https://peerinfinity.github.io/SWFModernRuntime/examples/trace-swf-test/)
+**[Try it live!](https://peerinfinity.github.io/SWFModernRuntime/examples/trace-swf-test/)**
 
 ## Project Goals
 
@@ -65,6 +77,10 @@ source ./emsdk_env.sh
 ```
 
 ### Build an Example
+
+**Note:** The improved build system is now in [SWFRecomp](https://github.com/PeerInfinity/SWFRecomp/tree/wasm-support). See that repository for automated native and WASM builds with complete runtime separation.
+
+For this repository's example:
 
 ```bash
 cd wasm/examples/trace-swf-test
