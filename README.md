@@ -10,10 +10,12 @@ This fork adds **WebAssembly compilation support** to SWFModernRuntime, enabling
 
 ## Documentation
 
-### This Repository
+### SWFRecomp
 
-- **[WASM_PROJECT_PLAN.md](WASM_PROJECT_PLAN.md)** - Complete WASM development plan and roadmap
-- **[TRACE_SWF_4_WASM_GENERATION_GUIDE.md](TRACE_SWF_4_WASM_GENERATION_GUIDE.md)** - Detailed guide to SWF → WASM compilation
+- **[README.md](https://github.com/PeerInfinity/SWFRecomp/tree/wasm-support/README.md)** - Main README file
+- **[TRACE_SWF_4_WASM_GENERATION_GUIDE.md](https://github.com/PeerInfinity/SWFRecomp/tree/wasm-support/TRACE_SWF_4_WASM_GENERATION_GUIDE.md)** - Detailed guide to SWF → WASM compilation
+- **[WASM_PROJECT_PLAN.md](https://github.com/PeerInfinity/SWFRecomp/tree/wasm-support/WASM_PROJECT_PLAN.md)** - Complete WASM development plan and roadmap
+- **[PROJECT_STATUS.md](https://github.com/PeerInfinity/SWFRecomp/tree/wasm-support/PROJECT_STATUS.md)** - Current project status and progress
 
 ### Upstream
 
@@ -103,7 +105,7 @@ python3 -m http.server 8000
 
 ## Roadmap
 
-See [WASM_PROJECT_PLAN.md](WASM_PROJECT_PLAN.md) for complete details.
+See [WASM_PROJECT_PLAN.md](https://github.com/PeerInfinity/SWFRecomp/tree/wasm-support/WASM_PROJECT_PLAN.md) for complete details.
 
 - **Phase 1 (Current):** Canvas2D backend - Proof of concept
 - **Phase 2 (Optional):** WebGL2 backend - GPU acceleration
