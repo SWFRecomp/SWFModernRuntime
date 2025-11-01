@@ -8,10 +8,24 @@
 #define VAL(type, x) *((type*) x)
 
 hashmap* var_map = NULL;
+ActionVar** var_array = NULL;
+size_t var_array_size = 0;
 
 void initMap()
 {
 	var_map = hashmap_create();
+}
+
+void initVarArray(size_t max_string_id)
+{
+	var_array_size = max_string_id;
+	var_array = (ActionVar**) calloc(var_array_size, sizeof(ActionVar*));
+
+	if (!var_array)
+	{
+		EXC("Failed to allocate variable array\n");
+		exit(1);
+	}
 }
 
 static int free_variable_callback(const void *key, size_t ksize, uintptr_t value, void *usr)
@@ -36,6 +50,57 @@ void freeMap()
 		hashmap_free(var_map);
 		var_map = NULL;
 	}
+
+	// Free array-based variables
+	if (var_array)
+	{
+		for (size_t i = 0; i < var_array_size; i++)
+		{
+			if (var_array[i])
+			{
+				// Free heap-allocated strings
+				if (var_array[i]->type == ACTION_STACK_VALUE_STRING &&
+				    var_array[i]->data.string_data.owns_memory)
+				{
+					free(var_array[i]->data.string_data.heap_ptr);
+				}
+				free(var_array[i]);
+			}
+		}
+		free(var_array);
+		var_array = NULL;
+		var_array_size = 0;
+	}
+}
+
+ActionVar* getVariableById(u32 string_id)
+{
+	if (string_id == 0 || string_id >= var_array_size)
+	{
+		// Invalid ID or dynamic string (ID = 0)
+		return NULL;
+	}
+
+	// Lazy allocation
+	if (!var_array[string_id])
+	{
+		ActionVar* var = (ActionVar*) malloc(sizeof(ActionVar));
+		if (!var)
+		{
+			EXC("Failed to allocate variable\n");
+			return NULL;
+		}
+
+		// Initialize with unset type
+		var->type = ACTION_STACK_VALUE_STRING;
+		var->str_size = 0;
+		var->data.string_data.heap_ptr = NULL;
+		var->data.string_data.owns_memory = false;
+
+		var_array[string_id] = var;
+	}
+
+	return var_array[string_id];
 }
 
 ActionVar* getVariable(char* var_name, size_t key_size)

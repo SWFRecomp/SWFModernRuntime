@@ -19,6 +19,13 @@ typedef struct
 void initMap();
 void freeMap();
 
+// Array-based variable storage for constant string IDs
+extern ActionVar** var_array;
+extern size_t var_array_size;
+
+void initVarArray(size_t max_string_id);
+ActionVar* getVariableById(u32 string_id);
+
 ActionVar* getVariable(char* var_name, size_t key_size);
 char* materializeStringList(char* stack, u32 sp);
 void setVariableWithValue(ActionVar* var, char* stack, u32 sp);

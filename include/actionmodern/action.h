@@ -11,14 +11,18 @@
 	VAL(u32, &stack[*sp + 4]) = oldSP; \
 	VAL(u64, &stack[*sp + 16]) = v; \
 
-#define PUSH_STR(v, n) \
+// Push string with ID (for constant strings from compiler)
+#define PUSH_STR_ID(v, n, id) \
 	oldSP = *sp; \
 	*sp -= 4 + 4 + 8 + 8; \
 	*sp &= ~7; \
 	stack[*sp] = ACTION_STACK_VALUE_STRING; \
-	VAL(u32, &stack[*sp + 4]) = oldSP; \
+	VAL(u32, &stack[*sp + 4]) = id; \
 	VAL(u32, &stack[*sp + 8]) = n; \
-	VAL(char*, &stack[*sp + 16]) = v; \
+	VAL(char*, &stack[*sp + 16]) = v;
+
+// Push string without ID (for dynamic strings, ID = 0)
+#define PUSH_STR(v, n) PUSH_STR_ID(v, n, 0)
 
 #define PUSH_STR_LIST(n, size) \
 	oldSP = VAL(u32, &stack[SP_SECOND_TOP + 4]); \
@@ -72,6 +76,9 @@ void actionNot(char* stack, u32* sp);
 void actionStringEquals(char* stack, u32* sp, char* a_str, char* b_str);
 void actionStringLength(char* stack, u32* sp, char* v_str);
 void actionStringAdd(char* stack, u32* sp, char* a_str, char* b_str);
+
+void actionGetVariable(char* stack, u32* sp);
+void actionSetVariable(char* stack, u32* sp);
 
 void actionTrace(char* stack, u32* sp);
 void actionGetTime(char* stack, u32* sp);

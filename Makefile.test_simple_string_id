@@ -1,0 +1,31 @@
+# Makefile for Simple String ID Test
+
+CC = gcc
+CFLAGS = -Wall -Wextra -g -Iinclude -Iinclude/actionmodern -Iinclude/libswf -Ilib/c-hashmap
+LDFLAGS = -lm
+
+SOURCES = test_string_id_simple.c \
+          src/actionmodern/variables.c \
+          src/utils.c \
+          lib/c-hashmap/map.c
+
+OBJECTS = $(SOURCES:.c=.o)
+TARGET = test_string_id_simple
+
+all: $(TARGET)
+
+$(TARGET): $(OBJECTS)
+	$(CC) $(OBJECTS) $(LDFLAGS) -o $(TARGET)
+	@echo ""
+	@echo "Build successful! Run with: ./$(TARGET)"
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+clean:
+	rm -f $(OBJECTS) $(TARGET)
+
+test: $(TARGET)
+	@./$(TARGET)
+
+.PHONY: all clean test

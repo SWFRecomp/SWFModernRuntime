@@ -744,8 +744,84 @@ void actionTrace(char* stack, u32* sp)
 	}
 	
 	fflush(stdout);
-	
+
 	POP();
+}
+
+void actionGetVariable(char* stack, u32* sp)
+{
+	u32 oldSP;
+
+	// Read variable name info from stack
+	u32 string_id = VAL(u32, &stack[*sp + 4]);
+	char* var_name = (char*) VAL(u64, &stack[*sp + 16]);
+	u32 var_name_len = VAL(u32, &stack[*sp + 8]);
+
+	// Pop variable name
+	POP();
+
+	// Get variable (fast path for constant strings)
+	ActionVar* var;
+	if (string_id != 0)
+	{
+		// Constant string - use array (O(1))
+		var = getVariableById(string_id);
+	}
+	else
+	{
+		// Dynamic string - use hashmap (O(n))
+		var = getVariable(var_name, var_name_len);
+	}
+
+	if (!var)
+	{
+		// Variable not found - push empty string
+		PUSH_STR("", 0);
+		return;
+	}
+
+	// Push variable value to stack
+	PUSH_VAR(var);
+}
+
+void actionSetVariable(char* stack, u32* sp)
+{
+	// Stack layout: [value] [name] <- sp
+	// We need value at top, name at second
+
+	u32 value_sp = *sp;
+	u32 var_name_sp = SP_SECOND_TOP;
+
+	// Read variable name info
+	u32 string_id = VAL(u32, &stack[var_name_sp + 4]);
+	char* var_name = (char*) VAL(u64, &stack[var_name_sp + 16]);
+	u32 var_name_len = VAL(u32, &stack[var_name_sp + 8]);
+
+	// Get variable (fast path for constant strings)
+	ActionVar* var;
+	if (string_id != 0)
+	{
+		// Constant string - use array (O(1))
+		var = getVariableById(string_id);
+	}
+	else
+	{
+		// Dynamic string - use hashmap (O(n))
+		var = getVariable(var_name, var_name_len);
+	}
+
+	if (!var)
+	{
+		// Failed to get/create variable
+		POP_2();
+		return;
+	}
+
+	// Set variable value (uses existing string materialization!)
+	setVariableWithValue(var, stack, value_sp);
+
+	// Pop both value and name
+	POP_2();
 }
 
 void actionGetTime(char* stack, u32* sp)
