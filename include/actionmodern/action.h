@@ -46,10 +46,7 @@
 #define STACK_SECOND_TOP_N VAL(u32, &stack[SP_SECOND_TOP + 8])
 #define STACK_SECOND_TOP_VALUE VAL(u64, &stack[SP_SECOND_TOP + 16])
 
-#define SET_VAR(p, t, n, v) \
-	p->type = t; \
-	p->str_size = n; \
-	p->value = v; \
+#define SET_VAR(p, t, n, v) setVariableWithValue(p, stack, *sp)
 
 #define VAL(type, x) *((type*) x)
 
