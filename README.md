@@ -6,20 +6,19 @@ WebAssembly port of [SWFModernRuntime](https://github.com/SWFRecomp/SWFModernRun
 
 This fork adds **WebAssembly compilation support** to SWFModernRuntime, enabling Flash SWF files to run natively in web browsers without Flash Player or emulation.
 
-**Live Demos:** https://peerinfinity.github.io/SWFModernRuntime/
+**Live Demos:** https://swfrecomp.github.io/SWFRecompDocs/
 
 ## Documentation
 
-### SWFRecomp
+See the [SWFRecompDocs](https://github.com/SWFRecomp/SWFRecompDocs) repository for comprehensive documentation:
 
-- **[README.md](https://github.com/PeerInfinity/SWFRecomp/tree/wasm-support/README.md)** - Main README file
-- **[TRACE_SWF_4_WASM_GENERATION_GUIDE.md](https://github.com/PeerInfinity/SWFRecomp/tree/wasm-support/TRACE_SWF_4_WASM_GENERATION_GUIDE.md)** - Detailed guide to SWF → WASM compilation
-- **[WASM_PROJECT_PLAN.md](https://github.com/PeerInfinity/SWFRecomp/tree/wasm-support/WASM_PROJECT_PLAN.md)** - Complete WASM development plan and roadmap
-- **[PROJECT_STATUS.md](https://github.com/PeerInfinity/SWFRecomp/tree/wasm-support/PROJECT_STATUS.md)** - Current project status and progress
+- **[Live Demos](https://swfrecomp.github.io/SWFRecompDocs/)** - See working examples
+- **[Reference Guides](https://github.com/SWFRecomp/SWFRecompDocs/tree/master/reference)** - Technical documentation
+- **[Implementation Guides](https://github.com/SWFRecomp/SWFRecompDocs/tree/master/guides)** - Step-by-step guides
 
-### Upstream
-
-- **[Upstream README](https://github.com/SWFRecomp/SWFModernRuntime/blob/master/README.md)** - Original SWFModernRuntime documentation
+**Related Repositories:**
+- **[SWFRecomp](https://github.com/SWFRecomp/SWFRecomp)** - The static recompiler
+- **[Upstream SWFModernRuntime](https://github.com/SWFRecomp/SWFModernRuntime)** - Original runtime by LittleCube
 
 ## Quick Demo
 
@@ -29,7 +28,7 @@ The `trace_swf_4` example is working! It demonstrates:
 - String operations and console output
 - Native performance without Flash Player
 
-**[Try it live!](https://peerinfinity.github.io/SWFModernRuntime/examples/trace-swf-test/)**
+**[Try it live!](https://swfrecomp.github.io/SWFRecompDocs/examples/trace-swf-test/)**
 
 ## Project Goals
 
@@ -52,64 +51,55 @@ The generated C code is **100% portable** - it compiles to both native and WASM 
 
 ```
 SWFModernRuntime/
-├── src/                    # Runtime source (mostly from upstream)
-│   ├── libswf/            # Core SWF execution (unchanged)
-│   ├── actionmodern/      # ActionScript VM (unchanged)
-│   ├── flashbang/         # Native GPU rendering (unchanged)
-│   └── rendering/         # NEW - Rendering abstraction layer
-├── wasm/                   # NEW - All WASM-specific code
-│   ├── examples/          # Working test cases
-│   ├── shell-templates/   # HTML templates
-│   └── README.md          # WASM documentation
-├── docs/                   # GitHub Pages content
-└── WASM_PROJECT_PLAN.md   # Detailed development plan
+├── src/                    # Runtime source
+│   ├── libswf/            # Core SWF execution
+│   ├── actionmodern/      # ActionScript VM with variable storage improvements
+│   └── flashbang/         # Native GPU rendering
+├── include/               # Header files
+├── test_*.c               # Test suite for variable storage
+└── Makefile.test*         # Build files for tests
 ```
 
 ## Building
 
-### Prerequisites
+### Run Tests
+
+This repository contains a comprehensive test suite for the variable storage system:
 
 ```bash
-# Install Emscripten
-git clone https://github.com/emscripten-core/emsdk.git ~/tools/emsdk
-cd ~/tools/emsdk
-./emsdk install latest
-./emsdk activate latest
-source ./emsdk_env.sh
+# Build and run all tests
+make -f Makefile.test
+
+# Or run individual test suites
+make -f Makefile.test_simple              # Basic variable tests
+make -f Makefile.test_string_id           # String ID optimization tests
+make -f Makefile.test_simple_string_id    # Simple ID tests
 ```
 
-### Build an Example
+### Integration with SWFRecomp
 
-**Note:** The improved build system is now in [SWFRecomp](https://github.com/PeerInfinity/SWFRecomp/tree/wasm-support). See that repository for automated native and WASM builds with complete runtime separation.
-
-For this repository's example:
-
-```bash
-cd wasm/examples/trace-swf-test
-./build.sh
-
-# Test locally
-python3 -m http.server 8000
-# Open http://localhost:8000/index.html
-```
+This runtime is used by [SWFRecomp](https://github.com/SWFRecomp/SWFRecomp) when generating WASM builds. See the SWFRecomp repository for complete build instructions and working examples.
 
 ## Current Status
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| **ActionScript VM** | Working | String ops, math, variables |
-| **Frame execution** | Working | Frame-by-frame playback |
-| **Canvas2D rendering** | In Progress | Basic shapes next |
-| **WebGL2 rendering** | Planned | Optional Phase 2 |
-| **SDL3 WebGPU** | Future | Waiting on SDL3 |
+| **ActionScript VM** | ✅ Working | String ops, math, variables |
+| **Variable Storage** | ✅ Working | Copy-on-Store, array optimization |
+| **Memory Management** | ✅ Working | Proper cleanup, no leaks |
+| **Test Suite** | ✅ Complete | 1,100+ lines of tests |
+| **Frame execution** | ✅ Working | Frame-by-frame playback |
+| **Native GPU Rendering** | ✅ Working | SDL3 + WebGPU (upstream) |
 
-## Roadmap
+## Key Features in This Fork
 
-See [WASM_PROJECT_PLAN.md](https://github.com/PeerInfinity/SWFRecomp/tree/wasm-support/WASM_PROJECT_PLAN.md) for complete details.
+### Variable Storage Improvements
+- **Copy-on-Store**: Variables own their string data
+- **Array Optimization**: O(1) lookup for constant strings by ID
+- **Memory Management**: Proper heap allocation and cleanup
+- **Ownership Tracking**: No memory leaks or dangling pointers
 
-- **Phase 1 (Current):** Canvas2D backend - Proof of concept
-- **Phase 2 (Optional):** WebGL2 backend - GPU acceleration
-- **Phase 3 (Future):** SDL3 WebGPU - Use upstream code unmodified
+See the [branch differences document](https://github.com/SWFRecomp/SWFRecompDocs/blob/master/merge/swfmodernruntime-branch-differences.md) for complete technical details.
 
 ## Upstream Sync
 
