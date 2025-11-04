@@ -1,6 +1,7 @@
 .vs/
 build/
 build-*/
+build_*/
 out/
 RecompiledTags/
 RecompiledScripts/
