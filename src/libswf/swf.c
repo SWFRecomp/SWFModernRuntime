@@ -24,11 +24,13 @@ FlashbangContext* context;
 
 void tagInit();
 
-void tagMain(frame_func* frame_funcs)
+void tagMain(SWFAppContext* app_context)
 {
+	frame_func* frame_funcs = app_context->frame_funcs;
+	
 	while (!quit_swf)
 	{
-		frame_funcs[next_frame]();
+		frame_funcs[next_frame](app_context);
 		if (!manual_next_frame)
 		{
 			next_frame += 1;
@@ -45,7 +47,7 @@ void tagMain(frame_func* frame_funcs)
 	
 	while (!flashbang_poll())
 	{
-		tagShowFrame();
+		tagShowFrame(app_context);
 	}
 }
 
@@ -92,7 +94,7 @@ void swfStart(SWFAppContext* app_context)
 	
 	tagInit();
 	
-	tagMain(frame_funcs);
+	tagMain(app_context);
 	
 	freeMap();
 	

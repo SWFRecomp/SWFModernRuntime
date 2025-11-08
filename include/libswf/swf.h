@@ -5,10 +5,31 @@
 #define INITIAL_DICTIONARY_CAPACITY 1024
 #define INITIAL_DISPLAYLIST_CAPACITY 1024
 
+typedef enum
+{
+	CHAR_TYPE_SHAPE,
+	CHAR_TYPE_TEXT,
+} CharacterType;
+
 typedef struct Character
 {
-	size_t shape_offset;
-	size_t size;
+	CharacterType type;
+	union
+	{
+		// DefineShape
+		struct
+		{
+			size_t shape_offset;
+			size_t size;
+		};
+		// DefineText
+		struct
+		{
+			size_t text_start;
+			size_t text_size;
+			u32 transform_start;
+		};
+	};
 } Character;
 
 typedef struct DisplayObject
@@ -17,7 +38,9 @@ typedef struct DisplayObject
 	u32 transform_id;
 } DisplayObject;
 
-typedef void (*frame_func)();
+typedef struct SWFAppContext SWFAppContext;
+
+typedef void (*frame_func)(SWFAppContext* app_context);
 
 extern frame_func frame_funcs[];
 
@@ -46,6 +69,10 @@ typedef struct SWFAppContext
 	size_t gradient_data_size;
 	char* bitmap_data;
 	size_t bitmap_data_size;
+	u32* glyph_data;
+	size_t glyph_data_size;
+	u32* text_data;
+	size_t text_data_size;
 } SWFAppContext;
 
 extern char* stack;
