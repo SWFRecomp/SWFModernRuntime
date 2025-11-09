@@ -8,6 +8,26 @@
 
 int once = 0;
 
+const float identity[16] =
+{
+	1.0f,
+	0.0f,
+	0.0f,
+	0.0f,
+	0.0f,
+	1.0f,
+	0.0f,
+	0.0f,
+	0.0f,
+	0.0f,
+	1.0f,
+	0.0f,
+	0.0f,
+	0.0f,
+	0.0f,
+	1.0f
+};
+
 FlashbangContext* flashbang_new()
 {
 	return malloc(sizeof(FlashbangContext));
@@ -191,7 +211,7 @@ void flashbang_init(FlashbangContext* context)
 	vertex_shader_info.num_samplers = 0;
 	vertex_shader_info.num_storage_buffers = 4;
 	vertex_shader_info.num_storage_textures = 0;
-	vertex_shader_info.num_uniform_buffers = 2;
+	vertex_shader_info.num_uniform_buffers = 4;
 	
 	SDL_GPUShader* vertex_shader = SDL_CreateGPUShader(context->device, &vertex_shader_info);
 	
@@ -753,7 +773,11 @@ void flashbang_open_pass(FlashbangContext* context)
 	// bind the graphics pipeline
 	SDL_BindGPUGraphicsPipeline(context->render_pass, context->graphics_pipeline);
 	
+	u32 identity_id = 0;
+	
 	SDL_PushGPUVertexUniformData(context->command_buffer, 0, context->stage_to_ndc, 16*sizeof(float));
+	SDL_PushGPUVertexUniformData(context->command_buffer, 2, &identity_id, sizeof(u32));
+	SDL_PushGPUVertexUniformData(context->command_buffer, 3, identity, 16*sizeof(float));
 	SDL_BindGPUVertexStorageBuffers(context->render_pass, 0, &context->xform_buffer, 1);
 	SDL_BindGPUVertexStorageBuffers(context->render_pass, 1, &context->color_buffer, 1);
 	SDL_BindGPUVertexStorageBuffers(context->render_pass, 2, &context->inv_mat_buffer, 1);
@@ -789,6 +813,27 @@ void flashbang_open_pass(FlashbangContext* context)
 	}
 	
 	SDL_BindGPUFragmentSamplers(context->render_pass, 0, sampler_bindings, 2);
+	
+	context->set_extra_transform_id = 0;
+	context->set_extra_transform = 0;
+	context->should_reset_extra_transform_id = 0;
+	context->should_reset_extra_transform = 0;
+}
+
+void flashbang_upload_extra_transform_id(FlashbangContext* context, u32 transform_id)
+{
+	SDL_PushGPUVertexUniformData(context->command_buffer, 2, &transform_id, sizeof(u32));
+	
+	context->set_extra_transform_id = 1;
+	context->should_reset_extra_transform_id = 0;
+}
+
+void flashbang_upload_extra_transform(FlashbangContext* context, float* transform)
+{
+	SDL_PushGPUVertexUniformData(context->command_buffer, 3, transform, 16*sizeof(float));
+	
+	context->set_extra_transform = 1;
+	context->should_reset_extra_transform = 0;
 }
 
 void flashbang_draw_shape(FlashbangContext* context, size_t offset, size_t num_verts, u32 transform_id)
@@ -802,8 +847,33 @@ void flashbang_draw_shape(FlashbangContext* context, size_t offset, size_t num_v
 	
 	SDL_PushGPUVertexUniformData(context->command_buffer, 1, &transform_id, sizeof(u32));
 	
+	if (context->should_reset_extra_transform_id)
+	{
+		u32 identity_id = 0;
+		SDL_PushGPUVertexUniformData(context->command_buffer, 2, &identity_id, sizeof(u32));
+		context->should_reset_extra_transform_id = 0;
+	}
+	
+	if (context->should_reset_extra_transform)
+	{
+		SDL_PushGPUVertexUniformData(context->command_buffer, 3, identity, 16*sizeof(float));
+		context->should_reset_extra_transform = 0;
+	}
+	
 	// issue a draw call
 	SDL_DrawGPUPrimitives(context->render_pass, (Uint32) num_verts, 1, 0, 0);
+	
+	if (context->set_extra_transform_id)
+	{
+		context->set_extra_transform_id = 0;
+		context->should_reset_extra_transform_id = 1;
+	}
+	
+	if (context->set_extra_transform)
+	{
+		context->set_extra_transform = 0;
+		context->should_reset_extra_transform = 1;
+	}
 }
 
 void flashbang_close_pass(FlashbangContext* context)

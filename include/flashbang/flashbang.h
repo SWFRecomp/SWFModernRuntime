@@ -31,6 +31,11 @@ struct FlashbangContext
 	char* bitmap_data;
 	size_t bitmap_data_size;
 	
+	int set_extra_transform_id;
+	int set_extra_transform;
+	int should_reset_extra_transform_id;
+	int should_reset_extra_transform;
+	
 	SDL_Window* window;
 	SDL_GPUDevice* device;
 	
@@ -75,6 +80,8 @@ void flashbang_set_window_background(FlashbangContext* context, u8 r, u8 g, u8 b
 void flashbang_upload_bitmap(FlashbangContext* context, size_t offset, size_t size, u32 width, u32 height);
 void flashbang_finalize_bitmaps(FlashbangContext* context);
 void flashbang_open_pass(FlashbangContext* context);
+void flashbang_upload_extra_transform_id(FlashbangContext* context, u32 transform_id);
+void flashbang_upload_extra_transform(FlashbangContext* context, float* transform);
 void flashbang_draw_shape(FlashbangContext* context, size_t offset, size_t num_verts, u32 transform_id);
 void flashbang_close_pass(FlashbangContext* context);
 void flashbang_free(FlashbangContext* context);
