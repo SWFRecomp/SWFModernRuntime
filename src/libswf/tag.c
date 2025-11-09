@@ -34,9 +34,9 @@ void tagShowFrame(SWFAppContext* app_context)
 				flashbang_draw_shape(context, ch->shape_offset, ch->size, obj->transform_id);
 				break;
 			case CHAR_TYPE_TEXT:
+				flashbang_upload_extra_transform_id(context, obj->transform_id);
 				for (int i = 0; i < ch->text_size; ++i)
 				{
-					flashbang_upload_extra_transform_id(context, obj->transform_id);
 					size_t glyph_index = 2*app_context->text_data[ch->text_start + i];
 					flashbang_draw_shape(context, app_context->glyph_data[glyph_index], app_context->glyph_data[glyph_index + 1], ch->transform_start + i);
 				}

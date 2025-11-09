@@ -31,11 +31,6 @@ struct FlashbangContext
 	char* bitmap_data;
 	size_t bitmap_data_size;
 	
-	int set_extra_transform_id;
-	int set_extra_transform;
-	int should_reset_extra_transform_id;
-	int should_reset_extra_transform;
-	
 	SDL_Window* window;
 	SDL_GPUDevice* device;
 	
