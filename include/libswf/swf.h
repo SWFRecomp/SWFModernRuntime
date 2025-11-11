@@ -28,6 +28,7 @@ typedef struct Character
 			size_t text_start;
 			size_t text_size;
 			u32 transform_start;
+			u32 cxform_id;
 		};
 	};
 } Character;
@@ -73,6 +74,8 @@ typedef struct SWFAppContext
 	size_t glyph_data_size;
 	u32* text_data;
 	size_t text_data_size;
+	char* cxform_data;
+	size_t cxform_data_size;
 } SWFAppContext;
 
 extern char* stack;

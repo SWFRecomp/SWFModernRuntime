@@ -35,6 +35,7 @@ void tagShowFrame(SWFAppContext* app_context)
 				break;
 			case CHAR_TYPE_TEXT:
 				flashbang_upload_extra_transform_id(context, obj->transform_id);
+				flashbang_upload_cxform_id(context, ch->cxform_id);
 				for (int i = 0; i < ch->text_size; ++i)
 				{
 					size_t glyph_index = 2*app_context->text_data[ch->text_start + i];
@@ -56,7 +57,7 @@ void tagDefineShape(CharacterType type, size_t char_id, size_t shape_offset, siz
 	dictionary[char_id].size = shape_size;
 }
 
-void tagDefineText(size_t char_id, size_t text_start, size_t text_size, u32 transform_start)
+void tagDefineText(size_t char_id, size_t text_start, size_t text_size, u32 transform_start, u32 cxform_id)
 {
 	ENSURE_SIZE(dictionary, char_id, dictionary_capacity, sizeof(Character));
 	
@@ -64,6 +65,7 @@ void tagDefineText(size_t char_id, size_t text_start, size_t text_size, u32 tran
 	dictionary[char_id].text_start = text_start;
 	dictionary[char_id].text_size = text_size;
 	dictionary[char_id].transform_start = transform_start;
+	dictionary[char_id].cxform_id = cxform_id;
 }
 
 void tagPlaceObject2(size_t depth, size_t char_id, u32 transform_id)

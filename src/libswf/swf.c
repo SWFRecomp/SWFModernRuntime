@@ -76,6 +76,8 @@ void swfStart(SWFAppContext* app_context)
 	context->gradient_data_size = app_context->gradient_data_size;
 	context->bitmap_data = app_context->bitmap_data;
 	context->bitmap_data_size = app_context->bitmap_data_size;
+	context->cxform_data = app_context->cxform_data;
+	context->cxform_data_size = app_context->cxform_data_size;
 	
 	flashbang_init(context);
 	
