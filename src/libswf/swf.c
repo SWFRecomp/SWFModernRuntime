@@ -1,3 +1,5 @@
+#include <assert.h>
+
 #include <swf.h>
 #include <tag.h>
 #include <action.h>

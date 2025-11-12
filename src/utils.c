@@ -1,3 +1,6 @@
+#include <assert.h>
+#include <string.h>
+
 #include <utils.h>
 
 void grow_ptr(char** ptr, size_t* capacity_ptr, size_t elem_size)
@@ -8,12 +11,25 @@ void grow_ptr(char** ptr, size_t* capacity_ptr, size_t elem_size)
 	
 	char* new_data = malloc(old_data_size << 1);
 	
-	for (size_t i = 0; i < old_data_size; ++i)
-	{
-		new_data[i] = data[i];
-	}
+	memcpy(new_data, data, old_data_size);
 	
 	free(data);
+	
+	*ptr = new_data;
+	*capacity_ptr = capacity << 1;
+}
+
+void grow_ptr_aligned(char** ptr, size_t* capacity_ptr, size_t elem_size, size_t alignment)
+{
+	char* data = *ptr;
+	size_t capacity = *capacity_ptr;
+	size_t old_data_size = capacity*elem_size;
+	
+	char* new_data = aligned_alloc(alignment, old_data_size << 1);
+	
+	memcpy(new_data, data, old_data_size);
+	
+	aligned_free(data);
 	
 	*ptr = new_data;
 	*capacity_ptr = capacity << 1;
