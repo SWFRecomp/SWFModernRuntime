@@ -5,6 +5,7 @@
 #include <action.h>
 #include <variables.h>
 #include <flashbang.h>
+#include <heap.h>
 #include <utils.h>
 
 char* stack;
@@ -55,6 +56,10 @@ void tagMain(SWFAppContext* app_context)
 
 void swfStart(SWFAppContext* app_context)
 {
+	app_context->heap_inited = false;
+	
+	heap_init(app_context, 0);
+	
 	context = flashbang_new();
 	
 	context->width = app_context->width;

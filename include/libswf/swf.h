@@ -45,6 +45,8 @@ typedef void (*frame_func)(SWFAppContext* app_context);
 
 extern frame_func frame_funcs[];
 
+typedef struct O1HeapInstance O1HeapInstance;
+
 typedef struct SWFAppContext
 {
 	frame_func* frame_funcs;
@@ -53,6 +55,12 @@ typedef struct SWFAppContext
 	int height;
 	
 	const float* stage_to_ndc;
+	
+	O1HeapInstance* heap_instance;
+	char* heap;
+	int heap_inited;
+	size_t heap_current_size;
+	size_t heap_full_size;
 	
 	size_t bitmap_count;
 	size_t bitmap_highest_w;

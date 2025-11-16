@@ -10,3 +10,6 @@
 [submodule "lib/SDL3"]
 	path = lib/SDL3
 	url = https://github.com/libsdl-org/SDL.git
+[submodule "lib/o1heap"]
+	path = lib/o1heap
+	url = https://github.com/pavel-kirienko/o1heap.git

@@ -1,4 +1,3 @@
-#include <assert.h>
 #include <string.h>
 
 #include <utils.h>
@@ -36,7 +35,7 @@ void grow_ptr_aligned(char** ptr, size_t* capacity_ptr, size_t elem_size, size_t
 }
 
 #if defined(_MSC_VER)
-//  Microsoft
+// Microsoft
 
 #include <malloc.h>
 #include <windows.h>
@@ -63,6 +62,21 @@ u32 getpagesize()
 	GetSystemInfo(&si);
 	
 	return si.dwPageSize;
+}
+
+char* vmem_reserve(size_t size)
+{
+	return VirtualAlloc(NULL, size, MEM_RESERVE, PAGE_NOACCESS);
+}
+
+void vmem_commit(char* addr, size_t size)
+{
+	VirtualAlloc(addr, size, MEM_COMMIT, PAGE_READWRITE);
+}
+
+void vmem_release(char* addr, size_t size)
+{
+	VirtualFree(addr, 0, MEM_RELEASE);
 }
 
 #elif defined(__GNUC__)
