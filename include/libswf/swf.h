@@ -58,9 +58,7 @@ typedef struct SWFAppContext
 	
 	O1HeapInstance* heap_instance;
 	char* heap;
-	int heap_inited;
-	size_t heap_current_size;
-	size_t heap_full_size;
+	size_t heap_size;
 	
 	size_t bitmap_count;
 	size_t bitmap_highest_w;

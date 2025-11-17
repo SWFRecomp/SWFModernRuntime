@@ -1,5 +1,3 @@
-#include <assert.h>
-
 #include <swf.h>
 #include <tag.h>
 #include <action.h>
@@ -7,6 +5,8 @@
 #include <flashbang.h>
 #include <heap.h>
 #include <utils.h>
+
+#define HEAP_SIZE 1024*1024*1024  // 1 GB
 
 char* stack;
 u32 sp;
@@ -58,7 +58,7 @@ void swfStart(SWFAppContext* app_context)
 {
 	app_context->heap_inited = false;
 	
-	heap_init(app_context, 0);
+	heap_init(app_context, HEAP_SIZE);
 	
 	context = flashbang_new();
 	

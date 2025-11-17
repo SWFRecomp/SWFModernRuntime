@@ -56,7 +56,7 @@ u32 get_elapsed_ms()
 	return (u32) GetTickCount();
 }
 
-u32 getpagesize()
+int getpagesize()
 {
 	SYSTEM_INFO si;
 	GetSystemInfo(&si);
@@ -66,12 +66,7 @@ u32 getpagesize()
 
 char* vmem_reserve(size_t size)
 {
-	return VirtualAlloc(NULL, size, MEM_RESERVE, PAGE_NOACCESS);
-}
-
-void vmem_commit(char* addr, size_t size)
-{
-	VirtualAlloc(addr, size, MEM_COMMIT, PAGE_READWRITE);
+	return VirtualAlloc(NULL, size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 }
 
 void vmem_release(char* addr, size_t size)

@@ -23,8 +23,7 @@ void* aligned_alloc(size_t alignment, size_t size);
 void aligned_free(void* memblock);
 
 u32 get_elapsed_ms();
-u32 getpagesize();
+int getpagesize();
 
 char* vmem_reserve(size_t size);
-void vmem_commit(char* addr, size_t size);
 void vmem_release(char* addr, size_t size);
