@@ -56,8 +56,6 @@ void tagMain(SWFAppContext* app_context)
 
 void swfStart(SWFAppContext* app_context)
 {
-	app_context->heap_inited = false;
-	
 	heap_init(app_context, HEAP_SIZE);
 	
 	context = flashbang_new();
