@@ -19,13 +19,8 @@ void initMap()
 void initVarArray(size_t max_string_id)
 {
 	var_array_size = max_string_id;
-	var_array = (ActionVar**) calloc(var_array_size, sizeof(ActionVar*));
-
-	if (!var_array)
-	{
-		EXC("Failed to allocate variable array\n");
-		exit(1);
-	}
+	var_array = (ActionVar**) malloc(var_array_size * sizeof(ActionVar*));
+	memset(var_array, 0, var_array_size * sizeof(ActionVar*));
 }
 
 static int free_variable_callback(const void *key, size_t ksize, uintptr_t value, void *usr)
@@ -75,29 +70,10 @@ void freeMap()
 
 ActionVar* getVariableById(u32 string_id)
 {
-	if (string_id == 0 || string_id >= var_array_size)
-	{
-		// Invalid ID or dynamic string (ID = 0)
-		return NULL;
-	}
-
 	// Lazy allocation
 	if (!var_array[string_id])
 	{
-		ActionVar* var = (ActionVar*) malloc(sizeof(ActionVar));
-		if (!var)
-		{
-			EXC("Failed to allocate variable\n");
-			return NULL;
-		}
-
-		// Initialize with unset type
-		var->type = ACTION_STACK_VALUE_STRING;
-		var->str_size = 0;
-		var->data.string_data.heap_ptr = NULL;
-		var->data.string_data.owns_memory = false;
-
-		var_array[string_id] = var;
+		var_array[string_id] = (ActionVar*) malloc(sizeof(ActionVar));
 	}
 
 	return var_array[string_id];
@@ -112,16 +88,7 @@ ActionVar* getVariable(char* var_name, size_t key_size)
 		return var;
 	}
 
-	do
-	{
-		var = (ActionVar*) malloc(sizeof(ActionVar));
-	} while (errno != 0);
-
-	// Initialize with unset type
-	var->type = ACTION_STACK_VALUE_STRING;
-	var->str_size = 0;
-	var->data.string_data.heap_ptr = NULL;
-	var->data.string_data.owns_memory = false;
+	var = (ActionVar*) malloc(sizeof(ActionVar));
 
 	hashmap_set(var_map, var_name, key_size, (uintptr_t) var);
 
@@ -130,45 +97,26 @@ ActionVar* getVariable(char* var_name, size_t key_size)
 
 char* materializeStringList(char* stack, u32 sp)
 {
-	ActionStackValueType type = stack[sp];
+	// Get the string list
+	u64* str_list = (u64*) &stack[sp + 16];
+	u64 num_strings = str_list[0];
+	u32 total_size = VAL(u32, &stack[sp + 8]);
 
-	if (type == ACTION_STACK_VALUE_STR_LIST)
+	// Allocate heap memory for concatenated result
+	char* result = (char*) malloc(total_size + 1);
+
+	// Concatenate all strings
+	char* dest = result;
+	for (u64 i = 0; i < num_strings; i++)
 	{
-		// Get the string list
-		u64* str_list = (u64*) &stack[sp + 16];
-		u64 num_strings = str_list[0];
-		u32 total_size = VAL(u32, &stack[sp + 8]);
-
-		// Allocate heap memory for concatenated result
-		char* result = (char*) malloc(total_size + 1);
-		if (!result)
-		{
-			EXC("Failed to allocate memory for string variable\n");
-			return NULL;
-		}
-
-		// Concatenate all strings
-		char* dest = result;
-		for (u64 i = 0; i < num_strings; i++)
-		{
-			char* src = (char*) str_list[i + 1];
-			size_t len = strlen(src);
-			memcpy(dest, src, len);
-			dest += len;
-		}
-		*dest = '\0';
-
-		return result;
+		char* src = (char*) str_list[i + 1];
+		size_t len = strlen(src);
+		memcpy(dest, src, len);
+		dest += len;
 	}
-	else if (type == ACTION_STACK_VALUE_STRING)
-	{
-		// Single string - duplicate it
-		char* src = (char*) VAL(u64, &stack[sp + 16]);
-		return strdup(src);
-	}
+	*dest = '\0';
 
-	// Not a string type
-	return NULL;
+	return result;
 }
 
 void setVariableWithValue(ActionVar* var, char* stack, u32 sp)
@@ -182,27 +130,20 @@ void setVariableWithValue(ActionVar* var, char* stack, u32 sp)
 
 	ActionStackValueType type = stack[sp];
 
-	if (type == ACTION_STACK_VALUE_STRING || type == ACTION_STACK_VALUE_STR_LIST)
+	if (type == ACTION_STACK_VALUE_STR_LIST)
 	{
 		// Materialize string to heap
 		char* heap_str = materializeStringList(stack, sp);
-		if (!heap_str)
-		{
-			// Allocation failed, variable becomes unset
-			var->type = ACTION_STACK_VALUE_STRING;
-			var->str_size = 0;
-			var->data.numeric_value = 0;
-			return;
-		}
+		u32 total_size = VAL(u32, &stack[sp + 8]);
 
 		var->type = ACTION_STACK_VALUE_STRING;
-		var->str_size = strlen(heap_str);
+		var->str_size = total_size;
 		var->data.string_data.heap_ptr = heap_str;
 		var->data.string_data.owns_memory = true;
 	}
 	else
 	{
-		// Numeric types - store directly
+		// Numeric types and regular strings - store directly
 		var->type = type;
 		var->str_size = VAL(u32, &stack[sp + 8]);
 		var->data.numeric_value = VAL(u64, &stack[sp + 16]);
