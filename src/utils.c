@@ -1,34 +1,35 @@
 #include <string.h>
 
+#include <heap.h>
 #include <utils.h>
 
-void grow_ptr(char** ptr, size_t* capacity_ptr, size_t elem_size)
+void grow_ptr(SWFAppContext* app_context, char** ptr, size_t* capacity_ptr, size_t elem_size)
 {
 	char* data = *ptr;
 	size_t capacity = *capacity_ptr;
 	size_t old_data_size = capacity*elem_size;
 	
-	char* new_data = malloc(old_data_size << 1);
+	char* new_data = HALLOC(old_data_size << 1);
 	
 	memcpy(new_data, data, old_data_size);
 	
-	free(data);
+	FREE(data);
 	
 	*ptr = new_data;
 	*capacity_ptr = capacity << 1;
 }
 
-void grow_ptr_aligned(char** ptr, size_t* capacity_ptr, size_t elem_size, size_t alignment)
+void grow_ptr_aligned(SWFAppContext* app_context, char** ptr, size_t* capacity_ptr, size_t elem_size, size_t alignment)
 {
 	char* data = *ptr;
 	size_t capacity = *capacity_ptr;
 	size_t old_data_size = capacity*elem_size;
 	
-	char* new_data = aligned_alloc(alignment, old_data_size << 1);
+	char* new_data = HALIGNED(alignment, old_data_size << 1);
 	
 	memcpy(new_data, data, old_data_size);
 	
-	aligned_free(data);
+	FREE(data);
 	
 	*ptr = new_data;
 	*capacity_ptr = capacity << 1;

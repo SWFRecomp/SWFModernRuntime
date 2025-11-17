@@ -4,6 +4,7 @@
 
 #include <common.h>
 #include <flashbang.h>
+#include <heap.h>
 #include <utils.h>
 
 int once = 0;
@@ -52,12 +53,7 @@ const float identity_cxform[20] =
 	0.0f
 };
 
-FlashbangContext* flashbang_new()
-{
-	return malloc(sizeof(FlashbangContext));
-}
-
-void flashbang_init(FlashbangContext* context)
+void flashbang_init(FlashbangContext* context, SWFAppContext* app_context)
 {
 	if (!once && !SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD))
 	{
@@ -68,7 +64,7 @@ void flashbang_init(FlashbangContext* context)
 	once = 1;
 	
 	context->current_bitmap = 0;
-	context->bitmap_sizes = (u32*) aligned_alloc(8, 2*sizeof(u32)*context->bitmap_count);
+	context->bitmap_sizes = (u32*) HALIGNED(8, 2*sizeof(u32)*context->bitmap_count);
 	
 	// create a window
 	context->window = SDL_CreateWindow("TestSWFRecompiled", context->width, context->height, SDL_WINDOW_RESIZABLE);
@@ -953,7 +949,7 @@ void flashbang_close_pass(FlashbangContext* context)
 	SDL_SubmitGPUCommandBuffer(context->command_buffer);
 }
 
-void flashbang_free(FlashbangContext* context)
+void flashbang_release(FlashbangContext* context)
 {
 	// release the pipeline
 	SDL_ReleaseGPUGraphicsPipeline(context->device, context->graphics_pipeline);
@@ -966,6 +962,4 @@ void flashbang_free(FlashbangContext* context)
 	
 	// destroy the window
 	SDL_DestroyWindow(context->window);
-	
-	free(context);
 }

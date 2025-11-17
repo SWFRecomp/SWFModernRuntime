@@ -1,8 +1,7 @@
-#include <errno.h>
-
 #include <map.h>
 
 #include <variables.h>
+#include <heap.h>
 
 hashmap* var_map = NULL;
 
@@ -16,7 +15,7 @@ void freeMap()
 	hashmap_free(var_map);
 }
 
-ActionVar* getVariable(char* var_name, size_t key_size)
+ActionVar* getVariable(SWFAppContext* app_context, char* var_name, size_t key_size)
 {
 	ActionVar* var;
 	
@@ -25,10 +24,7 @@ ActionVar* getVariable(char* var_name, size_t key_size)
 		return var;
 	}
 	
-	do
-	{
-		var = (ActionVar*) malloc(sizeof(ActionVar));
-	} while (errno != 0);
+	var = (ActionVar*) HALLOC(sizeof(ActionVar));
 	
 	hashmap_set(var_map, var_name, key_size, (uintptr_t) var);
 	

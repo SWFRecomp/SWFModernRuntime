@@ -3,8 +3,9 @@
 #include <SDL3/SDL.h>
 
 #include <common.h>
+#include <swf.h>
 
-struct FlashbangContext
+typedef struct
 {
 	int width;
 	int height;
@@ -67,12 +68,9 @@ struct FlashbangContext
 	u8 red;
 	u8 green;
 	u8 blue;
-};
+} FlashbangContext;
 
-typedef struct FlashbangContext FlashbangContext;
-
-FlashbangContext* flashbang_new();
-void flashbang_init(FlashbangContext* context);
+void flashbang_init(FlashbangContext* context, SWFAppContext* app_context);
 int flashbang_poll();
 void flashbang_set_window_background(FlashbangContext* context, u8 r, u8 g, u8 b);
 void flashbang_upload_bitmap(FlashbangContext* context, size_t offset, size_t size, u32 width, u32 height);
@@ -84,4 +82,4 @@ void flashbang_upload_cxform_id(FlashbangContext* context, u32 cxform_id);
 void flashbang_upload_cxform(FlashbangContext* context, float* cxform);
 void flashbang_draw_shape(FlashbangContext* context, size_t offset, size_t num_verts, u32 transform_id);
 void flashbang_close_pass(FlashbangContext* context);
-void flashbang_free(FlashbangContext* context);
+void flashbang_release(FlashbangContext* context);

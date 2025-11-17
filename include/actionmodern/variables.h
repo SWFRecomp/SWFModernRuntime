@@ -1,6 +1,9 @@
 #pragma once
 
+#include <swf.h>
 #include <stackvalue.h>
+
+#define GETVAR(name, name_size) getVariable(app_context, name, name_size)
 
 typedef struct
 {
@@ -12,4 +15,4 @@ typedef struct
 void initMap();
 void freeMap();
 
-ActionVar* getVariable(char* var_name, size_t key_size);
+ActionVar* getVariable(SWFAppContext* app_context, char* var_name, size_t key_size);

@@ -58,7 +58,8 @@ void swfStart(SWFAppContext* app_context)
 {
 	heap_init(app_context, HEAP_SIZE);
 	
-	context = flashbang_new();
+	FlashbangContext c;
+	context = &c;
 	
 	context->width = app_context->width;
 	context->height = app_context->height;
@@ -84,12 +85,12 @@ void swfStart(SWFAppContext* app_context)
 	context->cxform_data = app_context->cxform_data;
 	context->cxform_data_size = app_context->cxform_data_size;
 	
-	flashbang_init(context);
+	flashbang_init(context, app_context);
 	
-	dictionary = malloc(INITIAL_DICTIONARY_CAPACITY*sizeof(Character));
-	display_list = malloc(INITIAL_DISPLAYLIST_CAPACITY*sizeof(DisplayObject));
+	dictionary = HALLOC(INITIAL_DICTIONARY_CAPACITY*sizeof(Character));
+	display_list = HALLOC(INITIAL_DISPLAYLIST_CAPACITY*sizeof(DisplayObject));
 	
-	stack = (char*) aligned_alloc(8, INITIAL_STACK_SIZE);
+	stack = (char*) HALIGNED(8, INITIAL_STACK_SIZE);
 	sp = INITIAL_SP;
 	
 	quit_swf = 0;
@@ -105,10 +106,12 @@ void swfStart(SWFAppContext* app_context)
 	
 	freeMap();
 	
-	aligned_free(stack);
+	FREE(stack);
 	
-	free(dictionary);
-	free(display_list);
+	FREE(dictionary);
+	FREE(display_list);
 	
-	flashbang_free(context);
+	flashbang_release(context);
+	
+	heap_shutdown(app_context);
 }

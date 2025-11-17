@@ -48,7 +48,7 @@ void tagShowFrame(SWFAppContext* app_context)
 	flashbang_close_pass(context);
 }
 
-void tagDefineShape(CharacterType type, size_t char_id, size_t shape_offset, size_t shape_size)
+void tagDefineShape(SWFAppContext* app_context, CharacterType type, size_t char_id, size_t shape_offset, size_t shape_size)
 {
 	ENSURE_SIZE(dictionary, char_id, dictionary_capacity, sizeof(Character));
 	
@@ -57,7 +57,7 @@ void tagDefineShape(CharacterType type, size_t char_id, size_t shape_offset, siz
 	dictionary[char_id].size = shape_size;
 }
 
-void tagDefineText(size_t char_id, size_t text_start, size_t text_size, u32 transform_start, u32 cxform_id)
+void tagDefineText(SWFAppContext* app_context, size_t char_id, size_t text_start, size_t text_size, u32 transform_start, u32 cxform_id)
 {
 	ENSURE_SIZE(dictionary, char_id, dictionary_capacity, sizeof(Character));
 	
@@ -68,7 +68,7 @@ void tagDefineText(size_t char_id, size_t text_start, size_t text_size, u32 tran
 	dictionary[char_id].cxform_id = cxform_id;
 }
 
-void tagPlaceObject2(size_t depth, size_t char_id, u32 transform_id)
+void tagPlaceObject2(SWFAppContext* app_context, size_t depth, size_t char_id, u32 transform_id)
 {
 	ENSURE_SIZE(display_list, depth, display_list_capacity, sizeof(DisplayObject));
 	
