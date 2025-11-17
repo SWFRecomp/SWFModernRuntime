@@ -54,8 +54,6 @@ ActionStackValueType convertDouble(char* stack, u32* sp)
 
 void pushVar(char* stack, u32* sp, ActionVar* var)
 {
-	u32 oldSP;
-
 	switch (var->type)
 	{
 		case ACTION_STACK_VALUE_F32:
@@ -73,7 +71,7 @@ void pushVar(char* stack, u32* sp, ActionVar* var)
 				var->data.string_data.heap_ptr :
 				(char*) var->data.numeric_value;
 
-			PUSH_STR(str_ptr, var->str_size);
+			PUSH_STR_ID(str_ptr, var->str_size, var->string_id);
 
 			break;
 		}
@@ -750,10 +748,9 @@ void actionTrace(char* stack, u32* sp)
 
 void actionGetVariable(char* stack, u32* sp)
 {
-	u32 oldSP;
-
 	// Read variable name info from stack
-	u32 string_id = VAL(u32, &stack[*sp + 4]);
+	// Stack layout for strings: +0=type, +4=oldSP, +8=length, +12=string_id, +16=pointer
+	u32 string_id = VAL(u32, &stack[*sp + 12]);
 	char* var_name = (char*) VAL(u64, &stack[*sp + 16]);
 	u32 var_name_len = VAL(u32, &stack[*sp + 8]);
 
@@ -793,7 +790,8 @@ void actionSetVariable(char* stack, u32* sp)
 	u32 var_name_sp = SP_SECOND_TOP;
 
 	// Read variable name info
-	u32 string_id = VAL(u32, &stack[var_name_sp + 4]);
+	// Stack layout for strings: +0=type, +4=oldSP, +8=length, +12=string_id, +16=pointer
+	u32 string_id = VAL(u32, &stack[var_name_sp + 12]);
 	char* var_name = (char*) VAL(u64, &stack[var_name_sp + 16]);
 	u32 var_name_len = VAL(u32, &stack[var_name_sp + 8]);
 
