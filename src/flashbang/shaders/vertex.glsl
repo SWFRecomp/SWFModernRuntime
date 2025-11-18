@@ -41,16 +41,27 @@ layout(set = 1, binding = 1) uniform CurrentTransformID
 	uint transform_id;
 };
 
+layout(set = 1, binding = 2) uniform ExtraTransformID
+{
+	uint extra_transform_id;
+};
+
+layout(set = 1, binding = 3) uniform ExtraTransform
+{
+	mat4 extra_transform;
+};
+
 void main()
 {
 	mat4 transform = transforms[transform_id];
+	mat4 extra_id_transform = transforms[extra_transform_id];
 	vec4 pos = vec4(position, 0.0f, 1.0f);
 	
 	v_style_type = style.x;
 	v_style_id = style.y & 0xFFFF;
 	uint style_upper = ((style.y >> 16) & 0xFFFF);
 	
-	gl_Position = stage_to_ndc*transform*pos;
+	gl_Position = stage_to_ndc*extra_id_transform*extra_transform*transform*pos;
 	
 	v_args = (v_style_type == 0x00) ? colors[v_style_id] :
 			 ((v_style_type & 0xF0) == 0x10) ? vec4(V_GRAD_UV(v_style_id), 0.0f, 0.0f) :

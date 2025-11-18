@@ -746,7 +746,7 @@ void actionTrace(char* stack, u32* sp)
 	POP();
 }
 
-void actionGetVariable(char* stack, u32* sp)
+void actionGetVariable(SWFAppContext* app_context, char* stack, u32* sp)
 {
 	// Read variable name info from stack
 	// Stack layout for strings: +0=type, +4=oldSP, +8=length, +12=string_id, +16=pointer
@@ -767,7 +767,7 @@ void actionGetVariable(char* stack, u32* sp)
 	else
 	{
 		// Dynamic string - use hashmap (O(n))
-		var = getVariable(var_name, var_name_len);
+		var = getVariable(app_context, var_name, var_name_len);
 	}
 
 	if (!var)
@@ -781,7 +781,7 @@ void actionGetVariable(char* stack, u32* sp)
 	PUSH_VAR(var);
 }
 
-void actionSetVariable(char* stack, u32* sp)
+void actionSetVariable(SWFAppContext* app_context, char* stack, u32* sp)
 {
 	// Stack layout: [value] [name] <- sp
 	// We need value at top, name at second
@@ -805,7 +805,7 @@ void actionSetVariable(char* stack, u32* sp)
 	else
 	{
 		// Dynamic string - use hashmap (O(n))
-		var = getVariable(var_name, var_name_len);
+		var = getVariable(app_context, var_name, var_name_len);
 	}
 
 	if (!var)

@@ -1,26 +1,42 @@
+#include <string.h>
+
+#include <heap.h>
 #include <utils.h>
 
-void grow_ptr(char** ptr, size_t* capacity_ptr, size_t elem_size)
+void grow_ptr(SWFAppContext* app_context, char** ptr, size_t* capacity_ptr, size_t elem_size)
 {
 	char* data = *ptr;
 	size_t capacity = *capacity_ptr;
 	size_t old_data_size = capacity*elem_size;
 	
-	char* new_data = malloc(old_data_size << 1);
+	char* new_data = HALLOC(old_data_size << 1);
 	
-	for (size_t i = 0; i < old_data_size; ++i)
-	{
-		new_data[i] = data[i];
-	}
+	memcpy(new_data, data, old_data_size);
 	
-	free(data);
+	FREE(data);
+	
+	*ptr = new_data;
+	*capacity_ptr = capacity << 1;
+}
+
+void grow_ptr_aligned(SWFAppContext* app_context, char** ptr, size_t* capacity_ptr, size_t elem_size, size_t alignment)
+{
+	char* data = *ptr;
+	size_t capacity = *capacity_ptr;
+	size_t old_data_size = capacity*elem_size;
+	
+	char* new_data = HALIGNED(alignment, old_data_size << 1);
+	
+	memcpy(new_data, data, old_data_size);
+	
+	FREE(data);
 	
 	*ptr = new_data;
 	*capacity_ptr = capacity << 1;
 }
 
 #if defined(_MSC_VER)
-//  Microsoft
+// Microsoft
 
 #include <malloc.h>
 #include <windows.h>
@@ -41,12 +57,22 @@ u32 get_elapsed_ms()
 	return (u32) GetTickCount();
 }
 
-u32 getpagesize()
+int getpagesize()
 {
 	SYSTEM_INFO si;
 	GetSystemInfo(&si);
 	
 	return si.dwPageSize;
+}
+
+char* vmem_reserve(size_t size)
+{
+	return VirtualAlloc(NULL, size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+}
+
+void vmem_release(char* addr, size_t size)
+{
+	VirtualFree(addr, 0, MEM_RELEASE);
 }
 
 #elif defined(__GNUC__)

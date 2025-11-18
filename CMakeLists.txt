@@ -15,8 +15,12 @@ option(NO_GRAPHICS "Build without graphics support (console-only)" OFF)
 set(CORE_SOURCES
     ${PROJECT_SOURCE_DIR}/src/actionmodern/action.c
     ${PROJECT_SOURCE_DIR}/src/actionmodern/variables.c
+    ${PROJECT_SOURCE_DIR}/src/flashbang/flashbang.c
+    ${PROJECT_SOURCE_DIR}/src/memory/heap.c
     ${PROJECT_SOURCE_DIR}/src/utils.c
-
+    
+    ${PROJECT_SOURCE_DIR}/lib/o1heap/o1heap/o1heap.c
+    
     # Compile hashmap file directly to avoid undefined symbols on Linux
     ${PROJECT_SOURCE_DIR}/lib/c-hashmap/map.c
 )
@@ -84,7 +88,11 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${PROJECT_SOURCE_DIR}/include
     ${PROJECT_SOURCE_DIR}/include/actionmodern
     ${PROJECT_SOURCE_DIR}/include/libswf
+    ${PROJECT_SOURCE_DIR}/include/flashbang
+    ${PROJECT_SOURCE_DIR}/include/memory
     ${PROJECT_SOURCE_DIR}/lib/c-hashmap
+    ${PROJECT_SOURCE_DIR}/lib/SDL3/include
+    ${PROJECT_SOURCE_DIR}/lib/o1heap/o1heap
     zlib
     lzma/liblzma/api
 )

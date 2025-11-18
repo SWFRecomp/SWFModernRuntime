@@ -86,8 +86,8 @@ void actionStringEquals(char* stack, u32* sp, char* a_str, char* b_str);
 void actionStringLength(char* stack, u32* sp, char* v_str);
 void actionStringAdd(char* stack, u32* sp, char* a_str, char* b_str);
 
-void actionGetVariable(char* stack, u32* sp);
-void actionSetVariable(char* stack, u32* sp);
+void actionGetVariable(SWFAppContext* app_context, char* stack, u32* sp);
+void actionSetVariable(SWFAppContext* app_context, char* stack, u32* sp);
 
 void actionTrace(char* stack, u32* sp);
 void actionGetTime(char* stack, u32* sp);

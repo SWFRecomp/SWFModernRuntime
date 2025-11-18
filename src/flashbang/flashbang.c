@@ -4,16 +4,56 @@
 
 #include <common.h>
 #include <flashbang.h>
+#include <heap.h>
 #include <utils.h>
 
 int once = 0;
 
-FlashbangContext* flashbang_new()
+const float identity[16] =
 {
-	return malloc(sizeof(FlashbangContext));
-}
+	1.0f,
+	0.0f,
+	0.0f,
+	0.0f,
+	0.0f,
+	1.0f,
+	0.0f,
+	0.0f,
+	0.0f,
+	0.0f,
+	1.0f,
+	0.0f,
+	0.0f,
+	0.0f,
+	0.0f,
+	1.0f
+};
 
-void flashbang_init(FlashbangContext* context)
+const float identity_cxform[20] =
+{
+	1.0f,
+	0.0f,
+	0.0f,
+	0.0f,
+	0.0f,
+	1.0f,
+	0.0f,
+	0.0f,
+	0.0f,
+	0.0f,
+	1.0f,
+	0.0f,
+	0.0f,
+	0.0f,
+	0.0f,
+	1.0f,
+	0.0f,
+	0.0f,
+	0.0f,
+	0.0f
+};
+
+void flashbang_init(FlashbangContext* context, SWFAppContext* app_context)
 {
 	if (!once && !SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD))
 	{
@@ -24,7 +64,7 @@ void flashbang_init(FlashbangContext* context)
 	once = 1;
 	
 	context->current_bitmap = 0;
-	context->bitmap_sizes = (u32*) aligned_alloc(8, 2*sizeof(u32)*context->bitmap_count);
+	context->bitmap_sizes = (u32*) HALIGNED(8, 2*sizeof(u32)*context->bitmap_count);
 	
 	// create a window
 	context->window = SDL_CreateWindow("TestSWFRecompiled", context->width, context->height, SDL_WINDOW_RESIZABLE);
@@ -49,6 +89,7 @@ void flashbang_init(FlashbangContext* context)
 	SDL_GPUTransferBuffer* color_transfer_buffer;
 	SDL_GPUTransferBuffer* uninv_mat_transfer_buffer;
 	SDL_GPUTransferBuffer* gradient_transfer_buffer;
+	SDL_GPUTransferBuffer* cxform_transfer_buffer;
 	SDL_GPUTransferBuffer* dummy_transfer_buffer;
 	
 	// create the vertex buffer
@@ -81,6 +122,11 @@ void flashbang_init(FlashbangContext* context)
 	bufferInfo.size = (Uint32) (2*sizeof(u32)*context->bitmap_count);
 	bufferInfo.usage = SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ;
 	context->bitmap_sizes_buffer = SDL_CreateGPUBuffer(context->device, &bufferInfo);
+	
+	// create a storage buffer for cxforms
+	bufferInfo.size = (Uint32) context->cxform_data_size;
+	bufferInfo.usage = SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ;
+	context->cxform_buffer = SDL_CreateGPUBuffer(context->device, &bufferInfo);
 	
 	// create a transfer buffer to upload to the vertex buffer
 	SDL_GPUTransferBufferCreateInfo transfer_info = {0};
@@ -117,6 +163,11 @@ void flashbang_init(FlashbangContext* context)
 	transfer_info.size = (Uint32) (2*sizeof(u32)*context->bitmap_count);
 	transfer_info.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
 	context->bitmap_sizes_transfer = SDL_CreateGPUTransferBuffer(context->device, &transfer_info);
+	
+	// create a transfer buffer to upload cxforms
+	transfer_info.size = (Uint32) context->cxform_data_size;
+	transfer_info.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
+	cxform_transfer_buffer = SDL_CreateGPUTransferBuffer(context->device, &transfer_info);
 	
 	// create a transfer buffer to upload a dummy texture
 	transfer_info.size = 4;
@@ -191,7 +242,7 @@ void flashbang_init(FlashbangContext* context)
 	vertex_shader_info.num_samplers = 0;
 	vertex_shader_info.num_storage_buffers = 4;
 	vertex_shader_info.num_storage_textures = 0;
-	vertex_shader_info.num_uniform_buffers = 2;
+	vertex_shader_info.num_uniform_buffers = 4;
 	
 	SDL_GPUShader* vertex_shader = SDL_CreateGPUShader(context->device, &vertex_shader_info);
 	
@@ -210,9 +261,9 @@ void flashbang_init(FlashbangContext* context)
 	fragment_shader_info.format = SDL_GPU_SHADERFORMAT_SPIRV;
 	fragment_shader_info.stage = SDL_GPU_SHADERSTAGE_FRAGMENT; // fragment shader
 	fragment_shader_info.num_samplers = 2;
-	fragment_shader_info.num_storage_buffers = 0;
+	fragment_shader_info.num_storage_buffers = 1;
 	fragment_shader_info.num_storage_textures = 0;
-	fragment_shader_info.num_uniform_buffers = 0;
+	fragment_shader_info.num_uniform_buffers = 2;
 	
 	SDL_GPUShader* fragment_shader = SDL_CreateGPUShader(context->device, &fragment_shader_info);
 	
@@ -389,6 +440,16 @@ void flashbang_init(FlashbangContext* context)
 		assert(context->gradient_sampler != NULL);
 	}
 	
+	// upload all cxform data once on init
+	buffer = (char*) SDL_MapGPUTransferBuffer(context->device, cxform_transfer_buffer, 0);
+	
+	for (size_t i = 0; i < context->cxform_data_size; ++i)
+	{
+		buffer[i] = context->cxform_data[i];
+	}
+	
+	SDL_UnmapGPUTransferBuffer(context->device, cxform_transfer_buffer);
+	
 	buffer = (char*) SDL_MapGPUTransferBuffer(context->device, dummy_transfer_buffer, 0);
 	
 	for (size_t i = 0; i < 4; ++i)
@@ -442,6 +503,18 @@ void flashbang_init(FlashbangContext* context)
 	region.offset = 0; // begin writing from the first byte
 	
 	// upload colors
+	SDL_UploadToGPUBuffer(copy_pass, &location, &region, false);
+	
+	// where is the data
+	location.transfer_buffer = cxform_transfer_buffer;
+	location.offset = 0;
+	
+	// where to upload the data
+	region.buffer = context->cxform_buffer;
+	region.size = (Uint32) context->cxform_data_size; // size of the data in bytes
+	region.offset = 0; // begin writing from the first byte
+	
+	// upload cxforms
 	SDL_UploadToGPUBuffer(copy_pass, &location, &region, false);
 	
 	// where is the texture
@@ -553,6 +626,7 @@ void flashbang_init(FlashbangContext* context)
 	SDL_ReleaseGPUTransferBuffer(context->device, color_transfer_buffer);
 	SDL_ReleaseGPUTransferBuffer(context->device, uninv_mat_transfer_buffer);
 	SDL_ReleaseGPUTransferBuffer(context->device, gradient_transfer_buffer);
+	SDL_ReleaseGPUTransferBuffer(context->device, cxform_transfer_buffer);
 	SDL_ReleaseGPUTransferBuffer(context->device, dummy_transfer_buffer);
 }
 
@@ -753,7 +827,15 @@ void flashbang_open_pass(FlashbangContext* context)
 	// bind the graphics pipeline
 	SDL_BindGPUGraphicsPipeline(context->render_pass, context->graphics_pipeline);
 	
+	u32 identity_id = 0;
+	
 	SDL_PushGPUVertexUniformData(context->command_buffer, 0, context->stage_to_ndc, 16*sizeof(float));
+	SDL_PushGPUVertexUniformData(context->command_buffer, 2, &identity_id, sizeof(u32));
+	SDL_PushGPUVertexUniformData(context->command_buffer, 3, identity, 16*sizeof(float));
+	
+	SDL_PushGPUFragmentUniformData(context->command_buffer, 0, &identity_id, sizeof(u32));
+	SDL_PushGPUFragmentUniformData(context->command_buffer, 1, identity_cxform, 20*sizeof(float));
+	
 	SDL_BindGPUVertexStorageBuffers(context->render_pass, 0, &context->xform_buffer, 1);
 	SDL_BindGPUVertexStorageBuffers(context->render_pass, 1, &context->color_buffer, 1);
 	SDL_BindGPUVertexStorageBuffers(context->render_pass, 2, &context->inv_mat_buffer, 1);
@@ -789,6 +871,27 @@ void flashbang_open_pass(FlashbangContext* context)
 	}
 	
 	SDL_BindGPUFragmentSamplers(context->render_pass, 0, sampler_bindings, 2);
+	SDL_BindGPUFragmentStorageBuffers(context->render_pass, 0, &context->cxform_buffer, 1);
+}
+
+void flashbang_upload_extra_transform_id(FlashbangContext* context, u32 transform_id)
+{
+	SDL_PushGPUVertexUniformData(context->command_buffer, 2, &transform_id, sizeof(u32));
+}
+
+void flashbang_upload_extra_transform(FlashbangContext* context, float* transform)
+{
+	SDL_PushGPUVertexUniformData(context->command_buffer, 3, transform, 16*sizeof(float));
+}
+
+void flashbang_upload_cxform_id(FlashbangContext* context, u32 cxform_id)
+{
+	SDL_PushGPUFragmentUniformData(context->command_buffer, 0, &cxform_id, sizeof(u32));
+}
+
+void flashbang_upload_cxform(FlashbangContext* context, float* cxform)
+{
+	SDL_PushGPUFragmentUniformData(context->command_buffer, 1, cxform, 20*sizeof(float));
 }
 
 void flashbang_draw_shape(FlashbangContext* context, size_t offset, size_t num_verts, u32 transform_id)
@@ -846,7 +949,7 @@ void flashbang_close_pass(FlashbangContext* context)
 	SDL_SubmitGPUCommandBuffer(context->command_buffer);
 }
 
-void flashbang_free(FlashbangContext* context)
+void flashbang_release(FlashbangContext* context)
 {
 	// release the pipeline
 	SDL_ReleaseGPUGraphicsPipeline(context->device, context->graphics_pipeline);
@@ -859,6 +962,4 @@ void flashbang_free(FlashbangContext* context)
 	
 	// destroy the window
 	SDL_DestroyWindow(context->window);
-	
-	free(context);
 }

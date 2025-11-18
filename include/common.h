@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 #define THROW *((u32*) 0) = 0;
 #define EXC(str) fprintf(stderr, str); THROW;

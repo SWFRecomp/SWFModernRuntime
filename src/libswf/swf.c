@@ -1,11 +1,12 @@
-#ifndef NO_GRAPHICS
-
 #include <swf.h>
 #include <tag.h>
 #include <action.h>
 #include <variables.h>
 #include <flashbang.h>
+#include <heap.h>
 #include <utils.h>
+
+#define HEAP_SIZE 1024*1024*1024  // 1 GB
 
 char* stack;
 u32 sp;
@@ -24,44 +25,58 @@ size_t max_depth = 0;
 
 FlashbangContext* context;
 
-void tagMain(frame_func* frame_funcs)
+void tagInit();
+
+void tagMain(SWFAppContext* app_context)
 {
+	frame_func* frame_funcs = app_context->frame_funcs;
+	
 	while (!quit_swf)
 	{
-		frame_funcs[next_frame]();
+		frame_funcs[next_frame](app_context);
 		if (!manual_next_frame)
 		{
 			next_frame += 1;
 		}
 		manual_next_frame = 0;
+		
+#ifndef NO_GRAPHICS
 		bad_poll |= flashbang_poll();
+#else
+		printf("\n[Frame %zu]\n", current_frame);
+#endif
+		
 		quit_swf |= bad_poll;
 	}
-
+	
 	if (bad_poll)
 	{
 		return;
 	}
-
+	
 	while (!flashbang_poll())
 	{
-		tagShowFrame();
+		tagShowFrame(app_context);
 	}
 }
 
 void swfStart(SWFAppContext* app_context)
 {
-	context = flashbang_new();
-
+	heap_init(app_context, HEAP_SIZE);
+	
+#ifndef NO_GRAPHICS
+	FlashbangContext c;
+	context = &c;
+	
 	context->width = app_context->width;
 	context->height = app_context->height;
-
+	
 	context->stage_to_ndc = app_context->stage_to_ndc;
-
+	
 	context->bitmap_count = app_context->bitmap_count;
 	context->bitmap_highest_w = app_context->bitmap_highest_w;
 	context->bitmap_highest_h = app_context->bitmap_highest_h;
-
+	
 	context->shape_data = app_context->shape_data;
 	context->shape_data_size = app_context->shape_data_size;
 	context->transform_data = app_context->transform_data;
@@ -74,34 +89,43 @@ void swfStart(SWFAppContext* app_context)
 	context->gradient_data_size = app_context->gradient_data_size;
 	context->bitmap_data = app_context->bitmap_data;
 	context->bitmap_data_size = app_context->bitmap_data_size;
-
-	flashbang_init(context);
-
-	dictionary = malloc(INITIAL_DICTIONARY_CAPACITY*sizeof(Character));
-	display_list = malloc(INITIAL_DISPLAYLIST_CAPACITY*sizeof(DisplayObject));
-
-	stack = (char*) aligned_alloc(8, INITIAL_STACK_SIZE);
+	context->cxform_data = app_context->cxform_data;
+	context->cxform_data_size = app_context->cxform_data_size;
+	
+	flashbang_init(context, app_context);
+	
+	dictionary = HALLOC(INITIAL_DICTIONARY_CAPACITY*sizeof(Character));
+	display_list = HALLOC(INITIAL_DISPLAYLIST_CAPACITY*sizeof(DisplayObject));
+#else
+	printf("=== SWF Execution Started (NO_GRAPHICS mode) ===\n");
+#endif
+	
+	stack = (char*) HALIGNED(8, INITIAL_STACK_SIZE);
 	sp = INITIAL_SP;
-
+	
 	quit_swf = 0;
 	bad_poll = 0;
 	next_frame = 0;
-
+	
 	initTime();
 	initMap();
-
+	
 	tagInit();
-
-	tagMain(frame_funcs);
-
+	
+	tagMain(app_context);
+	
 	freeMap();
-
-	aligned_free(stack);
-
-	free(dictionary);
-	free(display_list);
-
-	flashbang_free(context);
+	
+	FREE(stack);
+	
+#ifndef NO_GRAPHICS
+	FREE(dictionary);
+	FREE(display_list);
+	
+	flashbang_release(context);
+#else
+	printf("\n=== SWF Execution Completed ===\n");
+#endif
+	
+	heap_shutdown(app_context);
 }
-
-#endif // NO_GRAPHICS
