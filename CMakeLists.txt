@@ -28,26 +28,24 @@ if(NO_GRAPHICS)
     # Console-only mode
     message(STATUS "Building in NO_GRAPHICS mode (console-only)")
     add_definitions(-DNO_GRAPHICS)
-
+    
     set(SWF_SOURCES
         ${PROJECT_SOURCE_DIR}/src/libswf/swf_core.c
         ${PROJECT_SOURCE_DIR}/src/libswf/tag_stubs.c
     )
-
+    
     set(SOURCES ${CORE_SOURCES} ${SWF_SOURCES})
 else()
     # Full graphics mode
     message(STATUS "Building in full graphics mode")
-
+    
     set(SWF_SOURCES
         ${PROJECT_SOURCE_DIR}/src/libswf/swf.c
         ${PROJECT_SOURCE_DIR}/src/libswf/tag.c
         ${PROJECT_SOURCE_DIR}/src/flashbang/flashbang.c
     )
     
-
     set(SOURCES ${CORE_SOURCES} ${SWF_SOURCES})
-    
 endif()
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
@@ -65,7 +63,7 @@ add_subdirectory(${PROJECT_SOURCE_DIR}/lib/lzma)
 
 if(NOT NO_GRAPHICS)
     add_subdirectory(${PROJECT_SOURCE_DIR}/lib/SDL3)
-
+    
     target_link_libraries(${PROJECT_NAME} PUBLIC
         zlibstatic
         lzma
