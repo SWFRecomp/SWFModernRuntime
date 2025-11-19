@@ -1,7 +1,5 @@
-#ifdef NO_GRAPHICS
-
-#include <tag.h>
 #include <common.h>
+#include <tag.h>
 
 // Stub implementations for console-only mode
 // Note: tagInit() is provided by the generated tagMain.c file
@@ -39,5 +37,3 @@ void finalizeBitmaps()
 	printf("[Tag] FinalizeBitmaps() [ignored in NO_GRAPHICS mode]\n");
 }
 #endif
-
-#endif // NO_GRAPHICS

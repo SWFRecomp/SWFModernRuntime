@@ -15,7 +15,6 @@ option(NO_GRAPHICS "Build without graphics support (console-only)" OFF)
 set(CORE_SOURCES
     ${PROJECT_SOURCE_DIR}/src/actionmodern/action.c
     ${PROJECT_SOURCE_DIR}/src/actionmodern/variables.c
-    ${PROJECT_SOURCE_DIR}/src/flashbang/flashbang.c
     ${PROJECT_SOURCE_DIR}/src/memory/heap.c
     ${PROJECT_SOURCE_DIR}/src/utils.c
     
@@ -45,8 +44,10 @@ else()
         ${PROJECT_SOURCE_DIR}/src/libswf/tag.c
         ${PROJECT_SOURCE_DIR}/src/flashbang/flashbang.c
     )
+    
 
     set(SOURCES ${CORE_SOURCES} ${SWF_SOURCES})
+    
 endif()
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})

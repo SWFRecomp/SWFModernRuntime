@@ -1,6 +1,7 @@
 #pragma once
 
 #include <common.h>
+#include <swf.h>
 
 // Core tag functions - always available
 void tagInit();

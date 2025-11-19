@@ -6,8 +6,6 @@
 #include <heap.h>
 #include <utils.h>
 
-#define HEAP_SIZE 1024*1024*1024  // 1 GB
-
 char* stack;
 u32 sp;
 u32 oldSP;
@@ -40,12 +38,7 @@ void tagMain(SWFAppContext* app_context)
 		}
 		manual_next_frame = 0;
 		
-#ifndef NO_GRAPHICS
 		bad_poll |= flashbang_poll();
-#else
-		printf("\n[Frame %zu]\n", current_frame);
-#endif
-		
 		quit_swf |= bad_poll;
 	}
 	
@@ -64,7 +57,6 @@ void swfStart(SWFAppContext* app_context)
 {
 	heap_init(app_context, HEAP_SIZE);
 	
-#ifndef NO_GRAPHICS
 	FlashbangContext c;
 	context = &c;
 	
@@ -96,9 +88,6 @@ void swfStart(SWFAppContext* app_context)
 	
 	dictionary = HALLOC(INITIAL_DICTIONARY_CAPACITY*sizeof(Character));
 	display_list = HALLOC(INITIAL_DISPLAYLIST_CAPACITY*sizeof(DisplayObject));
-#else
-	printf("=== SWF Execution Started (NO_GRAPHICS mode) ===\n");
-#endif
 	
 	stack = (char*) HALIGNED(8, INITIAL_STACK_SIZE);
 	sp = INITIAL_SP;
@@ -118,14 +107,10 @@ void swfStart(SWFAppContext* app_context)
 	
 	FREE(stack);
 	
-#ifndef NO_GRAPHICS
 	FREE(dictionary);
 	FREE(display_list);
 	
 	flashbang_release(context);
-#else
-	printf("\n=== SWF Execution Completed ===\n");
-#endif
 	
 	heap_shutdown(app_context);
 }
