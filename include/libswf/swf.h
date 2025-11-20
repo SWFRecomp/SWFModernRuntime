@@ -65,7 +65,7 @@ typedef struct SWFAppContext
 	size_t bitmap_count;
 	size_t bitmap_highest_w;
 	size_t bitmap_highest_h;
-
+	
 	char* shape_data;
 	size_t shape_data_size;
 	char* transform_data;
