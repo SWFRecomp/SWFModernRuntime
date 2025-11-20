@@ -4,40 +4,34 @@
 #include <stackvalue.h>
 
 #define PUSH(t, v) \
-	do { \
-		u32 oldSP = *sp; \
-		*sp -= 4 + 4 + 8 + 8; \
-		*sp &= ~7; \
-		stack[*sp] = t; \
-		VAL(u32, &stack[*sp + 4]) = oldSP; \
-		VAL(u64, &stack[*sp + 16]) = v; \
-	} while(0)
+	u32 oldSP = *sp; \
+	*sp -= 4 + 4 + 8 + 8; \
+	*sp &= ~7; \
+	stack[*sp] = t; \
+	VAL(u32, &stack[*sp + 4]) = oldSP; \
+	VAL(u64, &stack[*sp + 16]) = v; \
 
 // Push string with ID (for constant strings from compiler)
 #define PUSH_STR_ID(v, n, id) \
-	do { \
-		u32 oldSP = *sp; \
-		*sp -= 4 + 4 + 8 + 8; \
-		*sp &= ~7; \
-		stack[*sp] = ACTION_STACK_VALUE_STRING; \
-		VAL(u32, &stack[*sp + 4]) = oldSP; \
-		VAL(u32, &stack[*sp + 8]) = n; \
-		VAL(u32, &stack[*sp + 12]) = id; \
-		VAL(char*, &stack[*sp + 16]) = v; \
-	} while(0)
+	u32 oldSP = *sp; \
+	*sp -= 4 + 4 + 8 + 8; \
+	*sp &= ~7; \
+	stack[*sp] = ACTION_STACK_VALUE_STRING; \
+	VAL(u32, &stack[*sp + 4]) = oldSP; \
+	VAL(u32, &stack[*sp + 8]) = n; \
+	VAL(u32, &stack[*sp + 12]) = id; \
+	VAL(char*, &stack[*sp + 16]) = v; \
 
 // Push string without ID (for dynamic strings, ID = 0)
 #define PUSH_STR(v, n) PUSH_STR_ID(v, n, 0)
 
 #define PUSH_STR_LIST(n, size) \
-	do { \
-		u32 oldSP = VAL(u32, &stack[SP_SECOND_TOP + 4]); \
-		*sp -= (u32) (4 + 4 + 8 + size); \
-		*sp &= ~7; \
-		stack[*sp] = ACTION_STACK_VALUE_STR_LIST; \
-		VAL(u32, &stack[*sp + 4]) = oldSP; \
-		VAL(u32, &stack[*sp + 8]) = n; \
-	} while(0)
+	u32 oldSP = VAL(u32, &stack[SP_SECOND_TOP + 4]); \
+	*sp -= (u32) (4 + 4 + 8 + size); \
+	*sp &= ~7; \
+	stack[*sp] = ACTION_STACK_VALUE_STR_LIST; \
+	VAL(u32, &stack[*sp + 4]) = oldSP; \
+	VAL(u32, &stack[*sp + 8]) = n; \
 
 #define PUSH_VAR(p) pushVar(stack, sp, p);
 
