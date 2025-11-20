@@ -89,8 +89,8 @@ void test_basic_string_variable(char* stack) {
     ActionVar* var = getVariable("test_var", 8);
     setVariableWithValue(var, stack, sp);
 
-    assert_string_equals("Basic string storage", "hello", var->data.string_data.heap_ptr);
-    assert_true("Variable owns memory", var->data.string_data.owns_memory);
+    assert_string_equals("Basic string storage", "hello", var->heap_ptr);
+    assert_true("Variable owns memory", var->owns_memory);
     assert_true("String size correct", var->str_size == 5);
 }
 
@@ -104,8 +104,8 @@ void test_string_list_materialization(char* stack) {
     ActionVar* var = getVariable("concat_var", 10);
     setVariableWithValue(var, stack, sp);
 
-    assert_string_equals("Concatenated string", "Hello World!", var->data.string_data.heap_ptr);
-    assert_true("Variable owns memory", var->data.string_data.owns_memory);
+    assert_string_equals("Concatenated string", "Hello World!", var->heap_ptr);
+    assert_true("Variable owns memory", var->owns_memory);
     assert_true("String size correct", var->str_size == 12);
 }
 
@@ -119,7 +119,7 @@ void test_variable_reassignment(char* stack) {
     ActionVar* var = getVariable("reassign_var", 12);
     setVariableWithValue(var, stack, sp);
 
-    char* first_ptr = var->data.string_data.heap_ptr;
+    char* first_ptr = var->heap_ptr;
     char first_value[50];
     strcpy(first_value, first_ptr);  // Save the value
     printf("    First allocation: %p ('%s')\n", (void*)first_ptr, first_value);
@@ -128,10 +128,10 @@ void test_variable_reassignment(char* stack) {
     create_string_on_stack(stack, sp, "second");
     setVariableWithValue(var, stack, sp);
 
-    char* second_ptr = var->data.string_data.heap_ptr;
-    printf("    Second allocation: %p ('%s')\n", (void*)second_ptr, var->data.string_data.heap_ptr);
+    char* second_ptr = var->heap_ptr;
+    printf("    Second allocation: %p ('%s')\n", (void*)second_ptr, var->heap_ptr);
 
-    assert_string_equals("Reassignment value", "second", var->data.string_data.heap_ptr);
+    assert_string_equals("Reassignment value", "second", var->heap_ptr);
     // Note: Pointer may be reused by allocator, so we just verify the value changed
     assert_true("Old value was freed and new value stored", strcmp(first_value, "second") != 0);
 }
@@ -153,13 +153,13 @@ void test_mixed_types(char* stack) {
     setVariableWithValue(str_var, stack, sp2);
 
     // Verify numeric variable
-    float num_result = VAL(float, &num_var->data.numeric_value);
+    float num_result = VAL(float, &num_var->raw_value);
     assert_true("Numeric value correct", num_result == 42.5f);
     assert_true("Numeric type correct", num_var->type == ACTION_STACK_VALUE_F32);
 
     // Verify string variable
-    assert_string_equals("String value correct", "text", str_var->data.string_data.heap_ptr);
-    assert_true("String owns memory", str_var->data.string_data.owns_memory);
+    assert_string_equals("String value correct", "text", str_var->heap_ptr);
+    assert_true("String owns memory", str_var->owns_memory);
 }
 
 void test_multiple_variables(char* stack) {
@@ -183,9 +183,9 @@ void test_multiple_variables(char* stack) {
     setVariableWithValue(v3, stack, sp3);
 
     // Verify all three
-    assert_string_equals("Variable 1", "var1", v1->data.string_data.heap_ptr);
-    assert_string_equals("Variable 2", "var2", v2->data.string_data.heap_ptr);
-    assert_string_equals("Variable 3", "var3", v3->data.string_data.heap_ptr);
+    assert_string_equals("Variable 1", "var1", v1->heap_ptr);
+    assert_string_equals("Variable 2", "var2", v2->heap_ptr);
+    assert_string_equals("Variable 3", "var3", v3->heap_ptr);
 }
 
 void test_empty_string(char* stack) {
@@ -197,8 +197,8 @@ void test_empty_string(char* stack) {
     ActionVar* var = getVariable("empty_var", 9);
     setVariableWithValue(var, stack, sp);
 
-    assert_string_equals("Empty string", "", var->data.string_data.heap_ptr);
-    assert_true("Empty string owns memory", var->data.string_data.owns_memory);
+    assert_string_equals("Empty string", "", var->heap_ptr);
+    assert_true("Empty string owns memory", var->owns_memory);
     assert_true("Empty string size correct", var->str_size == 0);
 }
 
@@ -218,7 +218,7 @@ void test_long_string(char* stack) {
     ActionVar* var = getVariable("long_var", 8);
     setVariableWithValue(var, stack, sp);
 
-    assert_string_equals("Long string", long_str, var->data.string_data.heap_ptr);
+    assert_string_equals("Long string", long_str, var->heap_ptr);
     assert_true("Long string length correct", var->str_size == 1023);
 }
 
@@ -253,7 +253,7 @@ void test_str_list_with_many_strings(char* stack) {
     ActionVar* var = getVariable("many_strings", 12);
     setVariableWithValue(var, stack, sp);
 
-    assert_string_equals("Many strings concatenated", "12345678910", var->data.string_data.heap_ptr);
+    assert_string_equals("Many strings concatenated", "12345678910", var->heap_ptr);
     assert_true("Correct size", var->str_size == 11);
 }
 

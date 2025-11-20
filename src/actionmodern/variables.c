@@ -26,9 +26,9 @@ static int free_variable_callback(const void *key, size_t ksize, uintptr_t value
 	ActionVar* var = (ActionVar*) value;
 	
 	// Free heap-allocated strings
-	if (var->type == ACTION_STACK_VALUE_STRING && var->data.string_data.owns_memory)
+	if (var->type == ACTION_STACK_VALUE_STRING && var->owns_memory)
 	{
-		free(var->data.string_data.heap_ptr);
+		free(var->heap_ptr);
 	}
 	
 	free(var);
@@ -53,9 +53,9 @@ void freeMap()
 			{
 				// Free heap-allocated strings
 				if (var_array[i]->type == ACTION_STACK_VALUE_STRING &&
-				    var_array[i]->data.string_data.owns_memory)
+				    var_array[i]->owns_memory)
 				{
-					free(var_array[i]->data.string_data.heap_ptr);
+					free(var_array[i]->heap_ptr);
 				}
 				free(var_array[i]);
 			}
@@ -120,10 +120,10 @@ char* materializeStringList(char* stack, u32 sp)
 void setVariableWithValue(ActionVar* var, char* stack, u32 sp)
 {
 	// Free old string if variable owns memory
-	if (var->type == ACTION_STACK_VALUE_STRING && var->data.string_data.owns_memory)
+	if (var->type == ACTION_STACK_VALUE_STRING && var->owns_memory)
 	{
-		free(var->data.string_data.heap_ptr);
-		var->data.string_data.owns_memory = false;
+		free(var->heap_ptr);
+		var->owns_memory = false;
 	}
 	
 	ActionStackValueType type = stack[sp];
@@ -136,14 +136,14 @@ void setVariableWithValue(ActionVar* var, char* stack, u32 sp)
 		
 		var->type = ACTION_STACK_VALUE_STRING;
 		var->str_size = total_size;
-		var->data.string_data.heap_ptr = heap_str;
-		var->data.string_data.owns_memory = true;
+		var->heap_ptr = heap_str;
+		var->owns_memory = true;
 	}
 	else
 	{
 		// Numeric types and regular strings - store directly
 		var->type = type;
 		var->str_size = VAL(u32, &stack[sp + 8]);
-		var->data.numeric_value = VAL(u64, &stack[sp + 16]);
+		var->raw_value = VAL(u64, &stack[sp + 16]);
 	}
 }

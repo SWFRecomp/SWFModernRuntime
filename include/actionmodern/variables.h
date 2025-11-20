@@ -11,13 +11,13 @@ typedef struct
 	u32 string_id;
 	union
 	{
-		u64 numeric_value;
+		u64 raw_value;
 		struct
 		{
 			char* heap_ptr;
 			bool owns_memory;
-		} string_data;
-	} data;
+		};
+	};
 } ActionVar;
 
 void initMap();

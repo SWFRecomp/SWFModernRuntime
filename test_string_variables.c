@@ -108,14 +108,14 @@ void push_var_to_stack(char* stack, u32* sp, ActionVar* var) {
             *sp &= ~7;
             stack[*sp] = var->type;
             VAL(u32, &stack[*sp + 4]) = oldSP;
-            VAL(u64, &stack[*sp + 16]) = var->data.numeric_value;
+            VAL(u64, &stack[*sp + 16]) = var->raw_value;
             break;
         }
         case ACTION_STACK_VALUE_STRING:
         {
-            char* str_ptr = var->data.string_data.owns_memory ?
-                var->data.string_data.heap_ptr :
-                (char*) var->data.numeric_value;
+            char* str_ptr = var->owns_memory ?
+                var->heap_ptr :
+                (char*) var->raw_value;
 
             *sp -= 4 + 4 + 8 + 8;
             *sp &= ~7;
@@ -148,7 +148,7 @@ void test_basic_string_variable(char* stack, u32* sp) {
     char* result = get_stack_string(stack, *sp);
 
     assert_string_equals("Basic string storage", "hello", result);
-    assert_true("Variable owns memory", var->data.string_data.owns_memory);
+    assert_true("Variable owns memory", var->owns_memory);
 
     pop_stack(stack, sp);
 }
@@ -175,8 +175,8 @@ void test_string_concat_to_variable(char* stack, u32* sp) {
     char* result = get_stack_string(stack, *sp);
 
     assert_string_equals("Concatenated string", "Hello World", result);
-    assert_true("Variable owns memory", var->data.string_data.owns_memory);
-    assert_true("Result is heap allocated", result == var->data.string_data.heap_ptr);
+    assert_true("Variable owns memory", var->owns_memory);
+    assert_true("Result is heap allocated", result == var->heap_ptr);
 
     pop_stack(stack, sp);
 }
@@ -219,14 +219,14 @@ void test_variable_reassignment(char* stack, u32* sp) {
     setVariableWithValue(var, stack, *sp);
     pop_stack(stack, sp);
 
-    char* first_ptr = var->data.string_data.heap_ptr;
+    char* first_ptr = var->heap_ptr;
 
     // Second assignment (should free first)
     push_string(stack, sp, "second value");
     setVariableWithValue(var, stack, *sp);
     pop_stack(stack, sp);
 
-    char* second_ptr = var->data.string_data.heap_ptr;
+    char* second_ptr = var->heap_ptr;
 
     // Verify second value
     push_var_to_stack(stack, sp, var);
@@ -315,7 +315,7 @@ void test_empty_string(char* stack, u32* sp) {
     char* result = get_stack_string(stack, *sp);
 
     assert_string_equals("Empty string", "", result);
-    assert_true("Empty string owns memory", var->data.string_data.owns_memory);
+    assert_true("Empty string owns memory", var->owns_memory);
 
     pop_stack(stack, sp);
 }
