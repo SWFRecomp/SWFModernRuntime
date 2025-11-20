@@ -4,7 +4,7 @@
 #include <stackvalue.h>
 
 #define PUSH(t, v) \
-	u32 oldSP = *sp; \
+	oldSP = *sp; \
 	*sp -= 4 + 4 + 8 + 8; \
 	*sp &= ~7; \
 	stack[*sp] = t; \
@@ -13,7 +13,7 @@
 
 // Push string with ID (for constant strings from compiler)
 #define PUSH_STR_ID(v, n, id) \
-	u32 oldSP = *sp; \
+	oldSP = *sp; \
 	*sp -= 4 + 4 + 8 + 8; \
 	*sp &= ~7; \
 	stack[*sp] = ACTION_STACK_VALUE_STRING; \
@@ -26,7 +26,7 @@
 #define PUSH_STR(v, n) PUSH_STR_ID(v, n, 0)
 
 #define PUSH_STR_LIST(n, size) \
-	u32 oldSP = VAL(u32, &stack[SP_SECOND_TOP + 4]); \
+	oldSP = VAL(u32, &stack[SP_SECOND_TOP + 4]); \
 	*sp -= (u32) (4 + 4 + 8 + size); \
 	*sp &= ~7; \
 	stack[*sp] = ACTION_STACK_VALUE_STR_LIST; \
