@@ -153,7 +153,7 @@ void test_mixed_types(char* stack) {
     setVariableWithValue(str_var, stack, sp2);
 
     // Verify numeric variable
-    float num_result = VAL(float, &num_var->raw_value);
+    float num_result = VAL(float, &num_var->value);
     assert_true("Numeric value correct", num_result == 42.5f);
     assert_true("Numeric type correct", num_var->type == ACTION_STACK_VALUE_F32);
 

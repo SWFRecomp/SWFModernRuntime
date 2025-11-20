@@ -144,6 +144,6 @@ void setVariableWithValue(ActionVar* var, char* stack, u32 sp)
 		// Numeric types and regular strings - store directly
 		var->type = type;
 		var->str_size = VAL(u32, &stack[sp + 8]);
-		var->raw_value = VAL(u64, &stack[sp + 16]);
+		var->value = VAL(u64, &stack[sp + 16]);
 	}
 }

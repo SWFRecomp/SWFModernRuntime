@@ -11,7 +11,7 @@ typedef struct
 	u32 string_id;
 	union
 	{
-		u64 raw_value;
+		u64 value;
 		struct
 		{
 			char* heap_ptr;

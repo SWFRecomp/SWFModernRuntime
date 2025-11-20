@@ -108,14 +108,14 @@ void push_var_to_stack(char* stack, u32* sp, ActionVar* var) {
             *sp &= ~7;
             stack[*sp] = var->type;
             VAL(u32, &stack[*sp + 4]) = oldSP;
-            VAL(u64, &stack[*sp + 16]) = var->raw_value;
+            VAL(u64, &stack[*sp + 16]) = var->value;
             break;
         }
         case ACTION_STACK_VALUE_STRING:
         {
             char* str_ptr = var->owns_memory ?
                 var->heap_ptr :
-                (char*) var->raw_value;
+                (char*) var->value;
 
             *sp -= 4 + 4 + 8 + 8;
             *sp &= ~7;
