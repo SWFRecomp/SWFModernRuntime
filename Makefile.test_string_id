@@ -1,0 +1,44 @@
+# Makefile for String ID Optimization Test Suite
+
+CC = gcc
+CFLAGS = -Wall -Wextra -g -Iinclude -Iinclude/actionmodern -Iinclude/libswf -Ilib/c-hashmap
+LDFLAGS = -lm
+
+# Source files
+SOURCES = test_string_id_optimization.c \
+          src/actionmodern/variables.c \
+          src/actionmodern/action.c \
+          src/utils.c \
+          lib/c-hashmap/map.c
+
+# Object files
+OBJECTS = $(SOURCES:.c=.o)
+
+# Target executable
+TARGET = test_string_id_optimization
+
+# Build rules
+all: $(TARGET)
+
+$(TARGET): $(OBJECTS)
+	$(CC) $(OBJECTS) $(LDFLAGS) -o $(TARGET)
+	@echo ""
+	@echo "Build successful! Run with:"
+	@echo "  ./$(TARGET)"
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+clean:
+	rm -f $(OBJECTS) $(TARGET)
+	@echo "Cleaned build artifacts"
+
+test: $(TARGET)
+	@echo "Running String ID optimization tests..."
+	@./$(TARGET)
+
+valgrind: $(TARGET)
+	@echo "Running tests with valgrind..."
+	@valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes ./$(TARGET)
+
+.PHONY: all clean test valgrind

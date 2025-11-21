@@ -2,6 +2,8 @@
 
 #include <stackvalue.h>
 
+#define HEAP_SIZE 1024*1024*1024  // 1 GB
+
 #define INITIAL_DICTIONARY_CAPACITY 1024
 #define INITIAL_DISPLAYLIST_CAPACITY 1024
 

@@ -6,8 +6,6 @@
 #include <heap.h>
 #include <utils.h>
 
-#define HEAP_SIZE 1024*1024*1024  // 1 GB
-
 char* stack;
 u32 sp;
 u32 oldSP;
@@ -39,6 +37,7 @@ void tagMain(SWFAppContext* app_context)
 			next_frame += 1;
 		}
 		manual_next_frame = 0;
+		
 		bad_poll |= flashbang_poll();
 		quit_swf |= bad_poll;
 	}
