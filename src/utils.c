@@ -69,12 +69,23 @@ void vmem_release(char* addr, size_t size)
 
 #include <stdlib.h>
 #include <time.h>
+#include <sys/mman.h>
 
 u32 get_elapsed_ms()
 {
 	struct timespec now;
 	clock_gettime(CLOCK_MONOTONIC_RAW, &now);
 	return (now.tv_sec)*1000 + (now.tv_nsec)/1000000;
+}
+
+char* vmem_reserve(size_t size)
+{
+	return mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
+}
+
+void vmem_release(char* addr, size_t size)
+{
+	munmap(addr, size);
 }
 
 #endif
