@@ -38,19 +38,8 @@ void grow_ptr_aligned(SWFAppContext* app_context, char** ptr, size_t* capacity_p
 #if defined(_MSC_VER)
 // Microsoft
 
-#include <malloc.h>
 #include <windows.h>
 #include <Winbase.h>
-
-void* aligned_alloc(size_t alignment, size_t size)
-{
-	return _aligned_malloc(size, alignment);
-}
-
-void aligned_free(void* memblock)
-{
-	_aligned_free(memblock);
-}
 
 u32 get_elapsed_ms()
 {
@@ -80,11 +69,6 @@ void vmem_release(char* addr, size_t size)
 
 #include <stdlib.h>
 #include <time.h>
-
-void aligned_free(void* memblock)
-{
-	free(memblock);
-}
 
 u32 get_elapsed_ms()
 {

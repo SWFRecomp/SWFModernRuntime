@@ -96,6 +96,8 @@ void swfStart(SWFAppContext* app_context)
 	bad_poll = 0;
 	next_frame = 0;
 	
+	initVarArray(app_context, app_context->max_string_id);
+	
 	initTime();
 	initMap();
 	

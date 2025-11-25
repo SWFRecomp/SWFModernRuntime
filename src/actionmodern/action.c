@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <math.h>
@@ -85,7 +86,7 @@ void peekVar(char* stack, u32* sp, ActionVar* var)
 	{
 		var->value = (u64) &STACK_TOP_VALUE;
 	}
-
+	
 	else
 	{
 		var->value = VAL(u64, &STACK_TOP_VALUE);
@@ -740,41 +741,37 @@ void actionTrace(char* stack, u32* sp)
 	}
 	
 	fflush(stdout);
-
+	
 	POP();
 }
 
 void actionGetVariable(SWFAppContext* app_context, char* stack, u32* sp)
 {
 	// Read variable name info from stack
-	// Stack layout for strings: +0=type, +4=oldSP, +8=length, +12=string_id, +16=pointer
-	u32 string_id = VAL(u32, &stack[*sp + 12]);
-	char* var_name = (char*) VAL(u64, &stack[*sp + 16]);
-	u32 var_name_len = VAL(u32, &stack[*sp + 8]);
-
+	u32 string_id = STACK_TOP_ID;
+	char* var_name = (char*) STACK_TOP_VALUE;
+	u32 var_name_len = STACK_TOP_N;
+	
 	// Pop variable name
 	POP();
-
+	
 	// Get variable (fast path for constant strings)
-	ActionVar* var;
+	ActionVar* var = NULL;
+	
 	if (string_id != 0)
 	{
 		// Constant string - use array (O(1))
-		var = getVariableById(string_id);
+		var = getVariableById(app_context, string_id);
 	}
+	
 	else
 	{
 		// Dynamic string - use hashmap (O(n))
 		var = getVariable(app_context, var_name, var_name_len);
 	}
-
-	if (!var)
-	{
-		// Variable not found - push empty string
-		PUSH_STR("", 0);
-		return;
-	}
-
+	
+	assert(var != NULL);
+	
 	// Push variable value to stack
 	PUSH_VAR(var);
 }
@@ -783,39 +780,32 @@ void actionSetVariable(SWFAppContext* app_context, char* stack, u32* sp)
 {
 	// Stack layout: [value] [name] <- sp
 	// We need value at top, name at second
-
-	u32 value_sp = *sp;
-	u32 var_name_sp = SP_SECOND_TOP;
-
+	
 	// Read variable name info
-	// Stack layout for strings: +0=type, +4=oldSP, +8=length, +12=string_id, +16=pointer
-	u32 string_id = VAL(u32, &stack[var_name_sp + 12]);
-	char* var_name = (char*) VAL(u64, &stack[var_name_sp + 16]);
-	u32 var_name_len = VAL(u32, &stack[var_name_sp + 8]);
-
+	u32 string_id = STACK_SECOND_TOP_ID;
+	char* var_name = (char*) STACK_SECOND_TOP_VALUE;
+	u32 var_name_len = STACK_SECOND_TOP_N;
+	
 	// Get variable (fast path for constant strings)
-	ActionVar* var;
+	ActionVar* var = NULL;
+	
 	if (string_id != 0)
 	{
 		// Constant string - use array (O(1))
-		var = getVariableById(string_id);
+		var = getVariableById(app_context, string_id);
 	}
+	
 	else
 	{
 		// Dynamic string - use hashmap (O(n))
 		var = getVariable(app_context, var_name, var_name_len);
 	}
-
-	if (!var)
-	{
-		// Failed to get/create variable
-		POP_2();
-		return;
-	}
-
+	
+	assert(var != NULL);
+	
 	// Set variable value (uses existing string materialization!)
-	setVariableWithValue(var, stack, value_sp);
-
+	setVariableWithValue(app_context, var, stack, sp);
+	
 	// Pop both value and name
 	POP_2();
 }
