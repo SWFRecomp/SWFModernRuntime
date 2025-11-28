@@ -8,12 +8,13 @@ set(CMAKE_SKIP_BUILD_RPATH FALSE)
 set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 set(CMAKE_INSTALL_RPATH "$\{ORIGIN\}")
 
-set(SOURCES
-    ${PROJECT_SOURCE_DIR}/src/libswf/swf.c
-    ${PROJECT_SOURCE_DIR}/src/libswf/tag.c
+# Option to disable graphics support (console-only mode)
+option(NO_GRAPHICS "Build without graphics support (console-only)" OFF)
+
+# Core sources (always included)
+set(CORE_SOURCES
     ${PROJECT_SOURCE_DIR}/src/actionmodern/action.c
     ${PROJECT_SOURCE_DIR}/src/actionmodern/variables.c
-    ${PROJECT_SOURCE_DIR}/src/flashbang/flashbang.c
     ${PROJECT_SOURCE_DIR}/src/memory/heap.c
     ${PROJECT_SOURCE_DIR}/src/utils.c
     
@@ -22,6 +23,30 @@ set(SOURCES
     # Compile hashmap file directly to avoid undefined symbols on Linux
     ${PROJECT_SOURCE_DIR}/lib/c-hashmap/map.c
 )
+
+if(NO_GRAPHICS)
+    # Console-only mode
+    message(STATUS "Building in NO_GRAPHICS mode (console-only)")
+    add_definitions(-DNO_GRAPHICS)
+    
+    set(SWF_SOURCES
+        ${PROJECT_SOURCE_DIR}/src/libswf/swf_core.c
+        ${PROJECT_SOURCE_DIR}/src/libswf/tag_stubs.c
+    )
+    
+    set(SOURCES ${CORE_SOURCES} ${SWF_SOURCES})
+else()
+    # Full graphics mode
+    message(STATUS "Building in full graphics mode")
+    
+    set(SWF_SOURCES
+        ${PROJECT_SOURCE_DIR}/src/libswf/swf.c
+        ${PROJECT_SOURCE_DIR}/src/libswf/tag.c
+        ${PROJECT_SOURCE_DIR}/src/flashbang/flashbang.c
+    )
+    
+    set(SOURCES ${CORE_SOURCES} ${SWF_SOURCES})
+endif()
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
 
@@ -35,13 +60,21 @@ set(RENAME_ZCONF OFF)
 
 add_subdirectory(${PROJECT_SOURCE_DIR}/lib/zlib)
 add_subdirectory(${PROJECT_SOURCE_DIR}/lib/lzma)
-add_subdirectory(${PROJECT_SOURCE_DIR}/lib/SDL3)
 
-target_link_libraries(${PROJECT_NAME} PUBLIC
-    zlibstatic
-    lzma
-    SDL3::SDL3
-)
+if(NOT NO_GRAPHICS)
+    add_subdirectory(${PROJECT_SOURCE_DIR}/lib/SDL3)
+    
+    target_link_libraries(${PROJECT_NAME} PUBLIC
+        zlibstatic
+        lzma
+        SDL3::SDL3
+    )
+else()
+    target_link_libraries(${PROJECT_NAME} PUBLIC
+        zlibstatic
+        lzma
+    )
+endif()
 
 # frick u ninja
 if (${CMAKE_GENERATOR} MATCHES "Ninja")
@@ -62,3 +95,10 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     zlib
     lzma/liblzma/api
 )
+
+if(NOT NO_GRAPHICS)
+    target_include_directories(${PROJECT_NAME} PRIVATE
+        ${PROJECT_SOURCE_DIR}/include/flashbang
+        ${PROJECT_SOURCE_DIR}/lib/SDL3/include
+    )
+endif()

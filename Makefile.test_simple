@@ -1,0 +1,47 @@
+# Makefile for Simple String Variable Test Suite
+# Tests only the variables.c module without action.c dependencies
+
+CC = gcc
+CFLAGS = -Wall -Wextra -g -Iinclude -Iinclude/actionmodern -Iinclude/libswf -Ilib/c-hashmap
+LDFLAGS = -lm
+
+# Source files
+SOURCES = test_variables_simple.c \
+          src/actionmodern/variables.c \
+          src/utils.c \
+          lib/c-hashmap/map.c
+
+# Object files
+OBJECTS = $(SOURCES:.c=.o)
+
+# Target executable
+TARGET = test_variables_simple
+
+# Build rules
+all: $(TARGET)
+
+$(TARGET): $(OBJECTS)
+	$(CC) $(OBJECTS) $(LDFLAGS) -o $(TARGET)
+	@echo ""
+	@echo "Build successful! Run with:"
+	@echo "  ./$(TARGET)"
+	@echo ""
+	@echo "Run with valgrind:"
+	@echo "  valgrind --leak-check=full --show-leak-kinds=all ./$(TARGET)"
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+clean:
+	rm -f $(OBJECTS) $(TARGET)
+	@echo "Cleaned build artifacts"
+
+test: $(TARGET)
+	@echo "Running tests..."
+	@./$(TARGET)
+
+valgrind: $(TARGET)
+	@echo "Running tests with valgrind..."
+	@valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes ./$(TARGET)
+
+.PHONY: all clean test valgrind

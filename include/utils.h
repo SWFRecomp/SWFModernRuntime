@@ -19,9 +19,6 @@
 void grow_ptr(SWFAppContext* app_context, char** ptr, size_t* capacity_ptr, size_t elem_size);
 void grow_ptr_aligned(SWFAppContext* app_context, char** ptr, size_t* capacity_ptr, size_t elem_size, size_t alignment);
 
-void* aligned_alloc(size_t alignment, size_t size);
-void aligned_free(void* memblock);
-
 u32 get_elapsed_ms();
 int getpagesize();
 

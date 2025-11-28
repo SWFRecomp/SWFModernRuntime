@@ -2,6 +2,8 @@
 
 #include <stackvalue.h>
 
+#define HEAP_SIZE 1024*1024*1024  // 1 GB
+
 #define INITIAL_DICTIONARY_CAPACITY 1024
 #define INITIAL_DISPLAYLIST_CAPACITY 1024
 
@@ -59,6 +61,8 @@ typedef struct SWFAppContext
 	O1HeapInstance* heap_instance;
 	char* heap;
 	size_t heap_size;
+	
+	size_t max_string_id;
 	
 	size_t bitmap_count;
 	size_t bitmap_highest_w;

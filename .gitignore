@@ -1,5 +1,7 @@
 .vs/
 build/
+build-*/
+build_*/
 out/
 RecompiledTags/
 RecompiledScripts/
@@ -8,3 +10,27 @@ zlib.dll
 *.lib
 *.a
 *.spv
+*.o
+
+# WASM build artifacts (but keep source)
+wasm/examples/*/*.wasm
+wasm/examples/*/*.js
+!wasm/examples/*/build.sh
+!wasm/examples/*/*.c
+!wasm/examples/*/*.h
+!wasm/examples/*/*.html
+
+# Emscripten
+.emscripten_cache/
+.emscripten_ports/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db

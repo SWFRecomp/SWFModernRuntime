@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <math.h>
@@ -66,7 +67,10 @@ void pushVar(char* stack, u32* sp, ActionVar* var)
 		
 		case ACTION_STACK_VALUE_STRING:
 		{
-			PUSH_STR((char*) var->value, var->str_size);
+			// Use heap pointer if variable owns memory, otherwise use value as pointer
+			char* str_ptr = var->owns_memory ? var->heap_ptr : (char*) var->value;
+			
+			PUSH_STR_ID(str_ptr, var->str_size, var->string_id);
 			
 			break;
 		}
@@ -96,7 +100,7 @@ void popVar(char* stack, u32* sp, ActionVar* var)
 	POP();
 }
 
-void actionAdd(char* stack, u32* sp)
+void actionAdd(SWFAppContext* app_context, char* stack, u32* sp)
 {
 	convertFloat(stack, sp);
 	ActionVar a;
@@ -131,7 +135,7 @@ void actionAdd(char* stack, u32* sp)
 	}
 }
 
-void actionSubtract(char* stack, u32* sp)
+void actionSubtract(SWFAppContext* app_context, char* stack, u32* sp)
 {
 	convertFloat(stack, sp);
 	ActionVar a;
@@ -166,7 +170,7 @@ void actionSubtract(char* stack, u32* sp)
 	}
 }
 
-void actionMultiply(char* stack, u32* sp)
+void actionMultiply(SWFAppContext* app_context, char* stack, u32* sp)
 {
 	convertFloat(stack, sp);
 	ActionVar a;
@@ -201,7 +205,7 @@ void actionMultiply(char* stack, u32* sp)
 	}
 }
 
-void actionDivide(char* stack, u32* sp)
+void actionDivide(SWFAppContext* app_context, char* stack, u32* sp)
 {
 	convertFloat(stack, sp);
 	ActionVar a;
@@ -261,7 +265,7 @@ void actionDivide(char* stack, u32* sp)
 	}
 }
 
-void actionEquals(char* stack, u32* sp)
+void actionEquals(SWFAppContext* app_context, char* stack, u32* sp)
 {
 	convertFloat(stack, sp);
 	ActionVar a;
@@ -296,7 +300,7 @@ void actionEquals(char* stack, u32* sp)
 	}
 }
 
-void actionLess(char* stack, u32* sp)
+void actionLess(SWFAppContext* app_context, char* stack, u32* sp)
 {
 	ActionVar a;
 	convertFloat(stack, sp);
@@ -331,7 +335,7 @@ void actionLess(char* stack, u32* sp)
 	}
 }
 
-void actionAnd(char* stack, u32* sp)
+void actionAnd(SWFAppContext* app_context, char* stack, u32* sp)
 {
 	ActionVar a;
 	convertFloat(stack, sp);
@@ -366,7 +370,7 @@ void actionAnd(char* stack, u32* sp)
 	}
 }
 
-void actionOr(char* stack, u32* sp)
+void actionOr(SWFAppContext* app_context, char* stack, u32* sp)
 {
 	ActionVar a;
 	convertFloat(stack, sp);
@@ -401,7 +405,7 @@ void actionOr(char* stack, u32* sp)
 	}
 }
 
-void actionNot(char* stack, u32* sp)
+void actionNot(SWFAppContext* app_context, char* stack, u32* sp)
 {
 	ActionVar v;
 	convertFloat(stack, sp);
@@ -574,7 +578,7 @@ int strcmp_not_a_list_b(u64 a_value, u64 b_value)
 	return 0;
 }
 
-void actionStringEquals(char* stack, u32* sp, char* a_str, char* b_str)
+void actionStringEquals(SWFAppContext* app_context, char* stack, u32* sp, char* a_str, char* b_str)
 {
 	ActionVar a;
 	convertString(stack, sp, a_str);
@@ -613,7 +617,7 @@ void actionStringEquals(char* stack, u32* sp, char* a_str, char* b_str)
 	PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &result));
 }
 
-void actionStringLength(char* stack, u32* sp, char* v_str)
+void actionStringLength(SWFAppContext* app_context, char* stack, u32* sp, char* v_str)
 {
 	ActionVar v;
 	convertString(stack, sp, v_str);
@@ -623,7 +627,7 @@ void actionStringLength(char* stack, u32* sp, char* v_str)
 	PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &str_size));
 }
 
-void actionStringAdd(char* stack, u32* sp, char* a_str, char* b_str)
+void actionStringAdd(SWFAppContext* app_context, char* stack, u32* sp, char* a_str, char* b_str)
 {
 	ActionVar a;
 	convertString(stack, sp, a_str);
@@ -661,7 +665,7 @@ void actionStringAdd(char* stack, u32* sp, char* a_str, char* b_str)
 	
 	num_strings += num_a_strings;
 	
-	PUSH_STR_LIST(b.str_size + a.str_size, (u32) sizeof(u64)*(num_strings + 1));
+	PUSH_STR_LIST(b.str_size + a.str_size, (u32) sizeof(u64)*(2*num_strings + 1));
 	
 	u64* str_list = (u64*) &STACK_TOP_VALUE;
 	str_list[0] = num_strings;
@@ -672,13 +676,16 @@ void actionStringAdd(char* stack, u32* sp, char* a_str, char* b_str)
 		
 		for (u64 i = 0; i < num_b_strings; ++i)
 		{
-			str_list[i + 1] = b_list[i + 1];
+			u64 str_i = 2*i;
+			str_list[str_i + 1] = b_list[str_i + 1];
+			str_list[str_i + 2] = b_list[str_i + 2];
 		}
 	}
 	
 	else
 	{
 		str_list[1] = b.value;
+		str_list[2] = b.str_size;
 	}
 	
 	if (a.type == ACTION_STACK_VALUE_STR_LIST)
@@ -687,17 +694,20 @@ void actionStringAdd(char* stack, u32* sp, char* a_str, char* b_str)
 		
 		for (u64 i = 0; i < num_a_strings; ++i)
 		{
-			str_list[i + 1 + num_b_strings] = a_list[i + 1];
+			u64 str_i = 2*i;
+			str_list[str_i + 1 + 2*num_b_strings] = a_list[str_i + 1];
+			str_list[str_i + 2 + 2*num_b_strings] = a_list[str_i + 2];
 		}
 	}
 	
 	else
 	{
-		str_list[1 + num_b_strings] = a.value;
+		str_list[1 + 2*num_b_strings] = a.value;
+		str_list[1 + 2*num_b_strings + 1] = a.str_size;
 	}
 }
 
-void actionTrace(char* stack, u32* sp)
+void actionTrace(SWFAppContext* app_context, char* stack, u32* sp)
 {
 	ActionStackValueType type = STACK_TOP_TYPE;
 	
@@ -713,7 +723,7 @@ void actionTrace(char* stack, u32* sp)
 		{
 			u64* str_list = (u64*) &STACK_TOP_VALUE;
 			
-			for (u64 i = 0; i < str_list[0]; ++i)
+			for (u64 i = 0; i < 2*str_list[0]; i += 2)
 			{
 				printf("%s", (char*) str_list[i + 1]);
 			}
@@ -741,7 +751,72 @@ void actionTrace(char* stack, u32* sp)
 	POP();
 }
 
-void actionGetTime(char* stack, u32* sp)
+void actionGetVariable(SWFAppContext* app_context, char* stack, u32* sp)
+{
+	// Read variable name info from stack
+	u32 string_id = STACK_TOP_ID;
+	char* var_name = (char*) STACK_TOP_VALUE;
+	u32 var_name_len = STACK_TOP_N;
+	
+	// Pop variable name
+	POP();
+	
+	// Get variable (fast path for constant strings)
+	ActionVar* var = NULL;
+	
+	if (string_id != 0)
+	{
+		// Constant string - use array (O(1))
+		var = getVariableById(app_context, string_id);
+	}
+	
+	else
+	{
+		// Dynamic string - use hashmap (O(n))
+		var = getVariable(app_context, var_name, var_name_len);
+	}
+	
+	assert(var != NULL);
+	
+	// Push variable value to stack
+	PUSH_VAR(var);
+}
+
+void actionSetVariable(SWFAppContext* app_context, char* stack, u32* sp)
+{
+	// Stack layout: [value] [name] <- sp
+	// We need value at top, name at second
+	
+	// Read variable name info
+	u32 string_id = STACK_SECOND_TOP_ID;
+	char* var_name = (char*) STACK_SECOND_TOP_VALUE;
+	u32 var_name_len = STACK_SECOND_TOP_N;
+	
+	// Get variable (fast path for constant strings)
+	ActionVar* var = NULL;
+	
+	if (string_id != 0)
+	{
+		// Constant string - use array (O(1))
+		var = getVariableById(app_context, string_id);
+	}
+	
+	else
+	{
+		// Dynamic string - use hashmap (O(n))
+		var = getVariable(app_context, var_name, var_name_len);
+	}
+	
+	assert(var != NULL);
+	
+	// Set variable value (uses existing string materialization!)
+	setVariableWithValue(app_context, var, stack, sp);
+	
+	// Pop both value and name
+	POP_2();
+}
+
+void actionGetTime(SWFAppContext* app_context, char* stack, u32* sp)
 {
 	u32 delta_ms = get_elapsed_ms() - start_time;
 	float delta_ms_f32 = (float) delta_ms;

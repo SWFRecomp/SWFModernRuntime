@@ -1,3 +1,5 @@
+#ifndef NO_GRAPHICS
+
 #include <swf.h>
 #include <tag.h>
 #include <flashbang.h>
@@ -90,3 +92,5 @@ void finalizeBitmaps()
 {
 	flashbang_finalize_bitmaps(context);
 }
+
+#endif // NO_GRAPHICS
