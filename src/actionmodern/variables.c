@@ -73,10 +73,10 @@ char* materializeStringList(SWFAppContext* app_context, char* stack, u32* sp)
 	
 	// Concatenate all strings
 	char* dest = result;
-	for (u64 i = 0; i < num_strings; i++)
+	for (u64 i = 0; i < 2*num_strings; i += 2)
 	{
 		char* src = (char*) str_list[i + 1];
-		size_t len = strlen(src);  // BAD
+		u64 len = str_list[i + 2];
 		memcpy(dest, src, len);
 		dest += len;
 	}

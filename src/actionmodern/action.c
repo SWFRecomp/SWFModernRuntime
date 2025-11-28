@@ -665,7 +665,7 @@ void actionStringAdd(char* stack, u32* sp, char* a_str, char* b_str)
 	
 	num_strings += num_a_strings;
 	
-	PUSH_STR_LIST(b.str_size + a.str_size, (u32) sizeof(u64)*(num_strings + 1));
+	PUSH_STR_LIST(b.str_size + a.str_size, (u32) sizeof(u64)*(2*num_strings + 1));
 	
 	u64* str_list = (u64*) &STACK_TOP_VALUE;
 	str_list[0] = num_strings;
@@ -676,13 +676,16 @@ void actionStringAdd(char* stack, u32* sp, char* a_str, char* b_str)
 		
 		for (u64 i = 0; i < num_b_strings; ++i)
 		{
-			str_list[i + 1] = b_list[i + 1];
+			u64 str_i = 2*i;
+			str_list[str_i + 1] = b_list[str_i + 1];
+			str_list[str_i + 2] = b_list[str_i + 2];
 		}
 	}
 	
 	else
 	{
 		str_list[1] = b.value;
+		str_list[2] = b.str_size;
 	}
 	
 	if (a.type == ACTION_STACK_VALUE_STR_LIST)
@@ -691,13 +694,16 @@ void actionStringAdd(char* stack, u32* sp, char* a_str, char* b_str)
 		
 		for (u64 i = 0; i < num_a_strings; ++i)
 		{
-			str_list[i + 1 + num_b_strings] = a_list[i + 1];
+			u64 str_i = 2*i;
+			str_list[str_i + 1 + num_b_strings] = a_list[str_i + 1];
+			str_list[str_i + 2 + num_b_strings] = a_list[str_i + 2];
 		}
 	}
 	
 	else
 	{
 		str_list[1 + num_b_strings] = a.value;
+		str_list[1 + num_b_strings + 1] = a.str_size;
 	}
 }
 
