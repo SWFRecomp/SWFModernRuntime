@@ -53,8 +53,6 @@
 #define STACK_SECOND_TOP_ID VAL(u32, &stack[SP_SECOND_TOP + 12])
 #define STACK_SECOND_TOP_VALUE VAL(u64, &stack[SP_SECOND_TOP + 16])
 
-#define SET_VAR(p, t, n, v) setVariableWithValue(p, stack, *sp)
-
 #define VAL(type, x) *((type*) x)
 
 #define INITIAL_STACK_SIZE 8388608  // 8 MB
