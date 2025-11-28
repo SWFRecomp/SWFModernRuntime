@@ -92,7 +92,7 @@ void setVariableWithValue(SWFAppContext* app_context, ActionVar* var, char* stac
 	// Free old string if variable owns memory
 	if (var->type == ACTION_STACK_VALUE_STRING && var->owns_memory)
 	{
-		free(var->heap_ptr);
+		FREE(var->heap_ptr);
 		var->owns_memory = false;
 	}
 	
