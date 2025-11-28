@@ -66,22 +66,22 @@ void initTime();
 
 void pushVar(char* stack, u32* sp, ActionVar* p);
 
-void actionAdd(char* stack, u32* sp);
-void actionSubtract(char* stack, u32* sp);
-void actionMultiply(char* stack, u32* sp);
-void actionDivide(char* stack, u32* sp);
-void actionEquals(char* stack, u32* sp);
-void actionLess(char* stack, u32* sp);
-void actionAnd(char* stack, u32* sp);
-void actionOr(char* stack, u32* sp);
-void actionNot(char* stack, u32* sp);
+void actionAdd(SWFAppContext* app_context, char* stack, u32* sp);
+void actionSubtract(SWFAppContext* app_context, char* stack, u32* sp);
+void actionMultiply(SWFAppContext* app_context, char* stack, u32* sp);
+void actionDivide(SWFAppContext* app_context, char* stack, u32* sp);
+void actionEquals(SWFAppContext* app_context, char* stack, u32* sp);
+void actionLess(SWFAppContext* app_context, char* stack, u32* sp);
+void actionAnd(SWFAppContext* app_context, char* stack, u32* sp);
+void actionOr(SWFAppContext* app_context, char* stack, u32* sp);
+void actionNot(SWFAppContext* app_context, char* stack, u32* sp);
 
-void actionStringEquals(char* stack, u32* sp, char* a_str, char* b_str);
-void actionStringLength(char* stack, u32* sp, char* v_str);
-void actionStringAdd(char* stack, u32* sp, char* a_str, char* b_str);
+void actionStringEquals(SWFAppContext* app_context, char* stack, u32* sp, char* a_str, char* b_str);
+void actionStringLength(SWFAppContext* app_context, char* stack, u32* sp, char* v_str);
+void actionStringAdd(SWFAppContext* app_context, char* stack, u32* sp, char* a_str, char* b_str);
 
 void actionGetVariable(SWFAppContext* app_context, char* stack, u32* sp);
 void actionSetVariable(SWFAppContext* app_context, char* stack, u32* sp);
 
-void actionTrace(char* stack, u32* sp);
-void actionGetTime(char* stack, u32* sp);
+void actionTrace(SWFAppContext* app_context, char* stack, u32* sp);
+void actionGetTime(SWFAppContext* app_context, char* stack, u32* sp);

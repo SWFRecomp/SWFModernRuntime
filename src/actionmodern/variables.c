@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include <map.h>
 #include <common.h>
 #include <action.h>
@@ -64,7 +66,7 @@ ActionVar* getVariable(SWFAppContext* app_context, char* var_name, size_t key_si
 char* materializeStringList(SWFAppContext* app_context, char* stack, u32* sp)
 {
 	// Get the string list
-	u64* str_list = (u64*) STACK_TOP_VALUE;
+	u64* str_list = (u64*) &STACK_TOP_VALUE;
 	u64 num_strings = str_list[0];
 	u32 total_size = STACK_TOP_N;
 	
