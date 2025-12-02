@@ -89,7 +89,7 @@ void swfStart(SWFAppContext* app_context)
 	dictionary = HALLOC(INITIAL_DICTIONARY_CAPACITY*sizeof(Character));
 	display_list = HALLOC(INITIAL_DISPLAYLIST_CAPACITY*sizeof(DisplayObject));
 	
-	stack = (char*) HALIGNED(8, INITIAL_STACK_SIZE);
+	stack = (char*) HALLOC(INITIAL_STACK_SIZE);
 	sp = INITIAL_SP;
 	
 	quit_swf = 0;
@@ -105,7 +105,7 @@ void swfStart(SWFAppContext* app_context)
 	
 	tagMain(app_context);
 	
-	freeMap();
+	freeMap(app_context);
 	
 	FREE(stack);
 	

@@ -24,7 +24,7 @@ void swfStart(SWFAppContext* app_context)
 	heap_init(app_context, HEAP_SIZE);
 	
 	// Allocate stack
-	stack = (char*) HALIGNED(8, INITIAL_STACK_SIZE);
+	stack = (char*) HALLOC(INITIAL_STACK_SIZE);
 	sp = INITIAL_SP;
 	
 	// Initialize subsystems

@@ -64,7 +64,7 @@ void flashbang_init(FlashbangContext* context, SWFAppContext* app_context)
 	once = 1;
 	
 	context->current_bitmap = 0;
-	context->bitmap_sizes = (u32*) HALIGNED(8, 2*sizeof(u32)*context->bitmap_count);
+	context->bitmap_sizes = (u32*) HALLOC(2*sizeof(u32)*context->bitmap_count);
 	
 	// create a window
 	context->window = SDL_CreateWindow("TestSWFRecompiled", context->width, context->height, SDL_WINDOW_RESIZABLE);
@@ -154,15 +154,24 @@ void flashbang_init(FlashbangContext* context, SWFAppContext* app_context)
 	transfer_info.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
 	gradient_transfer_buffer = SDL_CreateGPUTransferBuffer(context->device, &transfer_info);
 	
-	// create a transfer buffer to upload to the bitmap texture
-	transfer_info.size = (Uint32) (context->bitmap_count*(4*(context->bitmap_highest_w + 1)*(context->bitmap_highest_h + 1)));
-	transfer_info.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
-	context->bitmap_transfer = SDL_CreateGPUTransferBuffer(context->device, &transfer_info);
+	if (context->bitmap_count > 0)
+	{
+		// create a transfer buffer to upload to the bitmap texture
+		transfer_info.size = (Uint32) (context->bitmap_count*(4*(context->bitmap_highest_w + 1)*(context->bitmap_highest_h + 1)));
+		transfer_info.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
+		context->bitmap_transfer = SDL_CreateGPUTransferBuffer(context->device, &transfer_info);
+		
+		// create a transfer buffer to upload bitmap sizes
+		transfer_info.size = (Uint32) (2*sizeof(u32)*context->bitmap_count);
+		transfer_info.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
+		context->bitmap_sizes_transfer = SDL_CreateGPUTransferBuffer(context->device, &transfer_info);
+	}
 	
-	// create a transfer buffer to upload bitmap sizes
-	transfer_info.size = (Uint32) (2*sizeof(u32)*context->bitmap_count);
-	transfer_info.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
-	context->bitmap_sizes_transfer = SDL_CreateGPUTransferBuffer(context->device, &transfer_info);
+	else
+	{
+		context->bitmap_transfer = NULL;
+		context->bitmap_sizes_transfer = NULL;
+	}
 	
 	// create a transfer buffer to upload cxforms
 	transfer_info.size = (Uint32) context->cxform_data_size;

@@ -19,22 +19,6 @@ void grow_ptr(SWFAppContext* app_context, char** ptr, size_t* capacity_ptr, size
 	*capacity_ptr = capacity << 1;
 }
 
-void grow_ptr_aligned(SWFAppContext* app_context, char** ptr, size_t* capacity_ptr, size_t elem_size, size_t alignment)
-{
-	char* data = *ptr;
-	size_t capacity = *capacity_ptr;
-	size_t old_data_size = capacity*elem_size;
-	
-	char* new_data = HALIGNED(alignment, old_data_size << 1);
-	
-	memcpy(new_data, data, old_data_size);
-	
-	FREE(data);
-	
-	*ptr = new_data;
-	*capacity_ptr = capacity << 1;
-}
-
 #if defined(_MSC_VER)
 // Microsoft
 
@@ -80,7 +64,7 @@ u32 get_elapsed_ms()
 
 char* vmem_reserve(size_t size)
 {
-	return mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
+	return mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
 }
 
 void vmem_release(char* addr, size_t size)

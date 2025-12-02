@@ -10,14 +10,7 @@
 		grow_ptr(app_context, (char**) &ptr, &capac, elem_size); \
 	}
 
-#define ENSURE_SIZE_ALIGN(ptr, new_size, capac, elem_size, alignment) \
-	if (new_size >= capac) \
-	{ \
-		grow_ptr_aligned(app_context, (char**) &ptr, &capac, elem_size, alignment); \
-	}
-
 void grow_ptr(SWFAppContext* app_context, char** ptr, size_t* capacity_ptr, size_t elem_size);
-void grow_ptr_aligned(SWFAppContext* app_context, char** ptr, size_t* capacity_ptr, size_t elem_size, size_t alignment);
 
 u32 get_elapsed_ms();
 int getpagesize();

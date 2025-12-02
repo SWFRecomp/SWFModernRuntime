@@ -21,7 +21,7 @@ typedef struct
 } ActionVar;
 
 void initMap();
-void freeMap();
+void freeMap(SWFAppContext* app_context);
 
 // Array-based variable storage for constant string IDs
 extern ActionVar** var_array;
