@@ -28,8 +28,9 @@ void initVarArray(SWFAppContext* app_context, size_t max_string_id)
 	}
 }
 
-static int free_variable_callback(const void* key, size_t ksize, uintptr_t value, SWFAppContext* app_context)
+static int free_variable_callback(const void* key, size_t ksize, uintptr_t value, void* app_context_void)
 {
+	SWFAppContext* app_context = (SWFAppContext*) app_context_void;
 	ActionVar* var = (ActionVar*) value;
 	
 	// Free heap-allocated strings
@@ -121,6 +122,7 @@ void setVariableWithValue(SWFAppContext* app_context, ActionVar* var, char* stac
 
 void freeMap(SWFAppContext* app_context)
 {
+	// Free hashmap-based variables
 	if (var_map)
 	{
 		hashmap_iterate(var_map, free_variable_callback, app_context);
@@ -131,7 +133,7 @@ void freeMap(SWFAppContext* app_context)
 	// Free array-based variables
 	if (var_array)
 	{
-		for (size_t i = 0; i < var_array_size; i++)
+		for (size_t i = 1; i < var_array_size; i++)
 		{
 			if (var_array[i])
 			{
