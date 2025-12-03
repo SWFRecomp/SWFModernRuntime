@@ -112,7 +112,7 @@ void swfStart(SWFAppContext* app_context)
 	FREE(dictionary);
 	FREE(display_list);
 	
-	flashbang_release(context);
+	flashbang_release(context, app_context);
 	
 	heap_shutdown(app_context);
 }

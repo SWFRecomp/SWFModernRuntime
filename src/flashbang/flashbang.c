@@ -64,7 +64,6 @@ void flashbang_init(FlashbangContext* context, SWFAppContext* app_context)
 	once = 1;
 	
 	context->current_bitmap = 0;
-	context->bitmap_sizes = (u32*) HALLOC(2*sizeof(u32)*context->bitmap_count);
 	
 	// create a window
 	context->window = SDL_CreateWindow("TestSWFRecompiled", context->width, context->height, SDL_WINDOW_RESIZABLE);
@@ -154,7 +153,7 @@ void flashbang_init(FlashbangContext* context, SWFAppContext* app_context)
 	transfer_info.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
 	gradient_transfer_buffer = SDL_CreateGPUTransferBuffer(context->device, &transfer_info);
 	
-	if (context->bitmap_count > 0)
+	if (context->bitmap_count)
 	{
 		// create a transfer buffer to upload to the bitmap texture
 		transfer_info.size = (Uint32) (context->bitmap_count*(4*(context->bitmap_highest_w + 1)*(context->bitmap_highest_h + 1)));
@@ -165,6 +164,8 @@ void flashbang_init(FlashbangContext* context, SWFAppContext* app_context)
 		transfer_info.size = (Uint32) (2*sizeof(u32)*context->bitmap_count);
 		transfer_info.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
 		context->bitmap_sizes_transfer = SDL_CreateGPUTransferBuffer(context->device, &transfer_info);
+		
+		context->bitmap_sizes = (u32*) HALLOC(2*sizeof(u32)*context->bitmap_count);
 	}
 	
 	else
@@ -404,7 +405,7 @@ void flashbang_init(FlashbangContext* context, SWFAppContext* app_context)
 	
 	if (num_gradient_textures || context->bitmap_count)
 	{
-		// upload all DefineShape gradient matrix data once on init
+		// upload all DefineShape gradient/bitmap matrix data once on init
 		buffer = (char*) SDL_MapGPUTransferBuffer(context->device, uninv_mat_transfer_buffer, 0);
 		
 		for (size_t i = 0; i < context->uninv_mat_data_size; ++i)
@@ -629,6 +630,8 @@ void flashbang_init(FlashbangContext* context, SWFAppContext* app_context)
 		// submit the command buffer
 		SDL_SubmitGPUCommandBuffer(context->command_buffer);
 	}
+	
+	SDL_ReleaseGPUComputePipeline(context->device, compute_pipeline);
 	
 	SDL_ReleaseGPUTransferBuffer(context->device, vertex_transfer_buffer);
 	SDL_ReleaseGPUTransferBuffer(context->device, xform_transfer_buffer);
@@ -958,17 +961,54 @@ void flashbang_close_pass(FlashbangContext* context)
 	SDL_SubmitGPUCommandBuffer(context->command_buffer);
 }
 
-void flashbang_release(FlashbangContext* context)
+void flashbang_release(FlashbangContext* context, SWFAppContext* app_context)
 {
 	// release the pipeline
 	SDL_ReleaseGPUGraphicsPipeline(context->device, context->graphics_pipeline);
 	
 	// destroy the buffers
 	SDL_ReleaseGPUBuffer(context->device, context->vertex_buffer);
+	SDL_ReleaseGPUBuffer(context->device, context->xform_buffer);
+	SDL_ReleaseGPUBuffer(context->device, context->color_buffer);
+	SDL_ReleaseGPUBuffer(context->device, context->uninv_mat_buffer);
+	SDL_ReleaseGPUBuffer(context->device, context->inv_mat_buffer);
+	SDL_ReleaseGPUBuffer(context->device, context->bitmap_sizes_buffer);
+	SDL_ReleaseGPUBuffer(context->device, context->cxform_buffer);
+	
+	size_t sizeof_gradient = 256*4*sizeof(float);
+	size_t num_gradient_textures = context->gradient_data_size/sizeof_gradient;
+	
+	if (num_gradient_textures)
+	{
+		// destroy the gradients
+		SDL_ReleaseGPUTexture(context->device, context->gradient_tex_array);
+		SDL_ReleaseGPUSampler(context->device, context->gradient_sampler);
+	}
+	
+	if (context->bitmap_count)
+	{
+		// destroy the bitmaps
+		SDL_ReleaseGPUTransferBuffer(context->device, context->bitmap_transfer);
+		SDL_ReleaseGPUTransferBuffer(context->device, context->bitmap_sizes_transfer);
+		FREE(context->bitmap_sizes);
+	}
+	
+	// destroy other textures
+	SDL_ReleaseGPUTexture(context->device, context->dummy_tex);
+	SDL_ReleaseGPUTexture(context->device, context->msaa_texture);
+	SDL_ReleaseGPUTexture(context->device, context->resolve_texture);
+	
+	// destroy other samplers
+	SDL_ReleaseGPUSampler(context->device, context->dummy_sampler);
+	
+	// destroy the window
+	SDL_ReleaseWindowFromGPUDevice(context->device, context->window);
+	SDL_DestroyWindow(context->window);
 	
 	// destroy the GPU device
 	SDL_DestroyGPUDevice(context->device);
 	
-	// destroy the window
-	SDL_DestroyWindow(context->window);
+	// destroy SDL
+	SDL_QuitSubSystem(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD);
+	SDL_Quit();
 }
