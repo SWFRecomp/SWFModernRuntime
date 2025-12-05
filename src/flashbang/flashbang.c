@@ -393,15 +393,18 @@ void flashbang_init(FlashbangContext* context, SWFAppContext* app_context)
 	
 	SDL_UnmapGPUTransferBuffer(context->device, color_transfer_buffer);
 	
-	// clear all bitmap pixels on init
-	buffer = (char*) SDL_MapGPUTransferBuffer(context->device, context->bitmap_transfer, 0);
-	
-	for (size_t i = 0; i < 4*(context->bitmap_highest_w + 1)*(context->bitmap_highest_h + 1)*context->bitmap_count; ++i)
+	if (context->bitmap_count)
 	{
-		buffer[i] = 0;
+		// clear all bitmap pixels on init
+		buffer = (char*) SDL_MapGPUTransferBuffer(context->device, context->bitmap_transfer, 0);
+		
+		for (size_t i = 0; i < 4*(context->bitmap_highest_w + 1)*(context->bitmap_highest_h + 1)*context->bitmap_count; ++i)
+		{
+			buffer[i] = 0;
+		}
+		
+		SDL_UnmapGPUTransferBuffer(context->device, context->bitmap_transfer);
 	}
-	
-	SDL_UnmapGPUTransferBuffer(context->device, context->bitmap_transfer);
 	
 	if (num_gradient_textures || context->bitmap_count)
 	{
