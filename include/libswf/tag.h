@@ -4,7 +4,7 @@
 #include <swf.h>
 
 // Core tag functions - always available
-void tagInit();
+void tagInit(SWFAppContext* app_context);
 void tagSetBackgroundColor(u8 red, u8 green, u8 blue);
 void tagShowFrame(SWFAppContext* app_context);
 

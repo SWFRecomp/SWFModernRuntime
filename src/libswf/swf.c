@@ -101,7 +101,7 @@ void swfStart(SWFAppContext* app_context)
 	initTime();
 	initMap();
 	
-	tagInit();
+	tagInit(app_context);
 	
 	tagMain(app_context);
 	
