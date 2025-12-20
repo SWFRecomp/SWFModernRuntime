@@ -5966,4 +5966,3 @@ void actionCallMethod(SWFAppContext* app_context, char* str_buffer)
 		return;
 	}
 }
-

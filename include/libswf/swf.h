@@ -58,24 +58,24 @@ typedef struct SWFAppContext
 	char* stack;
 	u32 sp;
 	u32 oldSP;
-
+	
 	frame_func* frame_funcs;
-
+	
 	int width;
 	int height;
-
+	
 	const float* stage_to_ndc;
-
+	
 	O1HeapInstance* heap_instance;
 	char* heap;
 	size_t heap_size;
-
+	
 	size_t max_string_id;
-
+	
 	size_t bitmap_count;
 	size_t bitmap_highest_w;
 	size_t bitmap_highest_h;
-
+	
 	char* shape_data;
 	size_t shape_data_size;
 	char* transform_data;
