@@ -899,33 +899,6 @@ void actionStackSwap(SWFAppContext* app_context)
 }
 
 /**
- * actionTargetPath - Returns the target path of a MovieClip
- *
- * Opcode: 0x45 (ActionTargetPath)
- * Stack: [ movieclip ] -> [ path_string | undefined ]
- *
- * Pops a value from the stack. If it's a MovieClip, pushes its target path
- * as a string (e.g., "_root.mc1.mc2"). If it's not a MovieClip, pushes undefined.
- *
- * Path format: Dot notation (e.g., "_root.mc1.mc2")
- *
- * Edge cases:
- * - Non-MovieClip values (numbers, strings, objects): Returns undefined
- * - _root MovieClip: Returns "_root"
- * - Nested MovieClips: Returns full path from _root
- *
- * SWF version: 5+
- * Opcode: 0x45
- */
-void actionTargetPath(SWFAppContext* app_context, char* str_buffer)
-{
-	(void)str_buffer;
-	// MovieClip not implemented - pop value and push undefined
-	POP();
-	PUSH(ACTION_STACK_VALUE_UNDEFINED, 0);
-}
-
-/**
  * Helper structure to track enumerated property names
  * Used to prevent duplicates when walking the prototype chain
  */
@@ -1660,49 +1633,6 @@ void actionNextFrame(SWFAppContext* app_context)
 	manual_next_frame = 1;
 }
 
-/**
- * ActionPlay - Start playing from the current frame
- *
- * Opcode: 0x06
- * SWF version: 3+
- * Stack: [] -> [] (no stack operations)
- *
- * Description:
- *   Instructs the Flash Player to start playing at the current frame.
- *   The timeline will advance automatically on each frame tick after
- *   this action is executed.
- *
- * Behavior:
- *   - Sets the global playing state to true (is_playing = 1)
- *   - Timeline advances to next frame on next tick
- *   - If already playing, this is a no-op (safe to call multiple times)
- *   - Opposite of ActionStop (0x07)
- *
- * Implementation notes (NO_GRAPHICS mode):
- *   - Only affects the main timeline in current implementation
- *   - SetTarget support for controlling individual sprites/MovieClips
- *     is not yet implemented (requires MovieClip architecture)
- *   - Frame advancement is handled by the frame loop in swf_core.c
- *   - The frame loop checks is_playing and breaks if it's 0
- *
- * Edge cases handled:
- *   - Play when already playing: No-op, safe behavior
- *   - Multiple consecutive play calls: All are no-ops, state stays 1
- *   - Play after stop: Resumes playback from current frame
- *
- * Limitations:
- *   - SetTarget not supported: Cannot control individual sprite timelines
- *   - Only one global playing state: All timelines share the same state
- *
- * See also:
- *   - actionStop() / ActionStop (0x07): Stop playback
- *   - swf_core.c: Frame loop that checks is_playing
- */
-void actionPlay(SWFAppContext* app_context)
-{
-	(void)app_context;  // MovieClip not implemented - no-op
-}
-
 void actionTrace(SWFAppContext* app_context)
 {
 	ActionStackValueType type = STACK_TOP_TYPE;
@@ -2011,23 +1941,6 @@ void actionGotoFrame2(SWFAppContext* app_context, u8 play_flag, u16 scene_bias)
 		printf("GotoFrame2: invalid frame type %d (ignored)\n", frame_var.type);
 		fflush(stdout);
 	}
-}
-
-/**
- * actionEndDrag - Stops dragging the currently dragged sprite/MovieClip
- *
- * Opcode: 0x28 (ActionEndDrag)
- * Stack: [] -> []
- *
- * Ends the drag operation in progress, if any. If no sprite is being dragged,
- * this operation has no effect.
- *
- * In NO_GRAPHICS mode, this updates the drag state tracking but does not
- * perform actual sprite/mouse interaction.
- */
-void actionEndDrag(SWFAppContext* app_context)
-{
-	(void)app_context;  // MovieClip not implemented - no-op
 }
 
 /**
@@ -2350,23 +2263,6 @@ void actionDeclareLocal(SWFAppContext* app_context)
 	
 	// Pop the name
 	POP();
-}
-
-void actionSetTarget2(SWFAppContext* app_context)
-{
-	// MovieClip not implemented - pop target path and no-op
-	POP();
-	(void)app_context;
-}
-
-void actionGetProperty(SWFAppContext* app_context)
-{
-	// MovieClip not implemented - pop property index and target, push 0
-	POP();  // property index
-	POP();  // target path
-	float value = 0.0f;
-	PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &value));
-	(void)app_context;
 }
 
 void actionRandomNumber(SWFAppContext* app_context)
@@ -5065,150 +4961,6 @@ void actionNewMethod(SWFAppContext* app_context)
 	}
 }
 
-void actionSetProperty(SWFAppContext* app_context)
-{
-	// MovieClip not implemented - pop value, property index, and target
-	POP();  // value
-	POP();  // property index
-	POP();  // target path
-	(void)app_context;
-}
-
-/**
- * ActionCloneSprite - Clones a sprite/MovieClip
- *
- * Stack: [ target_name, source_name, depth ] -> [ ]
- *
- * Pops three values from the stack:
- * - depth (number): z-order depth for the clone
- * - source (string): path to sprite to clone
- * - target (string): name for the new clone
- *
- * Creates a duplicate of the source MovieClip with the specified name at the given depth.
- *
- * Edge cases:
- * - Null/empty strings: Treated as empty string names
- * - Negative depth: Accepted (some Flash versions allow this)
- * - Non-existent source: No-op in NO_GRAPHICS mode; would fail silently in Flash
- *
- * SWF version: 4+
- * Opcode: 0x24
- */
-void actionCloneSprite(SWFAppContext* app_context)
-{
-	// Stack layout: [target_name] [source_name] [depth] <- sp
-	// Pop in reverse order: depth, source, target
-	
-	// Pop depth (convert to float first)
-	convertFloat(app_context);
-	ActionVar depth;
-	popVar(app_context, &depth);
-	
-	// Pop source sprite name
-	ActionVar source;
-	popVar(app_context, &source);
-	const char* source_name = (const char*) source.value;
-	
-	// Handle null source name
-	if (source_name == NULL) {
-		source_name = "";
-	}
-	
-	// Pop target sprite name
-	ActionVar target;
-	popVar(app_context, &target);
-	const char* target_name = (const char*) target.value;
-	
-	// Handle null target name
-	if (target_name == NULL) {
-		target_name = "";
-	}
-	
-	#ifndef NO_GRAPHICS
-	// Full implementation would:
-	// 1. Find source MovieClip in display list
-	// 2. Create deep copy of sprite and its children
-	// 3. Add to display list at specified depth
-	// 4. Assign new name
-	cloneMovieClip(source_name, target_name, (int)VAL(float, &depth.value));
-	#else
-	// NO_GRAPHICS mode: Parameters are validated and popped
-	// In full graphics mode, this would clone the MovieClip
-	#ifdef DEBUG
-	printf("[CloneSprite] source='%s' -> target='%s' (depth=%d)\n",
-	       source_name, target_name, (int)VAL(float, &depth.value));
-	#endif
-	#endif
-}
-
-/**
- * ActionRemoveSprite (0x25) - Removes a clone sprite from the display list
- *
- * Stack: [ target ] -> [ ]
- *
- * Pops a target path (string) from the stack and removes the corresponding
- * clone movie clip from the display list. Only sprites created with
- * ActionCloneSprite can be removed (not sprites from the original SWF).
- *
- * Edge cases handled:
- * - Non-existent sprite: No error, silently ignored
- * - Empty string: No-op
- * - Null target: Handled gracefully (no crash)
- *
- * NO_GRAPHICS mode: This is a no-op as there's no display list
- * Graphics mode: Would remove sprite from display list and release resources
- *
- * SWF version: 4+
- * Opcode: 0x25
- */
-void actionRemoveSprite(SWFAppContext* app_context)
-{
-	// Pop target sprite name from stack
-	ActionVar target;
-	popVar(app_context, &target);
-	const char* target_name = (const char*) target.value;
-	
-	// Handle null/empty gracefully
-	if (target_name == NULL || target_name[0] == '\0') {
-		#ifdef DEBUG
-		printf("[RemoveSprite] Empty or null target, skipping\n");
-		#endif
-		return;
-	}
-	
-	#ifndef NO_GRAPHICS
-	// TODO: Full graphics implementation requires:
-	// 1. Display list management system
-	// 2. MovieClip reference counting
-	// 3. Proper resource cleanup
-	//
-	// When implemented, this should:
-	// - Look up the target sprite in the display list
-	// - Verify it's a clone (created by ActionCloneSprite)
-	// - Remove it from the display list
-	// - Decrement reference count and free if needed
-	// - Update any parent/child relationships
-	//
-	// For now, log in debug mode
-	#ifdef DEBUG
-	printf("[RemoveSprite] Graphics mode stub: would remove %s\n", target_name);
-	#endif
-	#else
-	// NO_GRAPHICS mode: This is a complete no-op
-	// There's no display list to remove from
-	#ifdef DEBUG
-	printf("[RemoveSprite] %s\n", target_name);
-	#endif
-	#endif
-}
-
-void actionSetTarget(SWFAppContext* app_context, const char* target_name)
-{
-	// MovieClip not implemented - no-op
-	(void)app_context;
-	(void)target_name;
-}
-
 // ==================================================================
 // WITH Statement Implementation
 // ==================================================================
@@ -6215,58 +5967,3 @@ void actionCallMethod(SWFAppContext* app_context, char* str_buffer)
 	}
 }
 
-void actionStartDrag(SWFAppContext* app_context)
-{
-	// MovieClip not implemented - pop target, lock, constrain and optionally constraint rect
-	POP();  // target
-	POP();  // lock center
-	
-	// Check constrain flag to know if we need to pop rect values
-	ActionStackValueType type = STACK_TOP_TYPE;
-	float constrain_val = 0.0f;
-	if (type == ACTION_STACK_VALUE_F32) {
-		constrain_val = VAL(float, &STACK_TOP_VALUE);
-	}
-	POP();  // constrain flag
-	
-	if (constrain_val != 0.0f) {
-		// Pop constraint rectangle
-		POP();  // y2
-		POP();  // x2
-		POP();  // y1
-		POP();  // x1
-	}
-	(void)app_context;
-}
-
-// ==================================================================
-// Control Flow - WaitForFrame
-// ==================================================================
-
-/**
- * actionWaitForFrame - Check if a frame is loaded
- *
- * @param stack - The execution stack
- * @param sp - Stack pointer
- * @param frame - Frame number to check (0-based in bytecode, 1-based in MovieClip)
- * @return true if frame is loaded, false otherwise
- *
- * This opcode was designed for streaming SWF files where frames load progressively.
- * For modern usage with instantly-loaded SWFs, we simplify by assuming all frames
- * that exist are loaded.
- */
-bool actionWaitForFrame(SWFAppContext* app_context, u16 frame)
-{
-	// MovieClip not implemented - assume frame is loaded
-	(void)app_context;
-	(void)frame;
-	return true;
-}
-
-bool actionWaitForFrame2(SWFAppContext* app_context)
-{
-	// MovieClip not implemented - pop frame and assume loaded
-	POP();
-	(void)app_context;
-	return true;
-}
