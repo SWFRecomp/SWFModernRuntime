@@ -6220,7 +6220,7 @@ void actionStartDrag(SWFAppContext* app_context)
 	// MovieClip not implemented - pop target, lock, constrain and optionally constraint rect
 	POP();  // target
 	POP();  // lock center
-
+	
 	// Check constrain flag to know if we need to pop rect values
 	ActionStackValueType type = STACK_TOP_TYPE;
 	float constrain_val = 0.0f;
@@ -6228,7 +6228,7 @@ void actionStartDrag(SWFAppContext* app_context)
 		constrain_val = VAL(float, &STACK_TOP_VALUE);
 	}
 	POP();  // constrain flag
-
+	
 	if (constrain_val != 0.0f) {
 		// Pop constraint rectangle
 		POP();  // y2

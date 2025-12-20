@@ -20,34 +20,34 @@ ActionVar* temp_val = NULL;
 void swfStart(SWFAppContext* app_context)
 {
 	printf("=== SWF Execution Started (NO_GRAPHICS mode) ===\n");
-
+	
 	heap_init(app_context, HEAP_SIZE);
-
+	
 	// Allocate stack
 	stack = (char*) HALLOC(INITIAL_STACK_SIZE);
 	sp = INITIAL_SP;
-
+	
 	// Initialize subsystems
 	quit_swf = 0;
 	bad_poll = 0;
 	next_frame = 0;
 	manual_next_frame = 0;
-
+	
 	initVarArray(app_context, app_context->max_string_id);
-
+	
 	initTime();
 	initMap();
 	tagInit();
-
+	
 	// Run frames in console mode
 	frame_func* funcs = app_context->frame_funcs;
 	size_t current_frame = 0;
 	const size_t max_frames = 10000;
-
+	
 	while (!quit_swf && current_frame < max_frames)
 	{
 		printf("\n[Frame %zu]\n", current_frame);
-
+		
 #ifdef NDEBUG
 		if (funcs[current_frame])
 		{
@@ -55,7 +55,7 @@ void swfStart(SWFAppContext* app_context)
 			funcs[current_frame](app_context);
 #ifdef NDEBUG
 		}
-
+		
 		else
 		{
 			printf("No function for frame %zu, stopping.\n", current_frame);
@@ -67,18 +67,18 @@ void swfStart(SWFAppContext* app_context)
 			current_frame = next_frame;
 			manual_next_frame = 0;
 		}
-
+		
 		else
 		{
 			current_frame++;
 		}
 	}
-
+	
 	printf("\n=== SWF Execution Completed ===\n");
-
+	
 	// Cleanup
 	freeMap(app_context);
 	FREE(stack);
-
+	
 	heap_shutdown(app_context);
 }

@@ -9,16 +9,16 @@ typedef struct
 {
 	int width;
 	int height;
-
+	
 	const float* stage_to_ndc;
-
+	
 	size_t bitmap_count;
 	size_t bitmap_highest_w;
 	size_t bitmap_highest_h;
-
+	
 	size_t current_bitmap;
 	u32* bitmap_sizes;
-
+	
 	char* shape_data;
 	size_t shape_data_size;
 	char* transform_data;
@@ -33,13 +33,13 @@ typedef struct
 	size_t bitmap_data_size;
 	char* cxform_data;
 	size_t cxform_data_size;
-
+	
 	SDL_Window* window;
 	SDL_GPUDevice* device;
-
+	
 	SDL_GPUTexture* dummy_tex;
 	SDL_GPUSampler* dummy_sampler;
-
+	
 	SDL_GPUBuffer* vertex_buffer;
 	SDL_GPUBuffer* xform_buffer;
 	SDL_GPUBuffer* color_buffer;
@@ -47,23 +47,23 @@ typedef struct
 	SDL_GPUBuffer* inv_mat_buffer;
 	SDL_GPUBuffer* bitmap_sizes_buffer;
 	SDL_GPUBuffer* cxform_buffer;
-
+	
 	SDL_GPUTexture* gradient_tex_array;
 	SDL_GPUSampler* gradient_sampler;
-
+	
 	SDL_GPUTransferBuffer* bitmap_transfer;
 	SDL_GPUTransferBuffer* bitmap_sizes_transfer;
 	SDL_GPUTexture* bitmap_tex_array;
 	SDL_GPUSampler* bitmap_sampler;
-
+	
 	SDL_GPUTexture* msaa_texture;
 	SDL_GPUTexture* resolve_texture;
-
+	
 	SDL_GPUGraphicsPipeline* graphics_pipeline;
-
+	
 	SDL_GPUCommandBuffer* command_buffer;
 	SDL_GPURenderPass* render_pass;
-
+	
 	// Window background color
 	u8 red;
 	u8 green;
