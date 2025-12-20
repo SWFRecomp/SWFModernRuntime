@@ -54,12 +54,7 @@ const float identity_cxform[20] =
 	0.0f
 };
 
-FlashbangContext* flashbang_new()
-{
-	return malloc(sizeof(FlashbangContext));
-}
-
-void flashbang_init(SWFAppContext* app_context, FlashbangContext* context)
+void flashbang_init(FlashbangContext* context, SWFAppContext* app_context)
 {
 	if (!once && !SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD))
 	{
@@ -955,22 +950,54 @@ void flashbang_close_pass(FlashbangContext* context)
 	SDL_SubmitGPUCommandBuffer(context->command_buffer);
 }
 
-void flashbang_free(SWFAppContext* app_context, FlashbangContext* context)
+void flashbang_release(FlashbangContext* context, SWFAppContext* app_context)
 {
 	// release the pipeline
 	SDL_ReleaseGPUGraphicsPipeline(context->device, context->graphics_pipeline);
-	
+
 	// destroy the buffers
 	SDL_ReleaseGPUBuffer(context->device, context->vertex_buffer);
-	
-	// free heap-allocated memory
-	FREE(context->bitmap_sizes);
-	
+	SDL_ReleaseGPUBuffer(context->device, context->xform_buffer);
+	SDL_ReleaseGPUBuffer(context->device, context->color_buffer);
+	SDL_ReleaseGPUBuffer(context->device, context->uninv_mat_buffer);
+	SDL_ReleaseGPUBuffer(context->device, context->inv_mat_buffer);
+	SDL_ReleaseGPUBuffer(context->device, context->bitmap_sizes_buffer);
+	SDL_ReleaseGPUBuffer(context->device, context->cxform_buffer);
+
+	size_t sizeof_gradient = 256*4*sizeof(float);
+	size_t num_gradient_textures = context->gradient_data_size/sizeof_gradient;
+
+	if (num_gradient_textures)
+	{
+		// destroy the gradients
+		SDL_ReleaseGPUTexture(context->device, context->gradient_tex_array);
+		SDL_ReleaseGPUSampler(context->device, context->gradient_sampler);
+	}
+
+	if (context->bitmap_count)
+	{
+		// destroy the bitmaps
+		SDL_ReleaseGPUTransferBuffer(context->device, context->bitmap_transfer);
+		SDL_ReleaseGPUTransferBuffer(context->device, context->bitmap_sizes_transfer);
+		FREE(context->bitmap_sizes);
+	}
+
+	// destroy other textures
+	SDL_ReleaseGPUTexture(context->device, context->dummy_tex);
+	SDL_ReleaseGPUTexture(context->device, context->msaa_texture);
+	SDL_ReleaseGPUTexture(context->device, context->resolve_texture);
+
+	// destroy other samplers
+	SDL_ReleaseGPUSampler(context->device, context->dummy_sampler);
+
+	// destroy the window
+	SDL_ReleaseWindowFromGPUDevice(context->device, context->window);
+	SDL_DestroyWindow(context->window);
+
 	// destroy the GPU device
 	SDL_DestroyGPUDevice(context->device);
-	
-	// destroy the window
-	SDL_DestroyWindow(context->window);
-	
-	free(context);
+
+	// destroy SDL
+	SDL_QuitSubSystem(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD);
+	SDL_Quit();
 }

@@ -116,14 +116,14 @@ void releaseObject(SWFAppContext* app_context, ASObject* obj)
 			// If property value is an object, release it recursively
 			if (obj->properties[i].value.type == ACTION_STACK_VALUE_OBJECT)
 			{
-				ASObject* child_obj = (ASObject*) obj->properties[i].value.data.numeric_value;
+				ASObject* child_obj = (ASObject*) obj->properties[i].value.value;
 				releaseObject(app_context, child_obj);
 			}
 			// If property value is a string that owns memory, free it
 			else if (obj->properties[i].value.type == ACTION_STACK_VALUE_STRING &&
-			         obj->properties[i].value.data.string_data.owns_memory)
+			         obj->properties[i].value.owns_memory)
 			{
-				free(obj->properties[i].value.data.string_data.heap_ptr);
+				free(obj->properties[i].value.heap_ptr);
 			}
 		}
 
@@ -214,7 +214,7 @@ ActionVar* getPropertyWithPrototype(ASObject* obj, const char* name, u32 name_le
 		}
 
 		// Move to next object in prototype chain
-		current = (ASObject*) proto_var->data.numeric_value;
+		current = (ASObject*) proto_var->value;
 	}
 
 	return NULL;  // Property not found in entire prototype chain
@@ -244,14 +244,14 @@ void setProperty(SWFAppContext* app_context, ASObject* obj, const char* name, u3
 			// Release old value if it was an object
 			if (obj->properties[i].value.type == ACTION_STACK_VALUE_OBJECT)
 			{
-				ASObject* old_obj = (ASObject*) obj->properties[i].value.data.numeric_value;
+				ASObject* old_obj = (ASObject*) obj->properties[i].value.value;
 				releaseObject(app_context, old_obj);
 			}
 			// Free old string if it owned memory
 			else if (obj->properties[i].value.type == ACTION_STACK_VALUE_STRING &&
-			         obj->properties[i].value.data.string_data.owns_memory)
+			         obj->properties[i].value.owns_memory)
 			{
-				free(obj->properties[i].value.data.string_data.heap_ptr);
+				free(obj->properties[i].value.heap_ptr);
 			}
 
 			// Set new value
@@ -260,7 +260,7 @@ void setProperty(SWFAppContext* app_context, ASObject* obj, const char* name, u3
 			// Retain new value if it's an object
 			if (value->type == ACTION_STACK_VALUE_OBJECT)
 			{
-				ASObject* new_obj = (ASObject*) value->data.numeric_value;
+				ASObject* new_obj = (ASObject*) value->value;
 				retainObject(new_obj);
 			}
 
@@ -321,7 +321,7 @@ void setProperty(SWFAppContext* app_context, ASObject* obj, const char* name, u3
 	// Retain if value is an object
 	if (value->type == ACTION_STACK_VALUE_OBJECT)
 	{
-		ASObject* new_obj = (ASObject*) value->data.numeric_value;
+		ASObject* new_obj = (ASObject*) value->value;
 		retainObject(new_obj);
 	}
 
@@ -355,19 +355,19 @@ bool deleteProperty(SWFAppContext* app_context, ASObject* obj, const char* name,
 			// 1. Release the property value if it's an object/array
 			if (obj->properties[i].value.type == ACTION_STACK_VALUE_OBJECT)
 			{
-				ASObject* child_obj = (ASObject*) obj->properties[i].value.data.numeric_value;
+				ASObject* child_obj = (ASObject*) obj->properties[i].value.value;
 				releaseObject(app_context, child_obj);
 			}
 			else if (obj->properties[i].value.type == ACTION_STACK_VALUE_ARRAY)
 			{
-				ASArray* child_arr = (ASArray*) obj->properties[i].value.data.numeric_value;
+				ASArray* child_arr = (ASArray*) obj->properties[i].value.value;
 				releaseArray(app_context, child_arr);
 			}
 			// Free string if it owns memory
 			else if (obj->properties[i].value.type == ACTION_STACK_VALUE_STRING &&
-			         obj->properties[i].value.data.string_data.owns_memory)
+			         obj->properties[i].value.owns_memory)
 			{
-				free(obj->properties[i].value.data.string_data.heap_ptr);
+				free(obj->properties[i].value.heap_ptr);
 			}
 
 			// 2. Free the property name
@@ -522,7 +522,7 @@ ASObject* getConstructor(ASObject* obj)
 
 	if (constructor_var != NULL && constructor_var->type == ACTION_STACK_VALUE_OBJECT)
 	{
-		return (ASObject*) constructor_var->data.numeric_value;
+		return (ASObject*) constructor_var->value;
 	}
 
 	return NULL;
@@ -573,24 +573,24 @@ void printObject(ASObject* obj)
 		switch (obj->properties[i].value.type)
 		{
 			case ACTION_STACK_VALUE_F32:
-				printf("%.15g (F32)\n", *((float*)&obj->properties[i].value.data.numeric_value));
+				printf("%.15g (F32)\n", *((float*)&obj->properties[i].value.value));
 				break;
 
 			case ACTION_STACK_VALUE_F64:
-				printf("%.15g (F64)\n", *((double*)&obj->properties[i].value.data.numeric_value));
+				printf("%.15g (F64)\n", *((double*)&obj->properties[i].value.value));
 				break;
 
 			case ACTION_STACK_VALUE_STRING:
 			{
-				const char* str = obj->properties[i].value.data.string_data.owns_memory ?
-					obj->properties[i].value.data.string_data.heap_ptr :
-					(const char*)obj->properties[i].value.data.numeric_value;
+				const char* str = obj->properties[i].value.owns_memory ?
+					obj->properties[i].value.heap_ptr :
+					(const char*)obj->properties[i].value.value;
 				printf("'%.*s' (STRING)\n", obj->properties[i].value.str_size, str);
 				break;
 			}
 
 			case ACTION_STACK_VALUE_OBJECT:
-				printf("%p (OBJECT)\n", (void*)obj->properties[i].value.data.numeric_value);
+				printf("%p (OBJECT)\n", (void*)obj->properties[i].value.value);
 				break;
 
 			default:
@@ -621,28 +621,28 @@ void printArray(ASArray* arr)
 		switch (arr->elements[i].type)
 		{
 			case ACTION_STACK_VALUE_F32:
-				printf("%.15g (F32)\n", *((float*)&arr->elements[i].data.numeric_value));
+				printf("%.15g (F32)\n", *((float*)&arr->elements[i].value));
 				break;
 
 			case ACTION_STACK_VALUE_F64:
-				printf("%.15g (F64)\n", *((double*)&arr->elements[i].data.numeric_value));
+				printf("%.15g (F64)\n", *((double*)&arr->elements[i].value));
 				break;
 
 			case ACTION_STACK_VALUE_STRING:
 			{
-				const char* str = arr->elements[i].data.string_data.owns_memory ?
-					arr->elements[i].data.string_data.heap_ptr :
-					(const char*)arr->elements[i].data.numeric_value;
+				const char* str = arr->elements[i].owns_memory ?
+					arr->elements[i].heap_ptr :
+					(const char*)arr->elements[i].value;
 				printf("'%.*s' (STRING)\n", arr->elements[i].str_size, str);
 				break;
 			}
 
 			case ACTION_STACK_VALUE_OBJECT:
-				printf("%p (OBJECT)\n", (void*)arr->elements[i].data.numeric_value);
+				printf("%p (OBJECT)\n", (void*)arr->elements[i].value);
 				break;
 
 			case ACTION_STACK_VALUE_ARRAY:
-				printf("%p (ARRAY)\n", (void*)arr->elements[i].data.numeric_value);
+				printf("%p (ARRAY)\n", (void*)arr->elements[i].value);
 				break;
 
 			default:
@@ -731,20 +731,20 @@ void releaseArray(SWFAppContext* app_context, ASArray* arr)
 			// If element is an object, release it recursively
 			if (arr->elements[i].type == ACTION_STACK_VALUE_OBJECT)
 			{
-				ASObject* child_obj = (ASObject*) arr->elements[i].data.numeric_value;
+				ASObject* child_obj = (ASObject*) arr->elements[i].value;
 				releaseObject(app_context, child_obj);
 			}
 			// If element is an array, release it recursively
 			else if (arr->elements[i].type == ACTION_STACK_VALUE_ARRAY)
 			{
-				ASArray* child_arr = (ASArray*) arr->elements[i].data.numeric_value;
+				ASArray* child_arr = (ASArray*) arr->elements[i].value;
 				releaseArray(app_context, child_arr);
 			}
 			// If element is a string that owns memory, free it
 			else if (arr->elements[i].type == ACTION_STACK_VALUE_STRING &&
-			         arr->elements[i].data.string_data.owns_memory)
+			         arr->elements[i].owns_memory)
 			{
-				free(arr->elements[i].data.string_data.heap_ptr);
+				free(arr->elements[i].heap_ptr);
 			}
 		}
 
@@ -802,18 +802,18 @@ void setArrayElement(SWFAppContext* app_context, ASArray* arr, u32 index, Action
 	{
 		if (arr->elements[index].type == ACTION_STACK_VALUE_OBJECT)
 		{
-			ASObject* old_obj = (ASObject*) arr->elements[index].data.numeric_value;
+			ASObject* old_obj = (ASObject*) arr->elements[index].value;
 			releaseObject(app_context, old_obj);
 		}
 		else if (arr->elements[index].type == ACTION_STACK_VALUE_ARRAY)
 		{
-			ASArray* old_arr = (ASArray*) arr->elements[index].data.numeric_value;
+			ASArray* old_arr = (ASArray*) arr->elements[index].value;
 			releaseArray(app_context, old_arr);
 		}
 		else if (arr->elements[index].type == ACTION_STACK_VALUE_STRING &&
-		         arr->elements[index].data.string_data.owns_memory)
+		         arr->elements[index].owns_memory)
 		{
-			free(arr->elements[index].data.string_data.heap_ptr);
+			free(arr->elements[index].heap_ptr);
 		}
 	}
 
@@ -829,12 +829,12 @@ void setArrayElement(SWFAppContext* app_context, ASArray* arr, u32 index, Action
 	// Retain new value if it's an object or array
 	if (value->type == ACTION_STACK_VALUE_OBJECT)
 	{
-		ASObject* new_obj = (ASObject*) value->data.numeric_value;
+		ASObject* new_obj = (ASObject*) value->value;
 		retainObject(new_obj);
 	}
 	else if (value->type == ACTION_STACK_VALUE_ARRAY)
 	{
-		ASArray* new_arr = (ASArray*) value->data.numeric_value;
+		ASArray* new_arr = (ASArray*) value->value;
 		retainArray(new_arr);
 	}
 
