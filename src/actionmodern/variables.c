@@ -64,7 +64,7 @@ ActionVar* getVariable(SWFAppContext* app_context, char* var_name, size_t key_si
 	return var;
 }
 
-char* materializeStringList(SWFAppContext* app_context, char* stack, u32* sp)
+char* materializeStringList(SWFAppContext* app_context)
 {
 	// Get the string list
 	u64* str_list = (u64*) &STACK_TOP_VALUE;
@@ -88,7 +88,7 @@ char* materializeStringList(SWFAppContext* app_context, char* stack, u32* sp)
 	return result;
 }
 
-void setVariableWithValue(SWFAppContext* app_context, ActionVar* var, char* stack, u32* sp)
+void setVariableWithValue(SWFAppContext* app_context, ActionVar* var)
 {
 	// Free old string if variable owns memory
 	if (var->type == ACTION_STACK_VALUE_STRING && var->owns_memory)
@@ -102,7 +102,7 @@ void setVariableWithValue(SWFAppContext* app_context, ActionVar* var, char* stac
 	if (type == ACTION_STACK_VALUE_STR_LIST)
 	{
 		// Materialize string to heap
-		char* heap_str = materializeStringList(app_context, stack, sp);
+		char* heap_str = materializeStringList(app_context);
 		u32 total_size = STACK_TOP_N;
 		
 		var->type = ACTION_STACK_VALUE_STRING;

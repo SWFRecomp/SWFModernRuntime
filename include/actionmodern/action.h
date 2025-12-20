@@ -1,57 +1,58 @@
 #pragma once
 
+#include <swf.h>
 #include <variables.h>
 #include <stackvalue.h>
 
 #define PUSH(t, v) \
-	oldSP = *sp; \
-	*sp -= 4 + 4 + 8 + 8; \
-	*sp &= ~7; \
-	stack[*sp] = t; \
-	VAL(u32, &stack[*sp + 4]) = oldSP; \
-	VAL(u64, &stack[*sp + 16]) = v; \
+	OLDSP = SP; \
+	SP -= 4 + 4 + 8 + 8; \
+	SP &= ~7; \
+	STACK[SP] = t; \
+	VAL(u32, &STACK[SP + 4]) = OLDSP; \
+	VAL(u64, &STACK[SP + 16]) = v; \
 
 // Push string with ID (for constant strings from compiler)
 #define PUSH_STR_ID(v, n, id) \
-	oldSP = *sp; \
-	*sp -= 4 + 4 + 8 + 8; \
-	*sp &= ~7; \
-	stack[*sp] = ACTION_STACK_VALUE_STRING; \
-	VAL(u32, &stack[*sp + 4]) = oldSP; \
-	VAL(u32, &stack[*sp + 8]) = n; \
-	VAL(u32, &stack[*sp + 12]) = id; \
-	VAL(char*, &stack[*sp + 16]) = v; \
+	OLDSP = SP; \
+	SP -= 4 + 4 + 8 + 8; \
+	SP &= ~7; \
+	STACK[SP] = ACTION_STACK_VALUE_STRING; \
+	VAL(u32, &STACK[SP + 4]) = OLDSP; \
+	VAL(u32, &STACK[SP + 8]) = n; \
+	VAL(u32, &STACK[SP + 12]) = id; \
+	VAL(char*, &STACK[SP + 16]) = v; \
 
 // Push string without ID (for dynamic strings, ID = 0)
 #define PUSH_STR(v, n) PUSH_STR_ID(v, n, 0)
 
 #define PUSH_STR_LIST(n, size) \
-	oldSP = VAL(u32, &stack[SP_SECOND_TOP + 4]); \
-	*sp -= (u32) (4 + 4 + 8 + size); \
-	*sp &= ~7; \
-	stack[*sp] = ACTION_STACK_VALUE_STR_LIST; \
-	VAL(u32, &stack[*sp + 4]) = oldSP; \
-	VAL(u32, &stack[*sp + 8]) = n; \
+	OLDSP = VAL(u32, &STACK[SP_SECOND_TOP + 4]); \
+	SP -= (u32) (4 + 4 + 8 + size); \
+	SP &= ~7; \
+	STACK[SP] = ACTION_STACK_VALUE_STR_LIST; \
+	VAL(u32, &STACK[SP + 4]) = OLDSP; \
+	VAL(u32, &STACK[SP + 8]) = n; \
 
-#define PUSH_VAR(p) pushVar(stack, sp, p);
+#define PUSH_VAR(p) pushVar(app_context, p);
 
 #define POP() \
-	*sp = VAL(u32, &stack[*sp + 4]); \
+	SP = VAL(u32, &STACK[SP + 4]); \
 
 #define POP_2() \
 	POP(); \
 	POP(); \
 
-#define STACK_TOP_TYPE stack[*sp]
-#define STACK_TOP_N VAL(u32, &stack[*sp + 8])
-#define STACK_TOP_ID VAL(u32, &stack[*sp + 12])
-#define STACK_TOP_VALUE VAL(u64, &stack[*sp + 16])
+#define STACK_TOP_TYPE STACK[SP]
+#define STACK_TOP_N VAL(u32, &STACK[SP + 8])
+#define STACK_TOP_ID VAL(u32, &STACK[SP + 12])
+#define STACK_TOP_VALUE VAL(u64, &STACK[SP + 16])
 
-#define SP_SECOND_TOP VAL(u32, &stack[*sp + 4])
-#define STACK_SECOND_TOP_TYPE stack[SP_SECOND_TOP]
-#define STACK_SECOND_TOP_N VAL(u32, &stack[SP_SECOND_TOP + 8])
-#define STACK_SECOND_TOP_ID VAL(u32, &stack[SP_SECOND_TOP + 12])
-#define STACK_SECOND_TOP_VALUE VAL(u64, &stack[SP_SECOND_TOP + 16])
+#define SP_SECOND_TOP VAL(u32, &STACK[SP + 4])
+#define STACK_SECOND_TOP_TYPE STACK[SP_SECOND_TOP]
+#define STACK_SECOND_TOP_N VAL(u32, &STACK[SP_SECOND_TOP + 8])
+#define STACK_SECOND_TOP_ID VAL(u32, &STACK[SP_SECOND_TOP + 12])
+#define STACK_SECOND_TOP_VALUE VAL(u64, &STACK[SP_SECOND_TOP + 16])
 
 #define VAL(type, x) *((type*) x)
 
@@ -62,24 +63,24 @@ extern ActionVar* temp_val;
 
 void initTime();
 
-void pushVar(char* stack, u32* sp, ActionVar* p);
+void pushVar(SWFAppContext* app_context, ActionVar* p);
 
-void actionAdd(SWFAppContext* app_context, char* stack, u32* sp);
-void actionSubtract(SWFAppContext* app_context, char* stack, u32* sp);
-void actionMultiply(SWFAppContext* app_context, char* stack, u32* sp);
-void actionDivide(SWFAppContext* app_context, char* stack, u32* sp);
-void actionEquals(SWFAppContext* app_context, char* stack, u32* sp);
-void actionLess(SWFAppContext* app_context, char* stack, u32* sp);
-void actionAnd(SWFAppContext* app_context, char* stack, u32* sp);
-void actionOr(SWFAppContext* app_context, char* stack, u32* sp);
-void actionNot(SWFAppContext* app_context, char* stack, u32* sp);
+void actionAdd(SWFAppContext* app_context);
+void actionSubtract(SWFAppContext* app_context);
+void actionMultiply(SWFAppContext* app_context);
+void actionDivide(SWFAppContext* app_context);
+void actionEquals(SWFAppContext* app_context);
+void actionLess(SWFAppContext* app_context);
+void actionAnd(SWFAppContext* app_context);
+void actionOr(SWFAppContext* app_context);
+void actionNot(SWFAppContext* app_context);
 
-void actionStringEquals(SWFAppContext* app_context, char* stack, u32* sp, char* a_str, char* b_str);
-void actionStringLength(SWFAppContext* app_context, char* stack, u32* sp, char* v_str);
-void actionStringAdd(SWFAppContext* app_context, char* stack, u32* sp, char* a_str, char* b_str);
+void actionStringEquals(SWFAppContext* app_context, char* a_str, char* b_str);
+void actionStringLength(SWFAppContext* app_context, char* v_str);
+void actionStringAdd(SWFAppContext* app_context, char* a_str, char* b_str);
 
-void actionGetVariable(SWFAppContext* app_context, char* stack, u32* sp);
-void actionSetVariable(SWFAppContext* app_context, char* stack, u32* sp);
+void actionGetVariable(SWFAppContext* app_context);
+void actionSetVariable(SWFAppContext* app_context);
 
-void actionTrace(SWFAppContext* app_context, char* stack, u32* sp);
-void actionGetTime(SWFAppContext* app_context, char* stack, u32* sp);
+void actionTrace(SWFAppContext* app_context);
+void actionGetTime(SWFAppContext* app_context);

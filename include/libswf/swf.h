@@ -7,6 +7,10 @@
 #define INITIAL_DICTIONARY_CAPACITY 1024
 #define INITIAL_DISPLAYLIST_CAPACITY 1024
 
+#define STACK (app_context->stack)
+#define SP (app_context->sp)
+#define OLDSP (app_context->oldSP)
+
 typedef enum
 {
 	CHAR_TYPE_SHAPE,
@@ -51,6 +55,10 @@ typedef struct O1HeapInstance O1HeapInstance;
 
 typedef struct SWFAppContext
 {
+	char* stack;
+	u32 sp;
+	u32 oldSP;
+	
 	frame_func* frame_funcs;
 	
 	int width;
@@ -87,10 +95,6 @@ typedef struct SWFAppContext
 	char* cxform_data;
 	size_t cxform_data_size;
 } SWFAppContext;
-
-extern char* stack;
-extern u32 sp;
-extern u32 oldSP;
 
 extern int quit_swf;
 extern size_t next_frame;
