@@ -24,7 +24,7 @@ void initVarArray(size_t max_string_id)
 {
 	var_array_size = max_string_id;
 	var_array = (ActionVar**) calloc(var_array_size, sizeof(ActionVar*));
-
+	
 	if (!var_array)
 	{
 		EXC("Failed to allocate variable array\n");
@@ -35,13 +35,13 @@ void initVarArray(size_t max_string_id)
 static int free_variable_callback(const void *key, size_t ksize, uintptr_t value, void *usr)
 {
 	ActionVar* var = (ActionVar*) value;
-
+	
 	// Free heap-allocated strings
 	if (var->type == ACTION_STACK_VALUE_STRING && var->data.string_data.owns_memory)
 	{
 		free(var->data.string_data.heap_ptr);
 	}
-
+	
 	free(var);
 	return 0;
 }
@@ -54,7 +54,7 @@ void freeMap()
 		hashmap_free(var_map);
 		var_map = NULL;
 	}
-
+	
 	// Free array-based variables
 	if (var_array)
 	{
@@ -84,7 +84,7 @@ ActionVar* getVariableById(u32 string_id)
 		// Invalid ID or dynamic string (ID = 0)
 		return NULL;
 	}
-
+	
 	// Lazy allocation
 	if (!var_array[string_id])
 	{
@@ -94,7 +94,7 @@ ActionVar* getVariableById(u32 string_id)
 			EXC("Failed to allocate variable\n");
 			return NULL;
 		}
-
+		
 		// Initialize with unset type (empty string)
 		var->type = ACTION_STACK_VALUE_STRING;
 		var->str_size = 0;
@@ -104,27 +104,27 @@ ActionVar* getVariableById(u32 string_id)
 		// Initialize numeric_value to point to empty string to avoid segfault
 		// when pushVar tries to use it as a string pointer
 		var->data.numeric_value = (u64) "";
-
+		
 		var_array[string_id] = var;
 	}
-
+	
 	return var_array[string_id];
 }
 
 ActionVar* getVariable(char* var_name, size_t key_size)
 {
 	ActionVar* var;
-
+	
 	if (hashmap_get(var_map, var_name, key_size, (uintptr_t*) &var))
 	{
 		return var;
 	}
-
+	
 	do
 	{
 		var = (ActionVar*) malloc(sizeof(ActionVar));
 	} while (errno != 0);
-
+	
 	// Initialize with unset type (empty string)
 	var->type = ACTION_STACK_VALUE_STRING;
 	var->str_size = 0;
@@ -134,9 +134,9 @@ ActionVar* getVariable(char* var_name, size_t key_size)
 	// Initialize numeric_value to point to empty string to avoid segfault
 	// when pushVar tries to use it as a string pointer
 	var->data.numeric_value = (u64) "";
-
+	
 	hashmap_set(var_map, var_name, key_size, (uintptr_t) var);
-
+	
 	return var;
 }
 
@@ -150,18 +150,18 @@ void setVariableByName(const char* var_name, ActionVar* value)
 {
 	size_t key_size = strlen(var_name);
 	ActionVar* var = getVariable((char*)var_name, key_size);
-
+	
 	if (var == NULL) {
 		return;
 	}
-
+	
 	// Free old data if it was a heap-allocated string
 	if (var->type == ACTION_STACK_VALUE_STRING && var->data.string_data.owns_memory) {
 		free(var->data.string_data.heap_ptr);
 		var->data.string_data.heap_ptr = NULL;
 		var->data.string_data.owns_memory = false;
 	}
-
+	
 	// Copy the new value
 	var->type = value->type;
 	var->str_size = value->str_size;
@@ -171,14 +171,14 @@ void setVariableByName(const char* var_name, ActionVar* value)
 char* materializeStringList(char* stack, u32 sp)
 {
 	ActionStackValueType type = stack[sp];
-
+	
 	if (type == ACTION_STACK_VALUE_STR_LIST)
 	{
 		// Get the string list
 		u64* str_list = (u64*) &stack[sp + 16];
 		u64 num_strings = str_list[0];
 		u32 total_size = VAL(u32, &stack[sp + 8]);
-
+		
 		// Allocate heap memory for concatenated result
 		char* result = (char*) malloc(total_size + 1);
 		if (!result)
@@ -186,7 +186,7 @@ char* materializeStringList(char* stack, u32 sp)
 			EXC("Failed to allocate memory for string variable\n");
 			return NULL;
 		}
-
+		
 		// Concatenate all strings
 		char* dest = result;
 		for (u64 i = 0; i < num_strings; i++)
@@ -197,7 +197,7 @@ char* materializeStringList(char* stack, u32 sp)
 			dest += len;
 		}
 		*dest = '\0';
-
+		
 		return result;
 	}
 	else if (type == ACTION_STACK_VALUE_STRING)
@@ -206,7 +206,7 @@ char* materializeStringList(char* stack, u32 sp)
 		char* src = (char*) VAL(u64, &stack[sp + 16]);
 		return strdup(src);
 	}
-
+	
 	// Not a string type
 	return NULL;
 }
@@ -219,9 +219,9 @@ void setVariableWithValue(ActionVar* var, char* stack, u32 sp)
 		free(var->data.string_data.heap_ptr);
 		var->data.string_data.owns_memory = false;
 	}
-
+	
 	ActionStackValueType type = stack[sp];
-
+	
 	if (type == ACTION_STACK_VALUE_STRING || type == ACTION_STACK_VALUE_STR_LIST)
 	{
 		// Materialize string to heap
@@ -234,7 +234,7 @@ void setVariableWithValue(ActionVar* var, char* stack, u32 sp)
 			var->data.numeric_value = 0;
 			return;
 		}
-
+		
 		var->type = ACTION_STACK_VALUE_STRING;
 		var->str_size = strlen(heap_str);
 		var->data.string_data.heap_ptr = heap_str;

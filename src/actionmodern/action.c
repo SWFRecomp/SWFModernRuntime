@@ -41,10 +41,10 @@ typedef struct ASFunction {
 	char name[256];           // Function name (can be empty for anonymous)
 	u8 function_type;         // 1 = simple (DefineFunction), 2 = advanced (DefineFunction2)
 	u32 param_count;          // Number of parameters
-
+	
 	// For DefineFunction (type 1)
 	SimpleFunctionPtr simple_func;
-
+	
 	// For DefineFunction2 (type 2)
 	Function2Ptr advanced_func;
 	u8 register_count;
@@ -78,7 +78,7 @@ static ASFunction* lookupFunctionFromVar(ActionVar* var) {
 void initTime(SWFAppContext* app_context)
 {
 	start_time = get_elapsed_ms();
-
+	
 	// Initialize global object if not already initialized
 	if (global_object == NULL) {
 		global_object = allocObject(app_context, 16);  // Start with capacity for 16 global properties
@@ -94,7 +94,7 @@ void actionToggleQuality(SWFAppContext* app_context)
 	// In NO_GRAPHICS mode, this is a no-op
 	// In full graphics mode, this would toggle between high and low quality rendering
 	// affecting anti-aliasing, smoothing, etc.
-
+	
 	#ifdef DEBUG
 	printf("[ActionToggleQuality] Toggled render quality\n");
 	#endif
@@ -148,12 +148,12 @@ static int32_t RandomPureHasher(int32_t iSeed) {
 	const int32_t c1 = 1376312589L;
 	const int32_t c2 = 789221L;
 	const int32_t c3 = 15731L;
-
+	
 	iSeed = ((iSeed << 13) ^ iSeed) - (iSeed >> 21);
 	int32_t iResult = (iSeed * (iSeed * iSeed * c3 + c2) + c1) & kRandomPureMax;
 	iResult += iSeed;
 	iResult = ((iResult << 13) ^ iResult) - (iResult >> 21);
-
+	
 	return iResult;
 }
 
@@ -164,7 +164,7 @@ static int32_t GenerateRandomNumber(TRandomFast *pRandomFast) {
 		// Use time-based seed for first initialization
 		RandomFastInit(pRandomFast, (uint32_t)time(NULL));
 	}
-
+	
 	int32_t aNum = RandomFastNext(pRandomFast);
 	aNum = RandomPureHasher(aNum * 71L);
 	return aNum & kRandomPureMax;
@@ -175,7 +175,7 @@ static int32_t Random(int32_t range, TRandomFast *pRandomFast) {
 	if (range <= 0) {
 		return 0;
 	}
-
+	
 	int32_t randomNumber = GenerateRandomNumber(pRandomFast);
 	return randomNumber % range;
 }
@@ -245,7 +245,7 @@ static MovieClip* createMovieClip(const char* instance_name, MovieClip* parent) 
 	if (!mc) {
 		return NULL;
 	}
-
+	
 	// Initialize with default values similar to root_movieclip
 	mc->x = 0.0f;
 	mc->y = 0.0f;
@@ -267,14 +267,14 @@ static MovieClip* createMovieClip(const char* instance_name, MovieClip* parent) 
 	mc->ymouse = 0.0f;
 	mc->droptarget[0] = '\0';
 	mc->url[0] = '\0';
-
+	
 	// Set instance name
 	strncpy(mc->name, instance_name, sizeof(mc->name) - 1);
 	mc->name[sizeof(mc->name) - 1] = '\0';
-
+	
 	// Set parent and construct target path
 	mc->parent = parent;
-
+	
 	// Construct target path based on parent
 	if (parent == NULL) {
 		// No parent - standalone clip
@@ -289,7 +289,7 @@ static MovieClip* createMovieClip(const char* instance_name, MovieClip* parent) 
 			mc->target[sizeof(mc->target) - 1] = '\0';
 		}
 	}
-
+	
 	return mc;
 }
 
@@ -310,7 +310,7 @@ static const char* constructPath(MovieClip* mc, char* buffer, size_t buffer_size
 		}
 		return buffer;
 	}
-
+	
 	// Return the pre-computed target path
 	strncpy(buffer, mc->target, buffer_size - 1);
 	buffer[buffer_size - 1] = '\0';
@@ -344,7 +344,7 @@ ActionStackValueType convertString(SWFAppContext* app_context, char* var_str)
 		VAL(u64, &STACK_TOP_VALUE) = (u64) var_str;
 		snprintf(var_str, 17, "%.15g", temp_val);  // Use the saved value
 	}
-
+	
 	return ACTION_STACK_VALUE_STRING;
 }
 
@@ -385,19 +385,19 @@ void pushVar(SWFAppContext* app_context, ActionVar* var)
 		case ACTION_STACK_VALUE_FUNCTION:
 		{
 			PUSH(var->type, var->data.numeric_value);
-
+			
 			break;
 		}
-
+		
 		case ACTION_STACK_VALUE_STRING:
 		{
 			// Use heap pointer if variable owns memory, otherwise use numeric_value as pointer
 			char* str_ptr = var->data.string_data.owns_memory ?
 				var->data.string_data.heap_ptr :
 				(char*) var->data.numeric_value;
-
+				
 			PUSH_STR_ID(str_ptr, var->str_size, var->string_id);
-
+			
 			break;
 		}
 	}
@@ -407,7 +407,7 @@ void peekVar(SWFAppContext* app_context, ActionVar* var)
 {
 	var->type = STACK_TOP_TYPE;
 	var->str_size = STACK_TOP_N;
-
+	
 	if (STACK_TOP_TYPE == ACTION_STACK_VALUE_STR_LIST)
 	{
 		var->data.numeric_value = (u64) &STACK_TOP_VALUE;
@@ -426,7 +426,7 @@ void peekVar(SWFAppContext* app_context, ActionVar* var)
 		var->data.numeric_value = VAL(u64, &STACK_TOP_VALUE);
 		var->string_id = 0;  // Non-string types don't have IDs
 	}
-
+	
 	// Initialize owns_memory to false for non-heap strings
 	// (When the value is in numeric_value, not string_data.heap_ptr)
 	if (var->type == ACTION_STACK_VALUE_STRING)
@@ -438,7 +438,7 @@ void peekVar(SWFAppContext* app_context, ActionVar* var)
 void popVar(SWFAppContext* app_context, ActionVar* var)
 {
 	peekVar(app_context, var);
-
+	
 	POP();
 }
 
@@ -447,7 +447,7 @@ void peekSecondVar(SWFAppContext* app_context, ActionVar* var)
 	u32 second_sp = SP_SECOND_TOP;
 	var->type = STACK[second_sp];
 	var->str_size = VAL(u32, &STACK[second_sp + 8]);
-
+	
 	if (STACK[second_sp] == ACTION_STACK_VALUE_STR_LIST)
 	{
 		var->data.numeric_value = (u64) &VAL(u64, &STACK[second_sp + 16]);
@@ -465,7 +465,7 @@ void peekSecondVar(SWFAppContext* app_context, ActionVar* var)
 		var->data.numeric_value = VAL(u64, &STACK[second_sp + 16]);
 		var->string_id = 0;
 	}
-
+	
 	if (var->type == ACTION_STACK_VALUE_STRING)
 	{
 		var->data.string_data.owns_memory = false;
@@ -476,12 +476,12 @@ void actionPrevFrame(SWFAppContext* app_context)
 {
 	// Suppress unused parameter warning
 	(void)app_context;
-
+	
 	// Access global frame control variables
 	extern size_t current_frame;
 	extern size_t next_frame;
 	extern int manual_next_frame;
-
+	
 	// Move to previous frame if not already at first frame
 	if (current_frame > 0)
 	{
@@ -530,53 +530,53 @@ void actionAdd2(SWFAppContext* app_context, char* str_buffer)
 {
 	// Peek at types without popping
 	u8 type_a = STACK_TOP_TYPE;
-
+	
 	// Move to second value
 	u32 sp_second = VAL(u32, &(STACK[SP + 4]));  // Get previous_sp
 	u8 type_b = STACK[sp_second];  // Type of second value
-
+	
 	// Check if either operand is a string
 	if (type_a == ACTION_STACK_VALUE_STRING || type_b == ACTION_STACK_VALUE_STRING) {
 		// String concatenation path
-
+		
 		// Convert first operand to string (top of stack - right operand)
 		char str_a[17];
 		convertString(app_context, str_a);
 		// Get the string pointer (either str_a if converted, or original if already string)
 		const char* str_a_ptr = (const char*) VAL(u64, &STACK_TOP_VALUE);
 		POP();
-
+		
 		// Convert second operand to string (second on stack - left operand)
 		char str_b[17];
 		convertString(app_context, str_b);
 		// Get the string pointer
 		const char* str_b_ptr = (const char*) VAL(u64, &STACK_TOP_VALUE);
 		POP();
-
+		
 		// Concatenate (left + right = b + a)
 		snprintf(str_buffer, 17, "%s%s", str_b_ptr, str_a_ptr);
-
+		
 		// Push result
 		PUSH_STR(str_buffer, strlen(str_buffer));
 	} else {
 		// Numeric addition path
-
+		
 		// Convert and pop first operand
 		convertFloat(app_context);
 		ActionVar a;
 		popVar(app_context, &a);
-
+		
 		// Convert and pop second operand
 		convertFloat(app_context);
 		ActionVar b;
 		popVar(app_context, &b);
-
+		
 		// Perform addition (same logic as actionAdd)
 		if (a.type == ACTION_STACK_VALUE_F64)
 		{
 			double a_val = VAL(double, &a.data.numeric_value);
 			double b_val = b.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &b.data.numeric_value) : VAL(double, &b.data.numeric_value);
-
+			
 			double c = b_val + a_val;
 			PUSH(ACTION_STACK_VALUE_F64, VAL(u64, &c));
 		}
@@ -584,7 +584,7 @@ void actionAdd2(SWFAppContext* app_context, char* str_buffer)
 		{
 			double a_val = a.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &a.data.numeric_value) : VAL(double, &a.data.numeric_value);
 			double b_val = VAL(double, &b.data.numeric_value);
-
+			
 			double c = b_val + a_val;
 			PUSH(ACTION_STACK_VALUE_F64, VAL(u64, &c));
 		}
@@ -731,37 +731,37 @@ void actionModulo(SWFAppContext* app_context)
 	convertFloat(app_context);
 	ActionVar a;
 	popVar(app_context, &a);
-
+	
 	convertFloat(app_context);
 	ActionVar b;
 	popVar(app_context, &b);
-
+	
 	if (VAL(float, &a.data.numeric_value) == 0.0f)
 	{
 		// SWF 4: Division by zero returns error string
 		PUSH_STR("#ERROR#", 8);
 	}
-
+	
 	else
 	{
 		if (a.type == ACTION_STACK_VALUE_F64)
 		{
 			double a_val = VAL(double, &a.data.numeric_value);
 			double b_val = b.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &b.data.numeric_value) : VAL(double, &b.data.numeric_value);
-
+			
 			double c = fmod(b_val, a_val);
 			PUSH(ACTION_STACK_VALUE_F64, VAL(u64, &c));
 		}
-
+		
 		else if (b.type == ACTION_STACK_VALUE_F64)
 		{
 			double a_val = a.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &a.data.numeric_value) : VAL(double, &a.data.numeric_value);
 			double b_val = VAL(double, &b.data.numeric_value);
-
+			
 			double c = fmod(b_val, a_val);
 			PUSH(ACTION_STACK_VALUE_F64, VAL(u64, &c));
 		}
-
+		
 		else
 		{
 			float c = fmodf(VAL(float, &b.data.numeric_value), VAL(float, &a.data.numeric_value));
@@ -810,29 +810,29 @@ void actionLess(SWFAppContext* app_context)
 	ActionVar a;
 	convertFloat(app_context);
 	popVar(app_context, &a);
-
+	
 	ActionVar b;
 	convertFloat(app_context);
 	popVar(app_context, &b);
-
+	
 	if (a.type == ACTION_STACK_VALUE_F64)
 	{
 		double a_val = VAL(double, &a.data.numeric_value);
 		double b_val = b.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &b.data.numeric_value) : VAL(double, &b.data.numeric_value);
-
+		
 		float c = b_val < a_val ? 1.0f : 0.0f;
 		PUSH(ACTION_STACK_VALUE_F64, VAL(u64, &c));
 	}
-
+	
 	else if (b.type == ACTION_STACK_VALUE_F64)
 	{
 		double a_val = a.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &a.data.numeric_value) : VAL(double, &a.data.numeric_value);
 		double b_val = VAL(double, &b.data.numeric_value);
-
+		
 		float c = b_val < a_val ? 1.0f : 0.0f;
 		PUSH(ACTION_STACK_VALUE_F64, VAL(u64, &c));
 	}
-
+	
 	else
 	{
 		float c = VAL(float, &b.data.numeric_value) < VAL(float, &a.data.numeric_value) ? 1.0f : 0.0f;
@@ -845,29 +845,29 @@ void actionLess2(SWFAppContext* app_context)
 	ActionVar a;
 	convertFloat(app_context);
 	popVar(app_context, &a);
-
+	
 	ActionVar b;
 	convertFloat(app_context);
 	popVar(app_context, &b);
-
+	
 	if (a.type == ACTION_STACK_VALUE_F64)
 	{
 		double a_val = VAL(double, &a.data.numeric_value);
 		double b_val = b.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &b.data.numeric_value) : VAL(double, &b.data.numeric_value);
-
+		
 		float c = b_val < a_val ? 1.0f : 0.0f;
 		PUSH(ACTION_STACK_VALUE_F64, VAL(u64, &c));
 	}
-
+	
 	else if (b.type == ACTION_STACK_VALUE_F64)
 	{
 		double a_val = a.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &a.data.numeric_value) : VAL(double, &a.data.numeric_value);
 		double b_val = VAL(double, &b.data.numeric_value);
-
+		
 		float c = b_val < a_val ? 1.0f : 0.0f;
 		PUSH(ACTION_STACK_VALUE_F64, VAL(u64, &c));
 	}
-
+	
 	else
 	{
 		float c = VAL(float, &b.data.numeric_value) < VAL(float, &a.data.numeric_value) ? 1.0f : 0.0f;
@@ -880,29 +880,29 @@ void actionGreater(SWFAppContext* app_context)
 	ActionVar a;
 	convertFloat(app_context);
 	popVar(app_context, &a);
-
+	
 	ActionVar b;
 	convertFloat(app_context);
 	popVar(app_context, &b);
-
+	
 	if (a.type == ACTION_STACK_VALUE_F64)
 	{
 		double a_val = VAL(double, &a.data.numeric_value);
 		double b_val = b.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &b.data.numeric_value) : VAL(double, &b.data.numeric_value);
-
+		
 		float c = b_val > a_val ? 1.0f : 0.0f;
 		PUSH(ACTION_STACK_VALUE_F64, VAL(u64, &c));
 	}
-
+	
 	else if (b.type == ACTION_STACK_VALUE_F64)
 	{
 		double a_val = a.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &a.data.numeric_value) : VAL(double, &a.data.numeric_value);
 		double b_val = VAL(double, &b.data.numeric_value);
-
+		
 		float c = b_val > a_val ? 1.0f : 0.0f;
 		PUSH(ACTION_STACK_VALUE_F64, VAL(u64, &c));
 	}
-
+	
 	else
 	{
 		float c = VAL(float, &b.data.numeric_value) > VAL(float, &a.data.numeric_value) ? 1.0f : 0.0f;
@@ -985,7 +985,7 @@ void actionNot(SWFAppContext* app_context)
 	ActionVar v;
 	convertFloat(app_context);
 	popVar(app_context, &v);
-
+	
 	float result = v.data.numeric_value == 0.0f ? 1.0f : 0.0f;
 	PUSH(ACTION_STACK_VALUE_F32, VAL(u64, &result));
 }
@@ -995,9 +995,9 @@ void actionToInteger(SWFAppContext* app_context)
 	ActionVar v;
 	convertFloat(app_context);
 	popVar(app_context, &v);
-
+	
 	float f = VAL(float, &v.data.numeric_value);
-
+	
 	// Handle special values: NaN and Infinity -> 0
 	if (isnan(f) || isinf(f)) {
 		f = 0.0f;
@@ -1007,7 +1007,7 @@ void actionToInteger(SWFAppContext* app_context)
 		// Convert back to float for pushing
 		f = (float)int_value;
 	}
-
+	
 	PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &f));
 }
 
@@ -1036,14 +1036,14 @@ void actionStackSwap(SWFAppContext* app_context)
 	// Pop top value (value1)
 	ActionVar val1;
 	popVar(app_context, &val1);
-
+	
 	// Pop second value (value2)
 	ActionVar val2;
 	popVar(app_context, &val2);
-
+	
 	// Push value1 (was on top, now goes to second position)
 	pushVar(app_context, &val1);
-
+	
 	// Push value2 (was second, now goes to top)
 	pushVar(app_context, &val2);
 }
@@ -1071,25 +1071,25 @@ void actionTargetPath(SWFAppContext* app_context, char* str_buffer)
 {
 	// Get type of value on stack
 	u8 type = STACK_TOP_TYPE;
-
+	
 	// Pop value from stack
 	ActionVar val;
 	popVar(app_context, &val);
-
+	
 	// Check if value is a MovieClip
 	if (type == ACTION_STACK_VALUE_MOVIECLIP) {
 		// Get the MovieClip pointer from the value
 		MovieClip* mc = (MovieClip*) val.data.numeric_value;
-
+		
 		if (mc) {
 			// Get the pre-computed target path from the MovieClip
 			const char* path = mc->target;
 			int len = strlen(path);
-
+			
 			// Copy path to string buffer
 			strncpy(str_buffer, path, 256);  // MovieClip.target is 256 bytes
 			str_buffer[255] = '\0';  // Ensure null termination
-
+			
 			// Push the path string
 			PUSH_STR(str_buffer, len);
 		} else {
@@ -1168,7 +1168,7 @@ void actionEnumerate(SWFAppContext* app_context, char* str_buffer)
 	char* var_name = (char*) VAL(u64, &STACK[SP + 16]);
 	u32 var_name_len = VAL(u32, &STACK[SP + 8]);
 	POP();
-
+	
 #ifdef DEBUG
 	printf("[DEBUG] actionEnumerate: looking up variable '%.*s' (len=%u, id=%u)\n",
 	       var_name_len, var_name, var_name_len, string_id);
@@ -1186,7 +1186,7 @@ void actionEnumerate(SWFAppContext* app_context, char* str_buffer)
 		// Dynamic string - use hashmap (O(n))
 		var = getVariable(var_name, var_name_len);
 	}
-
+	
 	// Step 3: Check if variable exists and is an object
 	if (!var || var->type != ACTION_STACK_VALUE_OBJECT)
 	{
@@ -1200,7 +1200,7 @@ void actionEnumerate(SWFAppContext* app_context, char* str_buffer)
 		PUSH(ACTION_STACK_VALUE_UNDEFINED, 0);
 		return;
 	}
-
+	
 	// Step 4: Get the object from the variable
 	ASObject* obj = (ASObject*) VAL(u64, &var->data.numeric_value);
 	if (obj == NULL)
@@ -1212,32 +1212,32 @@ void actionEnumerate(SWFAppContext* app_context, char* str_buffer)
 		PUSH(ACTION_STACK_VALUE_UNDEFINED, 0);
 		return;
 	}
-
+	
 	// Step 5: Collect all enumerable properties from the entire prototype chain
 	// We need to collect them first to push in reverse order
-
+	
 	// Temporary storage for property names (we'll push them to stack after collecting)
 	typedef struct PropList {
 		const char* name;
 		u32 name_length;
 		struct PropList* next;
 	} PropList;
-
+	
 	PropList* prop_head = NULL;
 	u32 total_props = 0;
-
+	
 	// Track which properties we've already seen (to handle shadowing)
 	EnumeratedName* enumerated_head = NULL;
-
+	
 	// Walk the prototype chain
 	ASObject* current_obj = obj;
 	int chain_depth = 0;
 	const int MAX_CHAIN_DEPTH = 100; // Prevent infinite loops
-
+	
 	while (current_obj != NULL && chain_depth < MAX_CHAIN_DEPTH)
 	{
 		chain_depth++;
-
+		
 #ifdef DEBUG
 		printf("[DEBUG] actionEnumerate: walking prototype chain depth=%d, num_used=%u\n",
 		       chain_depth, current_obj->num_used);
@@ -1249,7 +1249,7 @@ void actionEnumerate(SWFAppContext* app_context, char* str_buffer)
 			const char* prop_name = current_obj->properties[i].name;
 			u32 prop_name_len = current_obj->properties[i].name_length;
 			u8 prop_flags = current_obj->properties[i].flags;
-
+			
 			// Skip if property is not enumerable (DontEnum)
 			if (!(prop_flags & PROPERTY_FLAG_ENUMERABLE))
 			{
@@ -1259,7 +1259,7 @@ void actionEnumerate(SWFAppContext* app_context, char* str_buffer)
 #endif
 				continue;
 			}
-
+			
 			// Skip if we've already enumerated this property name (shadowing)
 			if (isPropertyEnumerated(enumerated_head, prop_name, prop_name_len))
 			{
@@ -1269,10 +1269,10 @@ void actionEnumerate(SWFAppContext* app_context, char* str_buffer)
 #endif
 				continue;
 			}
-
+			
 			// Add to enumerated list
 			addEnumeratedName(&enumerated_head, prop_name, prop_name_len);
-
+			
 			// Add to property list (for later pushing to stack)
 			PropList* node = (PropList*) malloc(sizeof(PropList));
 			if (node != NULL)
@@ -1282,14 +1282,14 @@ void actionEnumerate(SWFAppContext* app_context, char* str_buffer)
 				node->next = prop_head;
 				prop_head = node;
 				total_props++;
-
+				
 #ifdef DEBUG
 				printf("[DEBUG] actionEnumerate: added enumerable property '%.*s'\n",
 				       prop_name_len, prop_name);
 #endif
 			}
 		}
-
+		
 		// Move to prototype via __proto__ property
 		ActionVar* proto_var = getProperty(current_obj, "__proto__", 9);
 		if (proto_var != NULL && proto_var->type == ACTION_STACK_VALUE_OBJECT)
@@ -1305,10 +1305,10 @@ void actionEnumerate(SWFAppContext* app_context, char* str_buffer)
 			current_obj = NULL;
 		}
 	}
-
+	
 	// Free the enumerated names list
 	freeEnumeratedNames(enumerated_head);
-
+	
 #ifdef DEBUG
 	printf("[DEBUG] actionEnumerate: collected %u enumerable properties total\n", total_props);
 #endif
@@ -1316,12 +1316,12 @@ void actionEnumerate(SWFAppContext* app_context, char* str_buffer)
 	// Step 6: Push null terminator first
 	// This marks the end of the enumeration for for..in loops
 	PUSH(ACTION_STACK_VALUE_UNDEFINED, 0);
-
+	
 	// Step 7: Push property names from the list (they're already in reverse order)
 	while (prop_head != NULL)
 	{
 		PUSH_STR((char*)prop_head->name, prop_head->name_length);
-
+		
 		PropList* next = prop_head->next;
 		free(prop_head);
 		prop_head = next;
@@ -1334,7 +1334,7 @@ int evaluateCondition(SWFAppContext* app_context)
 	ActionVar v;
 	convertFloat(app_context);
 	popVar(app_context, &v);
-
+	
 	return v.data.numeric_value != 0.0f;
 }
 
@@ -1536,7 +1536,7 @@ void actionStringLength(SWFAppContext* app_context, char* v_str)
 	ActionVar v;
 	convertString(app_context, v_str);
 	popVar(app_context, &v);
-
+	
 	float str_size = (float) v.str_size;
 	PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &str_size));
 }
@@ -1548,13 +1548,13 @@ void actionStringExtract(SWFAppContext* app_context, char* str_buffer)
 	ActionVar length_var;
 	popVar(app_context, &length_var);
 	int length = (int)VAL(float, &length_var.data.numeric_value);
-
+	
 	// Pop index
 	convertFloat(app_context);
 	ActionVar index_var;
 	popVar(app_context, &index_var);
 	int index = (int)VAL(float, &index_var.data.numeric_value);
-
+	
 	// Pop string
 	char src_buffer[17];
 	convertString(app_context, src_buffer);
@@ -1563,10 +1563,10 @@ void actionStringExtract(SWFAppContext* app_context, char* str_buffer)
 	const char* src = src_var.data.string_data.owns_memory ?
 		src_var.data.string_data.heap_ptr :
 		(char*) src_var.data.numeric_value;
-
+		
 	// Get source string length
 	int src_len = src_var.str_size;
-
+	
 	// Handle out-of-bounds index
 	if (index < 0) index = 0;
 	if (index >= src_len) {
@@ -1574,20 +1574,20 @@ void actionStringExtract(SWFAppContext* app_context, char* str_buffer)
 		PUSH_STR(str_buffer, 0);
 		return;
 	}
-
+	
 	// Handle out-of-bounds length
 	if (length < 0) length = 0;
 	if (index + length > src_len) {
 		length = src_len - index;
 	}
-
+	
 	// Extract substring
 	int i;
 	for (i = 0; i < length && i < 16; i++) {  // Limit to buffer size
 		str_buffer[i] = src[index + i];
 	}
 	str_buffer[i] = '\0';
-
+	
 	// Push result
 	PUSH_STR(str_buffer, i);
 }
@@ -1596,13 +1596,13 @@ void actionMbStringLength(SWFAppContext* app_context, char* v_str)
 {
 	// Convert top of stack to string (if it's a number, converts it to string in v_str)
 	convertString(app_context, v_str);
-
+	
 	// Get the string pointer from stack
 	const unsigned char* str = (const unsigned char*) VAL(u64, &STACK_TOP_VALUE);
-
+	
 	// Pop the string value
 	POP();
-
+	
 	// Count UTF-8 characters
 	int count = 0;
 	while (*str != '\0') {
@@ -1625,7 +1625,7 @@ void actionMbStringLength(SWFAppContext* app_context, char* v_str)
 		}
 		count++;
 	}
-
+	
 	// Push result
 	float result = (float)count;
 	PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &result));
@@ -1638,13 +1638,13 @@ void actionMbStringExtract(SWFAppContext* app_context, char* str_buffer)
 	ActionVar count_var;
 	popVar(app_context, &count_var);
 	int count = (int)VAL(float, &count_var.data.numeric_value);
-
+	
 	// Pop index (starting character position)
 	convertFloat(app_context);
 	ActionVar index_var;
 	popVar(app_context, &index_var);
 	int index = (int)VAL(float, &index_var.data.numeric_value);
-
+	
 	// Pop string
 	char input_buffer[17];
 	convertString(app_context, input_buffer);
@@ -1653,18 +1653,18 @@ void actionMbStringExtract(SWFAppContext* app_context, char* str_buffer)
 	const char* src = src_var.data.string_data.owns_memory ?
 		src_var.data.string_data.heap_ptr :
 		(char*) src_var.data.numeric_value;
-
+		
 	// If index or count are invalid, return empty string
 	if (index < 0 || count < 0) {
 		str_buffer[0] = '\0';
 		PUSH_STR(str_buffer, 0);
 		return;
 	}
-
+	
 	// Navigate to starting character position (UTF-8 aware)
 	const unsigned char* str = (const unsigned char*)src;
 	int current_char = 0;
-
+	
 	// Skip to index'th character
 	while (*str != '\0' && current_char < index) {
 		// Advance by one UTF-8 character
@@ -1681,18 +1681,18 @@ void actionMbStringExtract(SWFAppContext* app_context, char* str_buffer)
 		}
 		current_char++;
 	}
-
+	
 	// If we reached end of string before index, return empty
 	if (*str == '\0') {
 		str_buffer[0] = '\0';
 		PUSH_STR(str_buffer, 0);
 		return;
 	}
-
+	
 	// Extract count characters
 	const unsigned char* start = str;
 	current_char = 0;
-
+	
 	while (*str != '\0' && current_char < count) {
 		// Advance by one UTF-8 character
 		if ((*str & 0x80) == 0) {
@@ -1708,13 +1708,13 @@ void actionMbStringExtract(SWFAppContext* app_context, char* str_buffer)
 		}
 		current_char++;
 	}
-
+	
 	// Copy substring to buffer
 	int length = str - start;
 	if (length > 16) length = 16;  // Buffer size limit
 	memcpy(str_buffer, start, length);
 	str_buffer[length] = '\0';
-
+	
 	// Push result
 	PUSH_STR(str_buffer, length);
 }
@@ -1724,14 +1724,14 @@ void actionCharToAscii(SWFAppContext* app_context)
 	// Convert top of stack to string
 	char str_buffer[17];
 	convertString(app_context, str_buffer);
-
+	
 	// Pop the string value
 	ActionVar v;
 	popVar(app_context, &v);
-
+	
 	// Get pointer to the string
 	const char* str = (const char*) v.data.numeric_value;
-
+	
 	// Handle empty string edge case
 	if (str == NULL || str[0] == '\0' || v.str_size == 0) {
 		// Push NaN for empty string (Flash behavior)
@@ -1739,11 +1739,11 @@ void actionCharToAscii(SWFAppContext* app_context)
 		PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &result));
 		return;
 	}
-
+	
 	// Get ASCII/Unicode code of first character
 	// Use unsigned char to ensure values 128-255 are handled correctly
 	float code = (float)(unsigned char)str[0];
-
+	
 	// Push result
 	PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &code));
 }
@@ -1833,7 +1833,7 @@ void actionNextFrame(SWFAppContext* app_context)
 	extern size_t current_frame;
 	extern size_t next_frame;
 	extern int manual_next_frame;
-
+	
 	next_frame = current_frame + 1;
 	manual_next_frame = 1;
 }
@@ -1887,7 +1887,7 @@ void actionPlay(SWFAppContext* app_context)
 void actionTrace(SWFAppContext* app_context)
 {
 	ActionStackValueType type = STACK_TOP_TYPE;
-
+	
 	switch (type)
 	{
 		case ACTION_STACK_VALUE_STRING:
@@ -1895,42 +1895,42 @@ void actionTrace(SWFAppContext* app_context)
 			printf("%s\n", (char*) STACK_TOP_VALUE);
 			break;
 		}
-
+		
 		case ACTION_STACK_VALUE_STR_LIST:
 		{
 			u64* str_list = (u64*) &STACK_TOP_VALUE;
-
+			
 			for (u64 i = 0; i < str_list[0]; ++i)
 			{
 				printf("%s", (char*) str_list[i + 1]);
 			}
-
+			
 			printf("\n");
-
+			
 			break;
 		}
-
+		
 		case ACTION_STACK_VALUE_F32:
 		{
 			printf("%.15g\n", VAL(float, &STACK_TOP_VALUE));
 			break;
 		}
-
+		
 		case ACTION_STACK_VALUE_F64:
 		{
 			printf("%.15g\n", VAL(double, &STACK_TOP_VALUE));
 			break;
 		}
-
+		
 		case ACTION_STACK_VALUE_UNDEFINED:
 		{
 			printf("undefined\n");
 			break;
 		}
 	}
-
+	
 	fflush(stdout);
-
+	
 	POP();
 }
 
@@ -1961,14 +1961,14 @@ void actionGotoFrame(SWFAppContext* app_context, u16 frame)
 {
 	// Suppress unused parameter warnings
 	(void)app_context;
-
+	
 	// Access global frame control variables
 	extern size_t current_frame;
 	extern size_t next_frame;
 	extern int manual_next_frame;
 	extern int is_playing;
 	extern size_t g_frame_count;
-
+	
 	// Frame boundary validation
 	// If the target frame is out of bounds, ignore the jump
 	if (frame >= g_frame_count)
@@ -1977,13 +1977,13 @@ void actionGotoFrame(SWFAppContext* app_context, u16 frame)
 		// Continue execution in current frame
 		return;
 	}
-
+	
 	// Set the next frame to the specified frame index
 	next_frame = frame;
-
+	
 	// Signal manual frame navigation (overrides automatic playback advancement)
 	manual_next_frame = 1;
-
+	
 	// Stop playback at the target frame (gotoAndStop semantics)
 	// This is the key difference from just advancing the frame counter
 	is_playing = 0;
@@ -2004,16 +2004,16 @@ int findFrameByLabel(const char* label)
 	{
 		return -1;
 	}
-
+	
 	// Extern declarations for generated frame label data
 	typedef struct {
 		const char* label;
 		size_t frame;
 	} FrameLabelEntry;
-
+	
 	extern FrameLabelEntry frame_label_data[];
 	extern size_t frame_label_count;
-
+	
 	// Search through frame labels
 	for (size_t i = 0; i < frame_label_count; i++)
 	{
@@ -2022,7 +2022,7 @@ int findFrameByLabel(const char* label)
 			return (int)frame_label_data[i].frame;
 		}
 	}
-
+	
 	return -1;  // Not found
 }
 
@@ -2044,28 +2044,28 @@ void actionGoToLabel(SWFAppContext* app_context, const char* label)
 	extern size_t next_frame;
 	extern int manual_next_frame;
 	extern int is_playing;
-
+	
 	// Debug output
 	printf("// GoToLabel: %s\n", label ? label : "(null)");
 	fflush(stdout);
-
+	
 	if (!label)
 	{
 		return;
 	}
-
+	
 	// Look up frame by label
 	int frame_index = findFrameByLabel(label);
-
+	
 	if (frame_index >= 0)
 	{
 		// Navigate to the frame
 		next_frame = (size_t)frame_index;
 		manual_next_frame = 1;
-
+		
 		// Stop playback (like gotoAndStop)
 		is_playing = 0;
-
+		
 		// Note: Actual navigation will occur in the frame loop
 	}
 	// If label not found, ignore (per Flash spec - no action taken)
@@ -2102,47 +2102,47 @@ void actionGotoFrame2(SWFAppContext* app_context, u8 play_flag, u16 scene_bias)
 	// Pop frame identifier from stack
 	ActionVar frame_var;
 	popVar(app_context, &frame_var);
-
+	
 	if (frame_var.type == ACTION_STACK_VALUE_F32) {
 		// Numeric frame
 		float frame_float;
 		memcpy(&frame_float, &frame_var.data.numeric_value, sizeof(float));
-
+		
 		// Handle negative frames (treat as 0)
 		s32 frame_num = (s32)frame_float;
 		if (frame_num < 0) {
 			frame_num = 0;
 		}
-
+		
 		// Apply scene bias
 		frame_num += scene_bias;
-
+		
 		printf("GotoFrame2: frame %d (play=%d)\n", frame_num, play_flag);
 		fflush(stdout);
-
+		
 		// Note: Actual frame navigation requires MovieClip structure and frame management
 		// In NO_GRAPHICS mode, we just log the navigation
 	}
 	else if (frame_var.type == ACTION_STACK_VALUE_STRING) {
 		// Frame label - may include target path
 		const char* frame_str = (const char*)frame_var.data.numeric_value;
-
+		
 		if (frame_str == NULL) {
 			printf("GotoFrame2: null label (ignored)\n");
 			fflush(stdout);
 			return;
 		}
-
+		
 		// Parse target path if present (format: "target:frame" or "/target:frame")
 		const char* target = NULL;
 		const char* frame_part = frame_str;
 		const char* colon = strchr(frame_str, ':');
-
+		
 		if (colon != NULL) {
 			// Target path present
 			size_t target_len = colon - frame_str;
 			static char target_buffer[256];
-
+			
 			if (target_len < sizeof(target_buffer)) {
 				memcpy(target_buffer, frame_str, target_len);
 				target_buffer[target_len] = '\0';
@@ -2150,17 +2150,17 @@ void actionGotoFrame2(SWFAppContext* app_context, u8 play_flag, u16 scene_bias)
 				frame_part = colon + 1;  // Frame label/number after the colon
 			}
 		}
-
+		
 		// Check if frame_part is numeric or a label
 		char* endptr;
 		long frame_num = strtol(frame_part, &endptr, 10);
-
+		
 		if (endptr != frame_part && *endptr == '\0') {
 			// It's a numeric frame
 			if (frame_num < 0) {
 				frame_num = 0;
 			}
-
+			
 			if (target) {
 				printf("GotoFrame2: target '%s', frame %ld (play=%d)\n", target, frame_num, play_flag);
 			} else {
@@ -2174,9 +2174,9 @@ void actionGotoFrame2(SWFAppContext* app_context, u8 play_flag, u16 scene_bias)
 				printf("GotoFrame2: label '%s' (play=%d)\n", frame_part, play_flag);
 			}
 		}
-
+		
 		fflush(stdout);
-
+		
 		// Note: Frame label lookup and navigation requires:
 		// - Frame label registry (mapping labels to frame numbers)
 		// - MovieClip context switching for target paths
@@ -2214,15 +2214,15 @@ void actionEndDrag(SWFAppContext* app_context)
 		printf("[EndDrag] Stopping drag of '%s'\n",
 			   dragged_target ? dragged_target : "(null)");
 		#endif
-
+		
 		is_dragging = 0;
-
+		
 		// Free the dragged target name if it was allocated
 		if (dragged_target) {
 			free(dragged_target);
 			dragged_target = NULL;
 		}
-
+		
 		#ifndef NO_GRAPHICS
 		// In graphics mode, additional cleanup would happen here:
 		// - Stop updating sprite position with mouse
@@ -2234,7 +2234,7 @@ void actionEndDrag(SWFAppContext* app_context)
 		printf("[EndDrag] No drag in progress\n");
 		#endif
 	}
-
+	
 	// No stack operations - END_DRAG has no parameters
 	(void)app_context;  // Suppress unused parameter warning
 }
@@ -2265,7 +2265,7 @@ void actionStopSounds(SWFAppContext* app_context)
 {
 	// Suppress unused parameter warnings
 	(void)app_context;
-
+	
 	// In NO_GRAPHICS mode, this is a no-op since there is no audio subsystem
 	#ifndef NO_GRAPHICS
 	// In full graphics mode, would stop all audio channels
@@ -2274,7 +2274,7 @@ void actionStopSounds(SWFAppContext* app_context)
 	//     stopAllAudioChannels(audio_context);
 	// }
 	#endif
-
+	
 	// No stack operations required - opcode has no parameters and no return value
 	// This opcode has global effect and does not modify the stack
 }
@@ -2318,11 +2318,11 @@ void actionGetURL(SWFAppContext* app_context, const char* url, const char* targe
 	// Handle null pointers
 	const char* safe_url = url ? url : "(null)";
 	const char* safe_target = target ? target : "(null)";
-
+	
 	// Log the URL request for verification in NO_GRAPHICS mode
 	// Format: "// GetURL: <url> -> <target>"
 	printf("// GetURL: %s -> %s\n", safe_url, safe_target);
-
+	
 	// Note: Full implementation would check target type and dispatch accordingly:
 	// - _level targets: Load SWF file into specified level
 	// - Browser targets (_blank, _self, etc.): Open in browser window/frame
@@ -2338,10 +2338,10 @@ void actionGetVariable(SWFAppContext* app_context)
 	u32 string_id = VAL(u32, &STACK[SP + 12]);
 	char* var_name = (char*) VAL(u64, &STACK[SP + 16]);
 	u32 var_name_len = VAL(u32, &STACK[SP + 8]);
-
+	
 	// Pop variable name
 	POP();
-
+	
 	// First check scope chain (innermost to outermost)
 	for (int i = scope_depth - 1; i >= 0; i--)
 	{
@@ -2357,14 +2357,14 @@ void actionGetVariable(SWFAppContext* app_context)
 			}
 		}
 	}
-
+	
 	// Not found in scope chain - check global variables
 	ActionVar* var = NULL;
 	if (string_id != 0)
 	{
 		// Constant string - use array (O(1))
 		var = getVariableById(string_id);
-
+		
 		// Fall back to hashmap if array lookup doesn't find the variable
 		// (This can happen for catch variables that are set by name but have a string ID)
 		if (var == NULL || (var->type == ACTION_STACK_VALUE_STRING && var->str_size == 0))
@@ -2377,14 +2377,14 @@ void actionGetVariable(SWFAppContext* app_context)
 		// Dynamic string - use hashmap (O(n))
 		var = getVariable(var_name, var_name_len);
 	}
-
+	
 	if (!var)
 	{
 		// Variable not found - push empty string
 		PUSH_STR("", 0);
 		return;
 	}
-
+	
 	// Push variable value to stack
 	PUSH_VAR(var);
 }
@@ -2394,18 +2394,18 @@ void actionSetVariable(SWFAppContext* app_context)
 	// Stack layout: [name, value] <- sp
 	// According to spec: Pop value first, then name
 	// So VALUE is at top (*sp), NAME is at second (SP_SECOND_TOP)
-
+	
 	u32 value_sp = SP;
 	u32 var_name_sp = SP_SECOND_TOP;
-
+	
 	// Read variable name info
 	// Stack layout for strings: +0=type, +4=oldSP, +8=length, +12=string_id, +16=pointer
 	u32 string_id = VAL(u32, &STACK[var_name_sp + 12]);
-
+	
 	char* var_name = (char*) VAL(u64, &STACK[var_name_sp + 16]);
-
+	
 	u32 var_name_len = VAL(u32, &STACK[var_name_sp + 8]);
-
+	
 	// First check scope chain (innermost to outermost)
 	for (int i = scope_depth - 1; i >= 0; i--)
 	{
@@ -2419,16 +2419,16 @@ void actionSetVariable(SWFAppContext* app_context)
 				ActionVar value_var;
 				peekVar(app_context, &value_var);
 				setProperty(app_context, scope_chain[i], var_name, var_name_len, &value_var);
-
+				
 				// Pop both value and name
 				POP_2();
 				return;
 			}
 		}
 	}
-
+	
 	// Not found in scope chain - set as global variable
-
+	
 	ActionVar* var;
 	if (string_id != 0)
 	{
@@ -2440,17 +2440,17 @@ void actionSetVariable(SWFAppContext* app_context)
 		// Dynamic string - use hashmap (O(n))
 		var = getVariable(var_name, var_name_len);
 	}
-
+	
 	if (!var)
 	{
 		// Failed to get/create variable
 		POP_2();
 		return;
 	}
-
+	
 	// Set variable value (uses existing string materialization!)
 	setVariableWithValue(var, STACK, value_sp);
-
+	
 	// Pop both value and name
 	POP_2();
 }
@@ -2461,37 +2461,37 @@ void actionDefineLocal(SWFAppContext* app_context)
 	// According to AS2 spec for DefineLocal:
 	// Pop value first, then name
 	// So VALUE is at top (*sp), NAME is at second (SP_SECOND_TOP)
-
+	
 	u32 value_sp = SP;
 	u32 var_name_sp = SP_SECOND_TOP;
-
+	
 	// Read variable name info
 	// Stack layout for strings: +0=type, +4=oldSP, +8=length, +12=string_id, +16=pointer
 	u32 string_id = VAL(u32, &STACK[var_name_sp + 12]);
 	char* var_name = (char*) VAL(u64, &STACK[var_name_sp + 16]);
 	u32 var_name_len = VAL(u32, &STACK[var_name_sp + 8]);
-
+	
 	// DefineLocal ALWAYS creates/updates in the local scope
 	// If there's a scope object (function context), define it there
 	// Otherwise, fall back to global scope (for testing without full function support)
-
+	
 	if (scope_depth > 0 && scope_chain[scope_depth - 1] != NULL)
 	{
 		// We have a local scope object - define variable as a property
 		ASObject* local_scope = scope_chain[scope_depth - 1];
-
+		
 		ActionVar value_var;
 		peekVar(app_context, &value_var);
-
+		
 		// Set property on the local scope object
 		// This will create the property if it doesn't exist, or update if it does
 		setProperty(app_context, local_scope, var_name, var_name_len, &value_var);
-
+		
 		// Pop both value and name
 		POP_2();
 		return;
 	}
-
+	
 	// No local scope - fall back to global variable
 	// This allows testing DefineLocal without full function infrastructure
 	ActionVar* var;
@@ -2505,17 +2505,17 @@ void actionDefineLocal(SWFAppContext* app_context)
 		// Dynamic string - use hashmap (O(n))
 		var = getVariable(var_name, var_name_len);
 	}
-
+	
 	if (!var)
 	{
 		// Failed to get/create variable
 		POP_2();
 		return;
 	}
-
+	
 	// Set variable value
 	setVariableWithValue(var, STACK, value_sp);
-
+	
 	// Pop both value and name
 	POP_2();
 }
@@ -2524,39 +2524,39 @@ void actionDeclareLocal(SWFAppContext* app_context)
 {
 	// DECLARE_LOCAL pops only the variable name (no value)
 	// It declares a local variable initialized to undefined
-
+	
 	// Stack layout: [name] <- sp
-
+	
 	// Read variable name info
 	u32 string_id = VAL(u32, &STACK[SP + 12]);
 	char* var_name = (char*) VAL(u64, &STACK[SP + 16]);
 	u32 var_name_len = VAL(u32, &STACK[SP + 8]);
-
+	
 	// Check if we're in a local scope (function context)
 	if (scope_depth > 0 && scope_chain[scope_depth - 1] != NULL)
 	{
 		// We have a local scope object - declare variable as undefined property
 		ASObject* local_scope = scope_chain[scope_depth - 1];
-
+		
 		// Create an undefined value
 		ActionVar undefined_var;
 		undefined_var.type = ACTION_STACK_VALUE_UNDEFINED;
 		undefined_var.str_size = 0;
 		undefined_var.data.numeric_value = 0;
-
+		
 		// Set property on the local scope object
 		// This will create the property if it doesn't exist
 		setProperty(app_context, local_scope, var_name, var_name_len, &undefined_var);
-
+		
 		// Pop the name
 		POP();
 		return;
 	}
-
+	
 	// Not in a function - show warning and treat as no-op
 	// (In AS2, DECLARE_LOCAL outside a function is technically invalid)
 	printf("Warning: DECLARE_LOCAL outside function for variable '%s'\n", var_name);
-
+	
 	// Pop the name
 	POP();
 }
@@ -2565,13 +2565,13 @@ void actionSetTarget2(SWFAppContext* app_context)
 {
 	// Convert top of stack to string if needed
 	convertString(app_context, NULL);
-
+	
 	// Get target path from stack
 	const char* target_path = (const char*) VAL(u64, &STACK_TOP_VALUE);
-
+	
 	// Pop the target path
 	POP();
-
+	
 	// Empty string or NULL means return to main timeline
 	if (target_path == NULL || strlen(target_path) == 0)
 	{
@@ -2579,19 +2579,19 @@ void actionSetTarget2(SWFAppContext* app_context)
 		printf("// SetTarget2: (main)\n");
 		return;
 	}
-
+	
 	// Try to resolve the target path
 	MovieClip* target_mc = getMovieClipByTarget(target_path);
-
+	
 	// Always print the target path, regardless of whether it exists
 	printf("// SetTarget2: %s\n", target_path);
-
+	
 	if (target_mc) {
 		// Valid target found - change context
 		setCurrentContext(target_mc);
 	}
 	// If target not found, context remains unchanged (silent failure, as per Flash behavior)
-
+	
 	// Note: In NO_GRAPHICS mode, only _root is available as a target.
 	// Full MovieClip hierarchy requires display list infrastructure.
 }
@@ -2603,20 +2603,20 @@ void actionGetProperty(SWFAppContext* app_context)
 	ActionVar index_var;
 	popVar(app_context, &index_var);
 	int prop_index = (int) VAL(float, &index_var.data.numeric_value);
-
+	
 	// Pop target path
 	convertString(app_context, NULL);
 	const char* target = (const char*) VAL(u64, &STACK_TOP_VALUE);
 	POP();
-
+	
 	// Get the MovieClip object
 	MovieClip* mc = getMovieClipByTarget(target);
-
+	
 	// Get property value based on index
 	float value = 0.0f;
 	const char* str_value = NULL;
 	int is_string = 0;
-
+	
 	switch (prop_index) {
 		case 0:  // _x
 			value = mc ? mc->x : 0.0f;
@@ -2708,7 +2708,7 @@ void actionGetProperty(SWFAppContext* app_context)
 			value = 0.0f;
 			break;
 	}
-
+	
 	// Push result
 	if (is_string) {
 		PUSH_STR(str_value, strlen(str_value));
@@ -2724,11 +2724,11 @@ void actionRandomNumber(SWFAppContext* app_context)
 	ActionVar max_var;
 	popVar(app_context, &max_var);
 	int max = (int) VAL(float, &max_var.data.numeric_value);
-
+	
 	// Generate random number using avmplus-compatible RNG
 	// This matches Flash Player's exact behavior for speedrunners
 	int random_val = Random(max, &global_random_state);
-
+	
 	// Push result as float
 	float result = (float) random_val;
 	PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &result));
@@ -2738,22 +2738,22 @@ void actionAsciiToChar(SWFAppContext* app_context, char* str_buffer)
 {
 	// Convert top of stack to number
 	convertFloat(app_context);
-
+	
 	// Pop the numeric value
 	ActionVar a;
 	popVar(app_context, &a);
-
+	
 	// Get integer code (truncate decimal)
 	float val = VAL(float, &a.data.numeric_value);
 	int code = (int)val;
-
+	
 	// Handle out-of-range values (wrap to 0-255)
 	code = code & 0xFF;
-
+	
 	// Create single-character string
 	str_buffer[0] = (char)code;
 	str_buffer[1] = '\0';
-
+	
 	// Push result string
 	PUSH_STR(str_buffer, 1);
 }
@@ -2762,24 +2762,24 @@ void actionMbCharToAscii(SWFAppContext* app_context, char* str_buffer)
 {
 	// Convert top of stack to string
 	convertString(app_context, str_buffer);
-
+	
 	// Get string pointer from stack
 	const char* str = (const char*) VAL(u64, &STACK_TOP_VALUE);
-
+	
 	// Pop the string value
 	POP();
-
+	
 	// Handle empty string edge case
 	if (str == NULL || str[0] == '\0') {
 		float result = 0.0f;  // Return 0 for empty string
 		PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &result));
 		return;
 	}
-
+	
 	// Decode UTF-8 first character
 	unsigned int codepoint = 0;
 	unsigned char c = (unsigned char)str[0];
-
+	
 	if ((c & 0x80) == 0) {
 		// 1-byte sequence (0xxxxxxx)
 		codepoint = c;
@@ -2798,7 +2798,7 @@ void actionMbCharToAscii(SWFAppContext* app_context, char* str_buffer)
 		            (((unsigned char)str[2] & 0x3F) << 6) |
 		            ((unsigned char)str[3] & 0x3F);
 	}
-
+	
 	// Push result as float
 	float result = (float)codepoint;
 	PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &result));
@@ -2808,7 +2808,7 @@ void actionGetTime(SWFAppContext* app_context)
 {
 	u32 delta_ms = get_elapsed_ms() - start_time;
 	float delta_ms_f32 = (float) delta_ms;
-
+	
 	PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &delta_ms_f32));
 }
 
@@ -2816,15 +2816,15 @@ void actionMbAsciiToChar(SWFAppContext* app_context, char* str_buffer)
 {
 	// Convert top of stack to number
 	convertFloat(app_context);
-
+	
 	// Pop the numeric value
 	ActionVar a;
 	popVar(app_context, &a);
-
+	
 	// Get integer code point
 	float value = a.type == ACTION_STACK_VALUE_F32 ? VAL(float, &a.data.numeric_value) : (float)VAL(double, &a.data.numeric_value);
 	unsigned int codepoint = (unsigned int)value;
-
+	
 	// Validate code point range (0 to 0x10FFFF for valid Unicode)
 	if (codepoint > 0x10FFFF) {
 		// Push empty string for invalid code points
@@ -2832,7 +2832,7 @@ void actionMbAsciiToChar(SWFAppContext* app_context, char* str_buffer)
 		PUSH_STR(str_buffer, 0);
 		return;
 	}
-
+	
 	// Encode as UTF-8
 	int len = 0;
 	if (codepoint <= 0x7F) {
@@ -2855,7 +2855,7 @@ void actionMbAsciiToChar(SWFAppContext* app_context, char* str_buffer)
 		str_buffer[len++] = (char)(0x80 | (codepoint & 0x3F));
 	}
 	str_buffer[len] = '\0';
-
+	
 	// Push result string
 	PUSH_STR(str_buffer, len);
 }
@@ -2864,10 +2864,10 @@ void actionTypeof(SWFAppContext* app_context, char* str_buffer)
 {
 	// Peek at the type without modifying value
 	u8 type = STACK_TOP_TYPE;
-
+	
 	// Pop the value
 	POP();
-
+	
 	// Determine type string based on stack type
 	const char* type_str;
 	switch (type)
@@ -2876,31 +2876,31 @@ void actionTypeof(SWFAppContext* app_context, char* str_buffer)
 		case ACTION_STACK_VALUE_F64:
 			type_str = "number";
 			break;
-
+			
 		case ACTION_STACK_VALUE_STRING:
 		case ACTION_STACK_VALUE_STR_LIST:
 			type_str = "string";
 			break;
-
+			
 		case ACTION_STACK_VALUE_FUNCTION:
 			type_str = "function";
 			break;
-
+			
 		case ACTION_STACK_VALUE_OBJECT:
 		case ACTION_STACK_VALUE_ARRAY:
 			// Arrays are objects in ActionScript (typeof [] returns "object")
 			type_str = "object";
 			break;
-
+			
 		case ACTION_STACK_VALUE_UNDEFINED:
 			type_str = "undefined";
 			break;
-
+			
 		default:
 			type_str = "undefined";
 			break;
 	}
-
+	
 	// Copy to str_buffer and push
 	int len = strlen(type_str);
 	strncpy(str_buffer, type_str, 16);
@@ -2912,13 +2912,13 @@ void actionDelete2(SWFAppContext* app_context, char* str_buffer)
 {
 	// Delete2 deletes a named property/variable
 	// Pops the name from the stack, deletes it, pushes success boolean
-
+	
 	// Read variable name from stack
 	u32 var_name_sp = SP;
 	u8 name_type = STACK[var_name_sp];
 	char* var_name = NULL;
 	u32 var_name_len = 0;
-
+	
 	// Get the variable name string
 	if (name_type == ACTION_STACK_VALUE_STRING)
 	{
@@ -2931,13 +2931,13 @@ void actionDelete2(SWFAppContext* app_context, char* str_buffer)
 		var_name = materializeStringList(STACK, var_name_sp);
 		var_name_len = strlen(var_name);
 	}
-
+	
 	// Pop the variable name
 	POP();
-
+	
 	// Default: assume deletion succeeds (Flash behavior)
 	bool success = true;
-
+	
 	// Try to delete from scope chain (innermost to outermost)
 	for (int i = scope_depth - 1; i >= 0; i--)
 	{
@@ -2949,7 +2949,7 @@ void actionDelete2(SWFAppContext* app_context, char* str_buffer)
 			{
 				// Found in scope chain - delete it
 				success = deleteProperty(app_context, scope_chain[i], var_name, var_name_len);
-
+				
 				// Push result and return
 				float result = success ? 1.0f : 0.0f;
 				PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &result));
@@ -2957,7 +2957,7 @@ void actionDelete2(SWFAppContext* app_context, char* str_buffer)
 			}
 		}
 	}
-
+	
 	// Not found in scope chain - check global variables
 	// Note: In Flash, you cannot delete variables declared with 'var', so we return false
 	// However, if the variable doesn't exist at all, we return true (Flash behavior)
@@ -2971,7 +2971,7 @@ void actionDelete2(SWFAppContext* app_context, char* str_buffer)
 		// Variable doesn't exist - Flash returns true
 		success = true;
 	}
-
+	
 	// Push result
 	float result = success ? 1.0f : 0.0f;
 	PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &result));
@@ -2998,7 +2998,7 @@ static int checkInstanceOf(ActionVar* obj_var, ActionVar* ctor_var)
 	{
 		return 0;
 	}
-
+	
 	// Object and constructor must be object types
 	if (obj_var->type != ACTION_STACK_VALUE_OBJECT &&
 		obj_var->type != ACTION_STACK_VALUE_ARRAY &&
@@ -3006,63 +3006,63 @@ static int checkInstanceOf(ActionVar* obj_var, ActionVar* ctor_var)
 	{
 		return 0;
 	}
-
+	
 	if (ctor_var->type != ACTION_STACK_VALUE_OBJECT &&
 		ctor_var->type != ACTION_STACK_VALUE_FUNCTION)
 	{
 		return 0;
 	}
-
+	
 	ASObject* obj = (ASObject*) obj_var->data.numeric_value;
 	ASObject* ctor = (ASObject*) ctor_var->data.numeric_value;
-
+	
 	if (obj == NULL || ctor == NULL)
 	{
 		return 0;
 	}
-
+	
 	// Get the constructor's "prototype" property
 	ActionVar* ctor_proto_var = getProperty(ctor, "prototype", 9);
 	if (ctor_proto_var == NULL)
 	{
 		return 0;
 	}
-
+	
 	// Get the prototype object
 	if (ctor_proto_var->type != ACTION_STACK_VALUE_OBJECT)
 	{
 		return 0;
 	}
-
+	
 	ASObject* ctor_proto = (ASObject*) ctor_proto_var->data.numeric_value;
 	if (ctor_proto == NULL)
 	{
 		return 0;
 	}
-
+	
 	// Walk up the object's prototype chain via __proto__ property
 	// Start with the object's __proto__
 	ActionVar* current_proto_var = getProperty(obj, "__proto__", 9);
-
+	
 	// Maximum chain depth to prevent infinite loops
 	int max_depth = 100;
 	int depth = 0;
-
+	
 	while (current_proto_var != NULL && depth < max_depth)
 	{
 		depth++;
-
+		
 		// Check if this prototype matches the constructor's prototype
 		if (current_proto_var->type == ACTION_STACK_VALUE_OBJECT)
 		{
 			ASObject* current_proto = (ASObject*) current_proto_var->data.numeric_value;
-
+			
 			if (current_proto == ctor_proto)
 			{
 				// Found a match!
 				return 1;
 			}
-
+			
 			// Continue up the chain
 			current_proto_var = getProperty(current_proto, "__proto__", 9);
 		}
@@ -3072,13 +3072,13 @@ static int checkInstanceOf(ActionVar* obj_var, ActionVar* ctor_var)
 			break;
 		}
 	}
-
+	
 	// Check interface implementation (ActionScript 2.0 implements keyword)
 	if (implementsInterface(obj, ctor))
 	{
 		return 1;
 	}
-
+	
 	// Not found in prototype chain or interfaces
 	return 0;
 }
@@ -3088,15 +3088,15 @@ void actionCastOp(SWFAppContext* app_context)
 	// CastOp implementation (ActionScript 2.0 cast operator)
 	// Pops object to cast, pops constructor, checks if object is instance of constructor
 	// Returns object if cast succeeds, null if it fails
-
+	
 	// Pop object to cast
 	ActionVar obj_var;
 	popVar(app_context, &obj_var);
-
+	
 	// Pop constructor function
 	ActionVar ctor_var;
 	popVar(app_context, &ctor_var);
-
+	
 	// Check if object is an instance of constructor using prototype chain + interfaces
 	if (checkInstanceOf(&obj_var, &ctor_var))
 	{
@@ -3118,7 +3118,7 @@ void actionDuplicate(SWFAppContext* app_context)
 {
 	// Get the type of the top stack entry
 	u8 type = STACK_TOP_TYPE;
-
+	
 	// Handle different types appropriately
 	if (type == ACTION_STACK_VALUE_STRING)
 	{
@@ -3126,7 +3126,7 @@ void actionDuplicate(SWFAppContext* app_context)
 		const char* str = (const char*) VAL(u64, &STACK_TOP_VALUE);
 		u32 len = STACK_TOP_N;  // Length is stored at offset +8
 		u32 id = VAL(u32, &STACK[SP + 12]);  // String ID is at offset +12
-
+		
 		// Push a copy of the string (shallow copy - same pointer)
 		PUSH_STR_ID(str, len, id);
 	}
@@ -3152,7 +3152,7 @@ void actionIncrement(SWFAppContext* app_context)
 	convertFloat(app_context);
 	ActionVar a;
 	popVar(app_context, &a);
-
+	
 	if (a.type == ACTION_STACK_VALUE_F64)
 	{
 		double val = VAL(double, &a.data.numeric_value);
@@ -3172,7 +3172,7 @@ void actionDecrement(SWFAppContext* app_context)
 	convertFloat(app_context);
 	ActionVar a;
 	popVar(app_context, &a);
-
+	
 	if (a.type == ACTION_STACK_VALUE_F64)
 	{
 		double val = VAL(double, &a.data.numeric_value);
@@ -3192,14 +3192,14 @@ void actionInstanceOf(SWFAppContext* app_context)
 	// Pop constructor function
 	ActionVar constr_var;
 	popVar(app_context, &constr_var);
-
+	
 	// Pop object
 	ActionVar obj_var;
 	popVar(app_context, &obj_var);
-
+	
 	// Check if object is an instance of constructor using prototype chain + interfaces
 	int result = checkInstanceOf(&obj_var, &constr_var);
-
+	
 	// Push result as float (1.0 for true, 0.0 for false)
 	float result_val = result ? 1.0f : 0.0f;
 	PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &result_val));
@@ -3210,16 +3210,16 @@ void actionEnumerate2(SWFAppContext* app_context, char* str_buffer)
 	// Pop object reference from stack
 	ActionVar obj_var;
 	popVar(app_context, &obj_var);
-
+	
 	// Push undefined as terminator
 	PUSH(ACTION_STACK_VALUE_UNDEFINED, 0);
-
+	
 	// Handle different types
 	if (obj_var.type == ACTION_STACK_VALUE_OBJECT)
 	{
 		// Object enumeration - push property names in reverse order
 		ASObject* obj = (ASObject*) obj_var.data.numeric_value;
-
+		
 		if (obj != NULL && obj->num_used > 0)
 		{
 			// Enumerate properties in reverse order (last to first)
@@ -3228,12 +3228,12 @@ void actionEnumerate2(SWFAppContext* app_context, char* str_buffer)
 			{
 				const char* prop_name = obj->properties[i].name;
 				u32 prop_name_len = obj->properties[i].name_length;
-
+				
 				// Push property name as string
 				PUSH_STR(prop_name, prop_name_len);
 			}
 		}
-
+		
 		#ifdef DEBUG
 		printf("// Enumerate2: enumerated %u properties from object\n",
 			obj ? obj->num_used : 0);
@@ -3243,7 +3243,7 @@ void actionEnumerate2(SWFAppContext* app_context, char* str_buffer)
 	{
 		// Array enumeration - push indices as strings
 		ASArray* arr = (ASArray*) obj_var.data.numeric_value;
-
+		
 		if (arr != NULL && arr->length > 0)
 		{
 			// Enumerate indices in reverse order
@@ -3252,12 +3252,12 @@ void actionEnumerate2(SWFAppContext* app_context, char* str_buffer)
 				// Convert index to string
 				snprintf(str_buffer, 17, "%d", i);
 				u32 len = strlen(str_buffer);
-
+				
 				// Push index as string
 				PUSH_STR(str_buffer, len);
 			}
 		}
-
+		
 		#ifdef DEBUG
 		printf("// Enumerate2: enumerated %u indices from array\n",
 			arr ? arr->length : 0);
@@ -3279,19 +3279,19 @@ void actionBitAnd(SWFAppContext* app_context)
 	convertFloat(app_context);
 	ActionVar a;
 	popVar(app_context, &a);
-
+	
 	// Convert and pop first operand (b)
 	convertFloat(app_context);
 	ActionVar b;
 	popVar(app_context, &b);
-
+	
 	// Convert to 32-bit signed integers (truncate, don't round)
 	int32_t a_int = (int32_t)VAL(float, &a.data.numeric_value);
 	int32_t b_int = (int32_t)VAL(float, &b.data.numeric_value);
-
+	
 	// Perform bitwise AND
 	int32_t result = b_int & a_int;
-
+	
 	// Push result as float (ActionScript stores all numbers as float)
 	float result_f = (float)result;
 	PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &result_f));
@@ -3304,19 +3304,19 @@ void actionBitOr(SWFAppContext* app_context)
 	convertFloat(app_context);
 	ActionVar a;
 	popVar(app_context, &a);
-
+	
 	// Convert and pop first operand (b)
 	convertFloat(app_context);
 	ActionVar b;
 	popVar(app_context, &b);
-
+	
 	// Convert to 32-bit signed integers (truncate, don't round)
 	int32_t a_int = (int32_t)VAL(float, &a.data.numeric_value);
 	int32_t b_int = (int32_t)VAL(float, &b.data.numeric_value);
-
+	
 	// Perform bitwise OR
 	int32_t result = b_int | a_int;
-
+	
 	// Push result as float (ActionScript stores all numbers as float)
 	float result_f = (float)result;
 	PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &result_f));
@@ -3329,19 +3329,19 @@ void actionBitXor(SWFAppContext* app_context)
 	convertFloat(app_context);
 	ActionVar a;
 	popVar(app_context, &a);
-
+	
 	// Convert and pop first operand (b)
 	convertFloat(app_context);
 	ActionVar b;
 	popVar(app_context, &b);
-
+	
 	// Convert to 32-bit signed integers (truncate, don't round)
 	int32_t a_int = (int32_t)VAL(float, &a.data.numeric_value);
 	int32_t b_int = (int32_t)VAL(float, &b.data.numeric_value);
-
+	
 	// Perform bitwise XOR
 	int32_t result = b_int ^ a_int;
-
+	
 	// Push result as float (ActionScript stores all numbers as float)
 	float result_f = (float)result;
 	PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &result_f));
@@ -3354,22 +3354,22 @@ void actionBitLShift(SWFAppContext* app_context)
 	convertFloat(app_context);
 	ActionVar shift_count_var;
 	popVar(app_context, &shift_count_var);
-
+	
 	// Pop value to shift (second argument)
 	convertFloat(app_context);
 	ActionVar value_var;
 	popVar(app_context, &value_var);
-
+	
 	// Convert to 32-bit signed integers (truncate, don't round)
 	int32_t shift_count = (int32_t)VAL(float, &shift_count_var.data.numeric_value);
 	int32_t value = (int32_t)VAL(float, &value_var.data.numeric_value);
-
+	
 	// Mask shift count to 5 bits (0-31 range)
 	shift_count = shift_count & 0x1F;
-
+	
 	// Perform left shift
 	int32_t result = value << shift_count;
-
+	
 	// Push result as float (ActionScript stores all numbers as float)
 	float result_f = (float)result;
 	PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &result_f));
@@ -3382,26 +3382,26 @@ void actionBitRShift(SWFAppContext* app_context)
 	convertFloat(app_context);
 	ActionVar shift_count_var;
 	popVar(app_context, &shift_count_var);
-
+	
 	// Pop value to shift (second argument)
 	convertFloat(app_context);
 	ActionVar value_var;
 	popVar(app_context, &value_var);
-
+	
 	// Convert to 32-bit signed integers
 	int32_t shift_count = (int32_t)VAL(float, &shift_count_var.data.numeric_value);
 	int32_t value = (int32_t)VAL(float, &value_var.data.numeric_value);
-
+	
 	// Mask shift count to 5 bits (0-31 range)
 	shift_count = shift_count & 0x1F;
-
+	
 	// Perform arithmetic right shift (sign-extending)
 	// In C, >> on signed int is arithmetic shift
 	int32_t result = value >> shift_count;
-
+	
 	// Convert result back to float for stack
 	float result_f = (float)result;
-
+	
 	// Push result
 	PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &result_f));
 }
@@ -3413,29 +3413,29 @@ void actionBitURShift(SWFAppContext* app_context)
 	convertFloat(app_context);
 	ActionVar shift_count_var;
 	popVar(app_context, &shift_count_var);
-
+	
 	// Pop value to shift (second argument)
 	convertFloat(app_context);
 	ActionVar value_var;
 	popVar(app_context, &value_var);
-
+	
 	// Convert to integers
 	int32_t shift_count = (int32_t)VAL(float, &shift_count_var.data.numeric_value);
-
+	
 	// IMPORTANT: Use UNSIGNED for logical shift
 	uint32_t value = (uint32_t)((int32_t)VAL(float, &value_var.data.numeric_value));
-
+	
 	// Mask shift count to 5 bits (0-31 range)
 	shift_count = shift_count & 0x1F;
-
+	
 	// Perform logical (unsigned) right shift
 	// In C, >> on unsigned int is logical shift (zero-fill)
 	uint32_t result = value >> shift_count;
-
+	
 	// Convert result back to float for stack
 	// Cast through double to preserve full 32-bit unsigned value
 	float result_float = (float)((double)result);
-
+	
 	// Push result
 	PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &result_float));
 }
@@ -3445,13 +3445,13 @@ void actionStrictEquals(SWFAppContext* app_context)
 	// Pop first argument (no type conversion - strict equality!)
 	ActionVar a;
 	popVar(app_context, &a);
-
+	
 	// Pop second argument (no type conversion - strict equality!)
 	ActionVar b;
 	popVar(app_context, &b);
-
+	
 	float result = 0.0f;
-
+	
 	// First check: types must match
 	if (a.type == b.type)
 	{
@@ -3465,7 +3465,7 @@ void actionStrictEquals(SWFAppContext* app_context)
 				result = (a_val == b_val) ? 1.0f : 0.0f;
 				break;
 			}
-
+			
 			case ACTION_STACK_VALUE_F64:
 			{
 				double a_val = VAL(double, &a.data.numeric_value);
@@ -3473,7 +3473,7 @@ void actionStrictEquals(SWFAppContext* app_context)
 				result = (a_val == b_val) ? 1.0f : 0.0f;
 				break;
 			}
-
+			
 			case ACTION_STACK_VALUE_STRING:
 			{
 				const char* str_a = (const char*) a.data.numeric_value;
@@ -3487,7 +3487,7 @@ void actionStrictEquals(SWFAppContext* app_context)
 				}
 				break;
 			}
-
+			
 			case ACTION_STACK_VALUE_STR_LIST:
 			{
 				// For string lists, use strcmp_list_a_list_b
@@ -3495,7 +3495,7 @@ void actionStrictEquals(SWFAppContext* app_context)
 				result = (cmp_result == 0) ? 1.0f : 0.0f;
 				break;
 			}
-
+			
 			// For other types (OBJECT, etc.), compare raw values
 			default:
 				#ifdef DEBUG
@@ -3514,7 +3514,7 @@ void actionStrictEquals(SWFAppContext* app_context)
 		printf("[DEBUG] STRICT_EQUALS: type mismatch - a.type=%d, b.type=%d\n", a.type, b.type);
 		#endif
 	}
-
+	
 	// Push boolean result
 	PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &result));
 }
@@ -3524,15 +3524,15 @@ void actionEquals2(SWFAppContext* app_context)
 	// Pop first argument (arg1)
 	ActionVar a;
 	popVar(app_context, &a);
-
+	
 	// Pop second argument (arg2)
 	ActionVar b;
 	popVar(app_context, &b);
-
+	
 	float result = 0.0f;
-
+	
 	// ECMA-262 equality algorithm (Section 11.9.3)
-
+	
 	// 1. If types are the same, use strict equality
 	if (a.type == b.type)
 	{
@@ -3550,7 +3550,7 @@ void actionEquals2(SWFAppContext* app_context)
 				}
 				break;
 			}
-
+			
 			case ACTION_STACK_VALUE_F64:
 			{
 				double a_val = VAL(double, &a.data.numeric_value);
@@ -3563,7 +3563,7 @@ void actionEquals2(SWFAppContext* app_context)
 				}
 				break;
 			}
-
+			
 			case ACTION_STACK_VALUE_STRING:
 			{
 				const char* str_a = (const char*) a.data.numeric_value;
@@ -3575,7 +3575,7 @@ void actionEquals2(SWFAppContext* app_context)
 				}
 				break;
 			}
-
+			
 			case ACTION_STACK_VALUE_BOOLEAN:
 			{
 				// Boolean values are stored in numeric_value as 0 (false) or 1 (true)
@@ -3584,21 +3584,21 @@ void actionEquals2(SWFAppContext* app_context)
 				result = (a_val == b_val) ? 1.0f : 0.0f;
 				break;
 			}
-
+			
 			case ACTION_STACK_VALUE_NULL:
 			{
 				// null == null is true
 				result = 1.0f;
 				break;
 			}
-
+			
 			case ACTION_STACK_VALUE_UNDEFINED:
 			{
 				// undefined == undefined is true
 				result = 1.0f;
 				break;
 			}
-
+			
 			default:
 				// For other types (OBJECT, etc.), compare raw values (reference equality)
 				result = (a.data.numeric_value == b.data.numeric_value) ? 1.0f : 0.0f;
@@ -3651,7 +3651,7 @@ void actionEquals2(SWFAppContext* app_context)
 		ActionVar a_as_num;
 		a_as_num.type = ACTION_STACK_VALUE_F32;
 		a_as_num.data.numeric_value = VAL(u64, &a_num);
-
+		
 		// Push back and recurse (simulated)
 		// For efficiency, we inline the comparison instead
 		if (b.type == ACTION_STACK_VALUE_F32 || b.type == ACTION_STACK_VALUE_F64)
@@ -3678,7 +3678,7 @@ void actionEquals2(SWFAppContext* app_context)
 		// Convert boolean to number (true = 1.0, false = 0.0)
 		u32 b_bool = (u32) b.data.numeric_value;
 		float b_num = b_bool ? 1.0f : 0.0f;
-
+		
 		if (a.type == ACTION_STACK_VALUE_F32 || a.type == ACTION_STACK_VALUE_F64)
 		{
 			float a_val = (a.type == ACTION_STACK_VALUE_F32) ?
@@ -3706,7 +3706,7 @@ void actionEquals2(SWFAppContext* app_context)
 	}
 	// 6. Different types not covered above: false
 	// (This handles cases like object vs number, etc.)
-
+	
 	// Push boolean result (1.0 = true, 0.0 = false)
 	PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &result));
 }
@@ -3718,16 +3718,16 @@ void actionStringGreater(SWFAppContext* app_context)
 	ActionVar a;
 	popVar(app_context, &a);
 	const char* str_a = (const char*) a.data.numeric_value;
-
+	
 	// Get second string (arg2)
 	ActionVar b;
 	popVar(app_context, &b);
 	const char* str_b = (const char*) b.data.numeric_value;
-
+	
 	// Compare: b > a (using strcmp)
 	// strcmp returns positive if str_b > str_a
 	float result = (strcmp(str_b, str_a) > 0) ? 1.0f : 0.0f;
-
+	
 	// Push boolean result
 	PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &result));
 }
@@ -3741,11 +3741,11 @@ void actionExtends(SWFAppContext* app_context)
 	// Pop superclass constructor from stack
 	ActionVar superclass;
 	popVar(app_context, &superclass);
-
+	
 	// Pop subclass constructor from stack
 	ActionVar subclass;
 	popVar(app_context, &subclass);
-
+	
 	// Verify both are objects/functions
 	if (superclass.type != ACTION_STACK_VALUE_OBJECT &&
 	    superclass.type != ACTION_STACK_VALUE_FUNCTION)
@@ -3756,7 +3756,7 @@ void actionExtends(SWFAppContext* app_context)
 #endif
 		return;
 	}
-
+	
 	if (subclass.type != ACTION_STACK_VALUE_OBJECT &&
 	    subclass.type != ACTION_STACK_VALUE_FUNCTION)
 	{
@@ -3766,11 +3766,11 @@ void actionExtends(SWFAppContext* app_context)
 #endif
 		return;
 	}
-
+	
 	// Get constructor objects
 	ASObject* super_func = (ASObject*) superclass.data.numeric_value;
 	ASObject* sub_func = (ASObject*) subclass.data.numeric_value;
-
+	
 	if (super_func == NULL || sub_func == NULL)
 	{
 #ifdef DEBUG
@@ -3778,7 +3778,7 @@ void actionExtends(SWFAppContext* app_context)
 #endif
 		return;
 	}
-
+	
 	// Create new prototype object
 	ASObject* new_proto = allocObject(app_context, 0);
 	if (new_proto == NULL)
@@ -3788,23 +3788,23 @@ void actionExtends(SWFAppContext* app_context)
 #endif
 		return;
 	}
-
+	
 	// Get superclass prototype property
 	ActionVar* super_proto_var = getProperty(super_func, "prototype", 9);
-
+	
 	// Set __proto__ of new prototype to superclass prototype
 	if (super_proto_var != NULL)
 	{
 		setProperty(app_context, new_proto, "__proto__", 9, super_proto_var);
 	}
-
+	
 	// Set constructor property to superclass
 	setProperty(app_context, new_proto, "constructor", 11, &superclass);
-
+	
 #ifdef DEBUG
 	printf("[DEBUG] actionExtends: Set constructor property - type=%d, ptr=%p\n",
 		superclass.type, (void*)superclass.data.numeric_value);
-
+		
 	// Verify it was set correctly
 	ActionVar* check = getProperty(new_proto, "constructor", 11);
 	if (check != NULL) {
@@ -3818,13 +3818,13 @@ void actionExtends(SWFAppContext* app_context)
 	new_proto_var.type = ACTION_STACK_VALUE_OBJECT;
 	new_proto_var.data.numeric_value = (u64) new_proto;
 	new_proto_var.str_size = 0;
-
+	
 	setProperty(app_context, sub_func, "prototype", 9, &new_proto_var);
-
+	
 	// Release our reference to new_proto
 	// (setProperty retained it when setting as prototype)
 	releaseObject(app_context, new_proto);
-
+	
 #ifdef DEBUG
 	printf("[DEBUG] actionExtends: Prototype chain established\n");
 #endif
@@ -3845,11 +3845,11 @@ void actionStoreRegister(SWFAppContext* app_context, u8 register_num)
 	if (register_num >= MAX_REGISTERS) {
 		return;
 	}
-
+	
 	// Peek the top of stack (don't pop!)
 	ActionVar value;
 	peekVar(app_context, &value);
-
+	
 	// Store value in register
 	g_registers[register_num] = value;
 }
@@ -3863,9 +3863,9 @@ void actionPushRegister(SWFAppContext* app_context, u8 register_num)
 		PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &undef));
 		return;
 	}
-
+	
 	ActionVar* reg = &g_registers[register_num];
-
+	
 	// Push register value to stack
 	if (reg->type == ACTION_STACK_VALUE_F32 || reg->type == ACTION_STACK_VALUE_F64) {
 		PUSH(reg->type, reg->data.numeric_value);
@@ -3888,16 +3888,16 @@ void actionStringLess(SWFAppContext* app_context)
 	ActionVar a;
 	popVar(app_context, &a);
 	const char* str_a = (const char*) a.data.numeric_value;
-
+	
 	// Get second string (arg2)
 	ActionVar b;
 	popVar(app_context, &b);
 	const char* str_b = (const char*) b.data.numeric_value;
-
+	
 	// Compare: b < a (using strcmp)
 	// strcmp returns negative if str_b < str_a
 	float result = (strcmp(str_b, str_a) < 0) ? 1.0f : 0.0f;
-
+	
 	// Push boolean result
 	PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &result));
 }
@@ -3906,24 +3906,24 @@ void actionImplementsOp(SWFAppContext* app_context)
 {
 	// ActionImplementsOp implements the ActionScript "implements" keyword
 	// It specifies the interfaces that a class implements, for use by instanceof and CastOp
-
+	
 	// Step 1: Pop constructor function (the class) from stack
 	ActionVar constructor_var;
 	popVar(app_context, &constructor_var);
-
+	
 	// Validate that it's an object
 	if (constructor_var.type != ACTION_STACK_VALUE_OBJECT)
 	{
 		fprintf(stderr, "ERROR: actionImplementsOp - constructor is not an object\n");
 		return;
 	}
-
+	
 	ASObject* constructor = (ASObject*) constructor_var.data.numeric_value;
-
+	
 	// Step 2: Pop count of interfaces from stack
 	ActionVar count_var;
 	popVar(app_context, &count_var);
-
+	
 	// Convert to number if needed
 	u32 interface_count = 0;
 	if (count_var.type == ACTION_STACK_VALUE_F32)
@@ -3939,7 +3939,7 @@ void actionImplementsOp(SWFAppContext* app_context)
 		fprintf(stderr, "ERROR: actionImplementsOp - interface count is not a number\n");
 		return;
 	}
-
+	
 	// Step 3: Allocate array for interface constructors
 	ASObject** interfaces = NULL;
 	if (interface_count > 0)
@@ -3950,14 +3950,14 @@ void actionImplementsOp(SWFAppContext* app_context)
 			fprintf(stderr, "ERROR: actionImplementsOp - failed to allocate interfaces array\n");
 			return;
 		}
-
+		
 		// Pop each interface constructor from stack
 		// Note: Interfaces are pushed in order, so we pop them in reverse
 		for (u32 i = 0; i < interface_count; i++)
 		{
 			ActionVar iface_var;
 			popVar(app_context, &iface_var);
-
+			
 			if (iface_var.type != ACTION_STACK_VALUE_OBJECT)
 			{
 				fprintf(stderr, "ERROR: actionImplementsOp - interface %u is not an object\n", i);
@@ -3969,16 +3969,16 @@ void actionImplementsOp(SWFAppContext* app_context)
 				free(interfaces);
 				return;
 			}
-
+			
 			// Store in reverse order (last popped goes first)
 			interfaces[interface_count - 1 - i] = (ASObject*) iface_var.data.numeric_value;
 		}
 	}
-
+	
 	// Step 4: Set the interface list on the constructor
 	// This transfers ownership of the interfaces array
 	setInterfaceList(app_context, constructor, interfaces, interface_count);
-
+	
 #ifdef DEBUG
 	printf("[DEBUG] actionImplementsOp: constructor=%p, interface_count=%u\n",
 		(void*)constructor, interface_count);
@@ -4022,16 +4022,16 @@ void actionCall(SWFAppContext* app_context)
 	extern frame_func* g_frame_funcs;
 	extern size_t g_frame_count;
 	extern int quit_swf;
-
+	
 	// Pop frame identifier from stack
 	ActionVar frame_var;
 	popVar(app_context, &frame_var);
-
+	
 	if (frame_var.type == ACTION_STACK_VALUE_F32) {
 		// Numeric frame
 		float frame_float;
 		memcpy(&frame_float, &frame_var.data.numeric_value, sizeof(float));
-
+		
 		// Handle negative frames (ignore)
 		s32 frame_num = (s32)frame_float;
 		if (frame_num < 0) {
@@ -4039,20 +4039,20 @@ void actionCall(SWFAppContext* app_context)
 			fflush(stdout);
 			return;
 		}
-
+		
 		// Validate frame is in range
 		if (g_frame_funcs && (size_t)frame_num < g_frame_count) {
 			printf("// Call: frame %d\n", frame_num);
 			fflush(stdout);
-
+			
 			// Save quit_swf state to prevent frame from terminating execution
 			int saved_quit_swf = quit_swf;
 			quit_swf = 0;
-
+			
 			// Call the frame function (executes frame actions)
 			// Note: This calls the full frame function including ShowFrame
 			g_frame_funcs[frame_num](app_context);
-
+			
 			// Restore quit_swf state (only quit if we were already quitting)
 			quit_swf = saved_quit_swf;
 		} else {
@@ -4063,23 +4063,23 @@ void actionCall(SWFAppContext* app_context)
 	else if (frame_var.type == ACTION_STACK_VALUE_STRING) {
 		// Frame label or number as string - may include target path
 		const char* frame_str = (const char*)frame_var.data.numeric_value;
-
+		
 		if (frame_str == NULL) {
 			printf("// Call: null frame identifier (ignored)\n");
 			fflush(stdout);
 			return;
 		}
-
+		
 		// Parse target path if present (format: "target:frame" or "/target:frame")
 		const char* target = NULL;
 		const char* frame_part = frame_str;
 		const char* colon = strchr(frame_str, ':');
-
+		
 		if (colon != NULL) {
 			// Target path present
 			size_t target_len = colon - frame_str;
 			static char target_buffer[256];
-
+			
 			if (target_len < sizeof(target_buffer)) {
 				memcpy(target_buffer, frame_str, target_len);
 				target_buffer[target_len] = '\0';
@@ -4087,11 +4087,11 @@ void actionCall(SWFAppContext* app_context)
 				frame_part = colon + 1;  // Frame label/number after the colon
 			}
 		}
-
+		
 		// Check if frame_part is numeric or a label
 		char* endptr;
 		long frame_num = strtol(frame_part, &endptr, 10);
-
+		
 		if (endptr != frame_part && *endptr == '\0') {
 			// It's a numeric frame
 			if (frame_num < 0) {
@@ -4103,7 +4103,7 @@ void actionCall(SWFAppContext* app_context)
 				fflush(stdout);
 				return;
 			}
-
+			
 			if (target) {
 				// Target path specified - requires MovieClip infrastructure
 				printf("// Call: target '%s', frame %ld (target paths not implemented)\n", target, frame_num);
@@ -4114,14 +4114,14 @@ void actionCall(SWFAppContext* app_context)
 				if (g_frame_funcs && (size_t)frame_num < g_frame_count) {
 					printf("// Call: frame %ld\n", frame_num);
 					fflush(stdout);
-
+					
 					// Save quit_swf state to prevent frame from terminating execution
 					int saved_quit_swf = quit_swf;
 					quit_swf = 0;
-
+					
 					// Call the frame function (executes frame actions)
 					g_frame_funcs[frame_num](app_context);
-
+					
 					// Restore quit_swf state
 					quit_swf = saved_quit_swf;
 				} else {
@@ -4137,7 +4137,7 @@ void actionCall(SWFAppContext* app_context)
 				printf("// Call: label '%s' (frame labels not implemented)\n", frame_part);
 			}
 			fflush(stdout);
-
+			
 			// Note: Frame label lookup requires:
 			// - Frame label registry (mapping labels to frame numbers)
 			// - SWFRecomp to parse FrameLabel tags (tag type 43) and generate the registry
@@ -4210,22 +4210,22 @@ void actionGetURL2(SWFAppContext* app_context, u8 send_vars_method, u8 load_targ
 	ActionVar target_var;
 	convertString(app_context, target_str);
 	popVar(app_context, &target_var);
-
+	
 	// Pop URL from stack
 	char url_str[17];
 	ActionVar url_var;
 	convertString(app_context, url_str);
 	popVar(app_context, &url_var);
-
+	
 	// Determine HTTP method
 	const char* method = "NONE";
 	if (send_vars_method == 1) method = "GET";
 	else if (send_vars_method == 2) method = "POST";
-
+	
 	// Determine operation type
 	bool is_sprite = (load_target_flag == 1);
 	bool load_vars = (load_variables_flag == 1);
-
+	
 	// Log the operation (NO_GRAPHICS mode implementation)
 	// In a full implementation, this would perform the actual operation
 	if (is_sprite) {
@@ -4279,7 +4279,7 @@ void actionInitArray(SWFAppContext* app_context)
 	ActionVar count_var;
 	popVar(app_context, &count_var);
 	u32 num_elements = (u32) VAL(float, &count_var.data.numeric_value);
-
+	
 	// 2. Allocate array
 	ASArray* arr = allocArray(app_context, num_elements);
 	if (!arr) {
@@ -4288,7 +4288,7 @@ void actionInitArray(SWFAppContext* app_context)
 		return;
 	}
 	arr->length = num_elements;
-
+	
 	// 3. Pop elements and populate array
 	// Per SWF spec: elements were pushed in reverse order (rightmost first, leftmost last)
 	// Stack has: [..., elem_N, elem_N-1, ..., elem_1] with elem_1 on top
@@ -4297,14 +4297,14 @@ void actionInitArray(SWFAppContext* app_context)
 		ActionVar elem;
 		popVar(app_context, &elem);
 		arr->elements[i] = elem;
-
+		
 		// If element is array, increment refcount
 		if (elem.type == ACTION_STACK_VALUE_ARRAY) {
 			retainArray((ASArray*) elem.data.numeric_value);
 		}
 		// Could also handle ACTION_STACK_VALUE_OBJECT here if needed
 	}
-
+	
 	// 4. Push array reference to stack
 	PUSH(ACTION_STACK_VALUE_ARRAY, (u64) arr);
 }
@@ -4315,20 +4315,20 @@ void actionSetMember(SWFAppContext* app_context)
 	// 1. value (the value to assign)
 	// 2. property_name (the name of the property)
 	// 3. object (the object to set the property on)
-
+	
 	// Pop the value to assign
 	ActionVar value_var;
 	popVar(app_context, &value_var);
-
+	
 	// Pop the property name
 	// The property name should be a string on the stack
 	ActionVar prop_name_var;
 	popVar(app_context, &prop_name_var);
-
+	
 	// Get the property name as string
 	const char* prop_name = NULL;
 	u32 prop_name_len = 0;
-
+	
 	if (prop_name_var.type == ACTION_STACK_VALUE_STRING)
 	{
 		// If it's a string, use it directly
@@ -4360,11 +4360,11 @@ void actionSetMember(SWFAppContext* app_context)
 		POP();
 		return;
 	}
-
+	
 	// Pop the object
 	ActionVar obj_var;
 	popVar(app_context, &obj_var);
-
+	
 	// Check if the object is actually an object type
 	if (obj_var.type == ACTION_STACK_VALUE_OBJECT)
 	{
@@ -4386,7 +4386,7 @@ void actionInitObject(SWFAppContext* app_context)
 	ActionVar count_var;
 	popVar(app_context, &count_var);
 	u32 num_props = (u32) VAL(float, &count_var.data.numeric_value);
-
+	
 #ifdef DEBUG
 	printf("[DEBUG] actionInitObject: creating object with %u properties\n", num_props);
 #endif
@@ -4400,7 +4400,7 @@ void actionInitObject(SWFAppContext* app_context)
 		PUSH(ACTION_STACK_VALUE_OBJECT, 0);
 		return;
 	}
-
+	
 	// Step 3: Pop property name/value pairs from stack
 	// Properties are in reverse order: rightmost property is on top of stack
 	// Stack order is: [..., value1, name1, ..., valueN, nameN, count]
@@ -4410,13 +4410,13 @@ void actionInitObject(SWFAppContext* app_context)
 		// Pop property name first (it's on top)
 		ActionVar name_var;
 		popVar(app_context, &name_var);
-
+		
 		// Pop property value (it's below the name)
 		ActionVar value;
 		popVar(app_context, &value);
 		const char* name = NULL;
 		u32 name_length = 0;
-
+		
 		// Handle string name
 		if (name_var.type == ACTION_STACK_VALUE_STRING)
 		{
@@ -4431,7 +4431,7 @@ void actionInitObject(SWFAppContext* app_context)
 			fprintf(stderr, "WARNING: Property name is not a string (type=%d), skipping\n", name_var.type);
 			continue;
 		}
-
+		
 #ifdef DEBUG
 		printf("[DEBUG] actionInitObject: setting property '%.*s'\n", name_length, name);
 #endif
@@ -4440,11 +4440,11 @@ void actionInitObject(SWFAppContext* app_context)
 		// This handles refcount management if value is an object
 		setProperty(app_context, obj, name, name_length, &value);
 	}
-
+	
 	// Step 4: Push object reference to stack
 	// The object has refcount = 1 from allocation
 	PUSH(ACTION_STACK_VALUE_OBJECT, (u64) obj);
-
+	
 #ifdef DEBUG
 	printf("[DEBUG] actionInitObject: pushed object %p to stack\n", (void*)obj);
 #endif
@@ -4461,14 +4461,14 @@ void actionDelete(SWFAppContext* app_context)
 	// Stack layout (from top to bottom):
 	// 1. property_name (string) - name of property to delete
 	// 2. object_name (string) - name of variable containing the object
-
+	
 	// Pop property name
 	ActionVar prop_name_var;
 	popVar(app_context, &prop_name_var);
-
+	
 	const char* prop_name = NULL;
 	u32 prop_name_len = 0;
-
+	
 	if (prop_name_var.type == ACTION_STACK_VALUE_STRING)
 	{
 		prop_name = prop_name_var.data.string_data.owns_memory ?
@@ -4484,14 +4484,14 @@ void actionDelete(SWFAppContext* app_context)
 		PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &result));
 		return;
 	}
-
+	
 	// Pop object name (variable name)
 	ActionVar obj_name_var;
 	popVar(app_context, &obj_name_var);
-
+	
 	const char* obj_name = NULL;
 	u32 obj_name_len = 0;
-
+	
 	if (obj_name_var.type == ACTION_STACK_VALUE_STRING)
 	{
 		obj_name = obj_name_var.data.string_data.owns_memory ?
@@ -4507,10 +4507,10 @@ void actionDelete(SWFAppContext* app_context)
 		PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &result));
 		return;
 	}
-
+	
 	// Look up the variable to get the object
 	ActionVar* obj_var = getVariable((char*)obj_name, obj_name_len);
-
+	
 	// If variable doesn't exist, return true (AS2 spec)
 	if (obj_var == NULL)
 	{
@@ -4518,7 +4518,7 @@ void actionDelete(SWFAppContext* app_context)
 		PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &result));
 		return;
 	}
-
+	
 	// If variable is not an object, return true (AS2 spec)
 	if (obj_var->type != ACTION_STACK_VALUE_OBJECT)
 	{
@@ -4526,10 +4526,10 @@ void actionDelete(SWFAppContext* app_context)
 		PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &result));
 		return;
 	}
-
+	
 	// Get the object
 	ASObject* obj = (ASObject*) obj_var->data.numeric_value;
-
+	
 	// If object is NULL, return true
 	if (obj == NULL)
 	{
@@ -4537,10 +4537,10 @@ void actionDelete(SWFAppContext* app_context)
 		PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &result));
 		return;
 	}
-
+	
 	// Delete the property
 	bool success = deleteProperty(app_context, obj, prop_name, prop_name_len);
-
+	
 	// Push result (1.0 for success, 0.0 for failure)
 	float result = success ? 1.0f : 0.0f;
 	PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &result));
@@ -4554,26 +4554,26 @@ void actionGetMember(SWFAppContext* app_context)
 	const char* prop_name = (const char*) VAL(u64, &STACK_TOP_VALUE);
 	u32 prop_name_len = STACK_TOP_N;
 	POP();
-
+	
 	// 2. Pop object (second on stack)
 	ActionVar obj_var;
 	popVar(app_context, &obj_var);
-
+	
 	// 3. Handle different object types
 	if (obj_var.type == ACTION_STACK_VALUE_OBJECT)
 	{
 		// Handle AS object
 		ASObject* obj = (ASObject*) obj_var.data.numeric_value;
-
+		
 		if (obj == NULL)
 		{
 			pushUndefined(app_context);
 			return;
 		}
-
+		
 		// Look up property with prototype chain support
 		ActionVar* prop = getPropertyWithPrototype(obj, prop_name, prop_name_len);
-
+		
 		if (prop != NULL)
 		{
 			// Property found - push its value
@@ -4594,7 +4594,7 @@ void actionGetMember(SWFAppContext* app_context)
 			const char* str = obj_var.data.string_data.owns_memory ?
 				obj_var.data.string_data.heap_ptr :
 				(const char*) obj_var.data.numeric_value;
-
+				
 			// Push length as float
 			float len = (float) strlen(str);
 			PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &len));
@@ -4609,13 +4609,13 @@ void actionGetMember(SWFAppContext* app_context)
 	{
 		// Handle array properties
 		ASArray* arr = (ASArray*) obj_var.data.numeric_value;
-
+		
 		if (arr == NULL)
 		{
 			pushUndefined(app_context);
 			return;
 		}
-
+		
 		// Check if accessing the "length" property
 		if (strcmp(prop_name, "length") == 0)
 		{
@@ -4628,7 +4628,7 @@ void actionGetMember(SWFAppContext* app_context)
 			// Try to parse property name as an array index
 			char* endptr;
 			long index = strtol(prop_name, &endptr, 10);
-
+			
 			// Check if conversion was successful and entire string was consumed
 			if (*endptr == '\0' && index >= 0)
 			{
@@ -4679,13 +4679,13 @@ void actionNewObject(SWFAppContext* app_context)
 		ctor_name = "Object";
 		ctor_name_len = 6;
 	}
-
+	
 	// 2. Pop number of arguments
 	convertFloat(app_context);
 	ActionVar num_args_var;
 	popVar(app_context, &num_args_var);
 	u32 num_args = (u32) VAL(float, &num_args_var.data.numeric_value);
-
+	
 	// 3. Pop arguments from stack (store them temporarily)
 	// Limit to 16 arguments for simplicity
 	ActionVar args[16];
@@ -4693,17 +4693,17 @@ void actionNewObject(SWFAppContext* app_context)
 	{
 		num_args = 16;
 	}
-
+	
 	// Pop arguments in reverse order (first arg is deepest on stack)
 	for (int i = (int)num_args - 1; i >= 0; i--)
 	{
 		popVar(app_context, &args[i]);
 	}
-
+	
 	// 4. Create new object based on constructor name
 	void* new_obj = NULL;
 	ActionStackValueType obj_type = ACTION_STACK_VALUE_OBJECT;
-
+	
 	if (strcmp(ctor_name, "Array") == 0)
 	{
 		// Handle Array constructor
@@ -4766,14 +4766,14 @@ void actionNewObject(SWFAppContext* app_context)
 		// In a full implementation, this would parse date arguments
 		// For now, create object with basic time property set to current time
 		ASObject* date = allocObject(app_context, 4);
-
+		
 		// Set time property to current milliseconds since epoch
 		ActionVar time_var;
 		time_var.type = ACTION_STACK_VALUE_F64;
 		double current_time = (double)time(NULL) * 1000.0;  // Convert to milliseconds
 		VAL(double, &time_var.data.numeric_value) = current_time;
 		setProperty(app_context, date, "time", 4, &time_var);
-
+		
 		new_obj = date;
 		PUSH(ACTION_STACK_VALUE_OBJECT, (u64) new_obj);
 		return;
@@ -4783,14 +4783,14 @@ void actionNewObject(SWFAppContext* app_context)
 		// Handle String constructor
 		// new String() or new String(value)
 		ASObject* str_obj = allocObject(app_context, 4);
-
+		
 		// If argument provided, convert to string and store as value property
 		if (num_args > 0)
 		{
 			// Convert first argument to string
 			char str_buffer[256];
 			const char* str_value = "";
-
+			
 			if (args[0].type == ACTION_STACK_VALUE_STRING)
 			{
 				str_value = args[0].data.string_data.owns_memory ?
@@ -4807,7 +4807,7 @@ void actionNewObject(SWFAppContext* app_context)
 				snprintf(str_buffer, sizeof(str_buffer), "%.15g", VAL(double, &args[0].data.numeric_value));
 				str_value = str_buffer;
 			}
-
+			
 			// Store as property
 			ActionVar value_var;
 			value_var.type = ACTION_STACK_VALUE_STRING;
@@ -4816,7 +4816,7 @@ void actionNewObject(SWFAppContext* app_context)
 			value_var.data.string_data.owns_memory = true;
 			setProperty(app_context, str_obj, "value", 5, &value_var);
 		}
-
+		
 		new_obj = str_obj;
 		PUSH(ACTION_STACK_VALUE_OBJECT, (u64) new_obj);
 		return;
@@ -4826,7 +4826,7 @@ void actionNewObject(SWFAppContext* app_context)
 		// Handle Number constructor
 		// new Number() or new Number(value)
 		ASObject* num_obj = allocObject(app_context, 4);
-
+		
 		// Store numeric value as property
 		ActionVar value_var;
 		if (num_args > 0)
@@ -4858,7 +4858,7 @@ void actionNewObject(SWFAppContext* app_context)
 			value_var.type = ACTION_STACK_VALUE_F32;
 			VAL(float, &value_var.data.numeric_value) = 0.0f;
 		}
-
+		
 		setProperty(app_context, num_obj, "value", 5, &value_var);
 		new_obj = num_obj;
 		PUSH(ACTION_STACK_VALUE_OBJECT, (u64) new_obj);
@@ -4869,16 +4869,16 @@ void actionNewObject(SWFAppContext* app_context)
 		// Handle Boolean constructor
 		// new Boolean() or new Boolean(value)
 		ASObject* bool_obj = allocObject(app_context, 4);
-
+		
 		// Store boolean value as property
 		ActionVar value_var;
 		value_var.type = ACTION_STACK_VALUE_F32;
-
+		
 		if (num_args > 0)
 		{
 			// Convert first argument to boolean (0 or 1)
 			float bool_val = 0.0f;
-
+			
 			if (args[0].type == ACTION_STACK_VALUE_F32)
 			{
 				bool_val = (VAL(float, &args[0].data.numeric_value) != 0.0f) ? 1.0f : 0.0f;
@@ -4894,7 +4894,7 @@ void actionNewObject(SWFAppContext* app_context)
 					(const char*) args[0].data.numeric_value;
 				bool_val = (str != NULL && strlen(str) > 0) ? 1.0f : 0.0f;
 			}
-
+			
 			VAL(float, &value_var.data.numeric_value) = bool_val;
 		}
 		else
@@ -4902,7 +4902,7 @@ void actionNewObject(SWFAppContext* app_context)
 			// No arguments - default to false
 			VAL(float, &value_var.data.numeric_value) = 0.0f;
 		}
-
+		
 		setProperty(app_context, bool_obj, "value", 5, &value_var);
 		new_obj = bool_obj;
 		PUSH(ACTION_STACK_VALUE_OBJECT, (u64) new_obj);
@@ -4912,21 +4912,21 @@ void actionNewObject(SWFAppContext* app_context)
 	{
 		// Try to find user-defined constructor function
 		ASFunction* ctor_func = lookupFunctionByName(ctor_name, ctor_name_len);
-
+		
 		if (ctor_func != NULL)
 		{
 			// User-defined constructor found
 			// Create new object to serve as 'this'
 			ASObject* obj = allocObject(app_context, 8);
 			new_obj = obj;
-
+			
 			// Call the constructor with 'this' binding
 			if (ctor_func->function_type == 1)
 			{
 				// DefineFunction (type 1) - simple function
 				// Push 'this' and arguments to stack, call function
 				// Note: Constructor return value is discarded per spec
-
+				
 				// For now, just create the object without calling constructor
 				// Full implementation would require stack manipulation to call constructor
 			}
@@ -4934,16 +4934,16 @@ void actionNewObject(SWFAppContext* app_context)
 			{
 				// DefineFunction2 (type 2) - advanced function with registers
 				// This supports 'this' binding and proper constructor semantics
-
+				
 				// Prepare arguments for the constructor
 				ActionVar registers[256] = {0};  // Max registers
-
+				
 				// Call constructor with 'this' binding
 				// Note: Return value is discarded per ActionScript spec for constructors
 				if (ctor_func->advanced_func != NULL)
 				{
 					ActionVar return_value = ctor_func->advanced_func(app_context, args, num_args, registers, obj);
-
+					
 					// Check if constructor returned an object (override default behavior)
 					// Per ECMAScript spec: if constructor returns object, use it; otherwise use 'this'
 					if (return_value.type == ACTION_STACK_VALUE_OBJECT && return_value.data.numeric_value != 0)
@@ -4956,7 +4956,7 @@ void actionNewObject(SWFAppContext* app_context)
 					// Note: If constructor returns non-object, we use the original 'this' object
 				}
 			}
-
+			
 			PUSH(ACTION_STACK_VALUE_OBJECT, (u64) new_obj);
 			return;
 		}
@@ -5000,24 +5000,24 @@ void actionNewObject(SWFAppContext* app_context)
 void actionNewMethod(SWFAppContext* app_context)
 {
 	// Pop in order: method_name, object, num_args, then args
-
+	
 	// 1. Pop method name (string)
 	char str_buffer[17];
 	convertString(app_context, str_buffer);
 	const char* method_name = (const char*) VAL(u64, &STACK_TOP_VALUE);
 	u32 method_name_len = STACK_TOP_N;
 	POP();
-
+	
 	// 2. Pop object reference
 	ActionVar obj_var;
 	popVar(app_context, &obj_var);
-
+	
 	// 3. Pop number of arguments
 	convertFloat(app_context);
 	ActionVar num_args_var;
 	popVar(app_context, &num_args_var);
 	u32 num_args = (u32) VAL(float, &num_args_var.data.numeric_value);
-
+	
 	// 4. Pop arguments from stack (store them temporarily)
 	// Limit to 16 arguments for simplicity
 	ActionVar args[16];
@@ -5025,16 +5025,16 @@ void actionNewMethod(SWFAppContext* app_context)
 	{
 		num_args = 16;
 	}
-
+	
 	// Pop arguments in reverse order (first arg is deepest on stack)
 	for (int i = (int)num_args - 1; i >= 0; i--)
 	{
 		popVar(app_context, &args[i]);
 	}
-
+	
 	// 5. Get the method property from the object
 	const char* ctor_name = NULL;
-
+	
 	// Check for blank/empty method name (SWF spec: treat object as function)
 	if (method_name == NULL || method_name_len == 0 || method_name[0] == '\0')
 	{
@@ -5043,18 +5043,18 @@ void actionNewMethod(SWFAppContext* app_context)
 		if (obj_var.type == ACTION_STACK_VALUE_FUNCTION)
 		{
 			ASFunction* func = (ASFunction*) obj_var.data.numeric_value;
-
+			
 			if (func != NULL)
 			{
 				// Create new object for 'this' context
 				ASObject* new_obj = allocObject(app_context, 8);
-
+				
 				// TODO: Set up prototype chain (new_obj.__proto__ = func.prototype)
 				// This requires prototype support in the object system
-
+				
 				// Call function as constructor with 'this' binding
 				ActionVar return_value;
-
+				
 				if (func->function_type == 2)
 				{
 					// DefineFunction2 with full register support
@@ -5062,22 +5062,22 @@ void actionNewMethod(SWFAppContext* app_context)
 					if (func->register_count > 0) {
 						registers = (ActionVar*) HCALLOC(func->register_count, sizeof(ActionVar));
 					}
-
+					
 					// Create local scope for function
 					ASObject* local_scope = allocObject(app_context, 8);
 					if (scope_depth < MAX_SCOPE_DEPTH) {
 						scope_chain[scope_depth++] = local_scope;
 					}
-
+					
 					// Call with 'this' context set to new object
 					return_value = func->advanced_func(app_context, args, num_args, registers, new_obj);
-
+					
 					// Pop local scope
 					if (scope_depth > 0) {
 						scope_depth--;
 					}
 					releaseObject(app_context, local_scope);
-
+					
 					if (registers != NULL) FREE(registers);
 				}
 				else
@@ -5088,11 +5088,11 @@ void actionNewMethod(SWFAppContext* app_context)
 					{
 						pushVar(app_context, &args[i]);
 					}
-
+					
 					// Call simple function
 					// Note: Simple functions don't have 'this' context support in current implementation
 					func->simple_func(app_context);
-
+					
 					// Pop return value if one was pushed
 					if (SP < INITIAL_SP)
 					{
@@ -5104,7 +5104,7 @@ void actionNewMethod(SWFAppContext* app_context)
 						return_value.data.numeric_value = 0;
 					}
 				}
-
+				
 				// According to SWF spec: constructor return value should be discarded
 				// Always return the newly created object
 				// (unless constructor explicitly returns an object, but we simplify here)
@@ -5112,23 +5112,23 @@ void actionNewMethod(SWFAppContext* app_context)
 				return;
 			}
 		}
-
+		
 		// If not a function object, push undefined
 		pushUndefined(app_context);
 		return;
 	}
-
+	
 	ASFunction* user_ctor_func = NULL;
-
+	
 	if (obj_var.type == ACTION_STACK_VALUE_OBJECT)
 	{
 		ASObject* obj = (ASObject*) obj_var.data.numeric_value;
-
+		
 		if (obj != NULL)
 		{
 			// Look up the method property
 			ActionVar* method_prop = getProperty(obj, method_name, method_name_len);
-
+			
 			if (method_prop != NULL)
 			{
 				if (method_prop->type == ACTION_STACK_VALUE_STRING)
@@ -5146,10 +5146,10 @@ void actionNewMethod(SWFAppContext* app_context)
 			}
 		}
 	}
-
+	
 	// 6. Create new object based on constructor name
 	void* new_obj = NULL;
-
+	
 	if (ctor_name != NULL && strcmp(ctor_name, "Array") == 0)
 	{
 		// Handle Array constructor
@@ -5214,13 +5214,13 @@ void actionNewMethod(SWFAppContext* app_context)
 		// Handle String constructor
 		// new String() or new String(value)
 		ASObject* str_obj = allocObject(app_context, 4);
-
+		
 		if (num_args > 0)
 		{
 			// Convert first argument to string and store it
 			// Store the string value so it can be retrieved with valueOf() or toString()
 			ActionVar string_value = args[0];
-
+			
 			// If not already a string, we'd need to convert it
 			// For now, store the value as-is with property name "valueOf"
 			setProperty(app_context, str_obj, "valueOf", 7, &string_value);
@@ -5233,7 +5233,7 @@ void actionNewMethod(SWFAppContext* app_context)
 			empty_str.data.numeric_value = (u64) "";
 			setProperty(app_context, str_obj, "valueOf", 7, &empty_str);
 		}
-
+		
 		new_obj = str_obj;
 		PUSH(ACTION_STACK_VALUE_OBJECT, VAL(u64, new_obj));
 	}
@@ -5242,12 +5242,12 @@ void actionNewMethod(SWFAppContext* app_context)
 		// Handle Number constructor
 		// new Number() or new Number(value)
 		ASObject* num_obj = allocObject(app_context, 4);
-
+		
 		if (num_args > 0)
 		{
 			// Store the numeric value
 			ActionVar num_value = args[0];
-
+			
 			// Convert to float if not already numeric
 			if (num_value.type != ACTION_STACK_VALUE_F32 &&
 			    num_value.type != ACTION_STACK_VALUE_F64)
@@ -5270,7 +5270,7 @@ void actionNewMethod(SWFAppContext* app_context)
 					num_value.data.numeric_value = VAL(u64, &zero);
 				}
 			}
-
+			
 			setProperty(app_context, num_obj, "valueOf", 7, &num_value);
 		}
 		else
@@ -5282,7 +5282,7 @@ void actionNewMethod(SWFAppContext* app_context)
 			zero_val.data.numeric_value = VAL(u64, &zero);
 			setProperty(app_context, num_obj, "valueOf", 7, &zero_val);
 		}
-
+		
 		new_obj = num_obj;
 		PUSH(ACTION_STACK_VALUE_OBJECT, VAL(u64, new_obj));
 	}
@@ -5291,14 +5291,14 @@ void actionNewMethod(SWFAppContext* app_context)
 		// Handle Boolean constructor
 		// new Boolean() or new Boolean(value)
 		ASObject* bool_obj = allocObject(app_context, 4);
-
+		
 		if (num_args > 0)
 		{
 			// Convert first argument to boolean
 			// In ActionScript/JavaScript, false values are: false, 0, NaN, "", null, undefined
 			ActionVar bool_value;
 			bool truthy = true;  // Default to true
-
+			
 			if (args[0].type == ACTION_STACK_VALUE_F32)
 			{
 				float fval = VAL(float, &args[0].data.numeric_value);
@@ -5320,7 +5320,7 @@ void actionNewMethod(SWFAppContext* app_context)
 			{
 				truthy = false;
 			}
-
+			
 			// Store as a number (1.0 for true, 0.0 for false)
 			float bool_as_float = truthy ? 1.0f : 0.0f;
 			bool_value.type = ACTION_STACK_VALUE_F32;
@@ -5336,7 +5336,7 @@ void actionNewMethod(SWFAppContext* app_context)
 			false_val.data.numeric_value = VAL(u64, &zero);
 			setProperty(app_context, bool_obj, "valueOf", 7, &false_val);
 		}
-
+		
 		new_obj = bool_obj;
 		PUSH(ACTION_STACK_VALUE_OBJECT, VAL(u64, new_obj));
 	}
@@ -5345,12 +5345,12 @@ void actionNewMethod(SWFAppContext* app_context)
 		// User-defined constructor function from object property
 		// Create new object for 'this' context
 		ASObject* new_obj_inst = allocObject(app_context, 8);
-
+		
 		// TODO: Set up prototype chain (new_obj.__proto__ = func.prototype)
-
+		
 		// Call function as constructor with 'this' binding
 		ActionVar return_value;
-
+		
 		if (user_ctor_func->function_type == 2)
 		{
 			// DefineFunction2 with full register support
@@ -5358,22 +5358,22 @@ void actionNewMethod(SWFAppContext* app_context)
 			if (user_ctor_func->register_count > 0) {
 				registers = (ActionVar*) calloc(user_ctor_func->register_count, sizeof(ActionVar));
 			}
-
+			
 			// Create local scope for function
 			ASObject* local_scope = allocObject(app_context, 8);
 			if (scope_depth < MAX_SCOPE_DEPTH) {
 				scope_chain[scope_depth++] = local_scope;
 			}
-
+			
 			// Call with 'this' context set to new object
 			return_value = user_ctor_func->advanced_func(app_context, args, num_args, registers, new_obj_inst);
-
+			
 			// Pop local scope
 			if (scope_depth > 0) {
 				scope_depth--;
 			}
 			releaseObject(app_context, local_scope);
-
+			
 			if (registers != NULL) FREE(registers);
 		}
 		else
@@ -5384,11 +5384,11 @@ void actionNewMethod(SWFAppContext* app_context)
 			{
 				pushVar(app_context, &args[i]);
 			}
-
+			
 			// Call simple function
 			// Note: Simple functions don't have 'this' context support
 			user_ctor_func->simple_func(app_context);
-
+			
 			// Pop return value if one was pushed
 			if (SP < INITIAL_SP)
 			{
@@ -5400,7 +5400,7 @@ void actionNewMethod(SWFAppContext* app_context)
 				return_value.data.numeric_value = 0;
 			}
 		}
-
+		
 		// According to SWF spec: constructor return value should be discarded
 		// Always return the newly created object
 		// (unless constructor explicitly returns an object, but we simplify here)
@@ -5417,38 +5417,38 @@ void actionSetProperty(SWFAppContext* app_context)
 {
 	// Stack layout: [target_path] [property_index] [value] <- sp
 	// Pop in reverse order: value, index, target
-
+	
 	// 1. Pop value
 	ActionVar value_var;
 	popVar(app_context, &value_var);
-
+	
 	// 2. Pop property index
 	convertFloat(app_context);
 	ActionVar index_var;
 	popVar(app_context, &index_var);
 	int prop_index = (int) VAL(float, &index_var.data.numeric_value);
-
+	
 	// 3. Pop target path
 	convertString(app_context, NULL);
 	const char* target = (const char*) VAL(u64, &STACK_TOP_VALUE);
 	POP();
-
+	
 	// 4. Get the MovieClip object
 	MovieClip* mc = getMovieClipByTarget(target);
 	if (!mc) return; // Invalid target
-
+	
 	// 5. Set property value based on index
 	// Convert value to float for numeric properties
 	float num_value = 0.0f;
 	const char* str_value = NULL;
-
+	
 	if (value_var.type == ACTION_STACK_VALUE_F32 || value_var.type == ACTION_STACK_VALUE_F64) {
 		num_value = (float) VAL(float, &value_var.data.numeric_value);
 	} else if (value_var.type == ACTION_STACK_VALUE_STRING) {
 		str_value = (const char*) value_var.data.numeric_value;
 		num_value = (float) atof(str_value);
 	}
-
+	
 	switch (prop_index) {
 		case 0:  // _x
 			mc->x = num_value;
@@ -5524,32 +5524,32 @@ void actionCloneSprite(SWFAppContext* app_context)
 {
 	// Stack layout: [target_name] [source_name] [depth] <- sp
 	// Pop in reverse order: depth, source, target
-
+	
 	// Pop depth (convert to float first)
 	convertFloat(app_context);
 	ActionVar depth;
 	popVar(app_context, &depth);
-
+	
 	// Pop source sprite name
 	ActionVar source;
 	popVar(app_context, &source);
 	const char* source_name = (const char*) source.data.numeric_value;
-
+	
 	// Handle null source name
 	if (source_name == NULL) {
 		source_name = "";
 	}
-
+	
 	// Pop target sprite name
 	ActionVar target;
 	popVar(app_context, &target);
 	const char* target_name = (const char*) target.data.numeric_value;
-
+	
 	// Handle null target name
 	if (target_name == NULL) {
 		target_name = "";
 	}
-
+	
 	#ifndef NO_GRAPHICS
 	// Full implementation would:
 	// 1. Find source MovieClip in display list
@@ -5593,7 +5593,7 @@ void actionRemoveSprite(SWFAppContext* app_context)
 	ActionVar target;
 	popVar(app_context, &target);
 	const char* target_name = (const char*) target.data.numeric_value;
-
+	
 	// Handle null/empty gracefully
 	if (target_name == NULL || target_name[0] == '\0') {
 		#ifdef DEBUG
@@ -5601,7 +5601,7 @@ void actionRemoveSprite(SWFAppContext* app_context)
 		#endif
 		return;
 	}
-
+	
 	#ifndef NO_GRAPHICS
 	// TODO: Full graphics implementation requires:
 	// 1. Display list management system
@@ -5636,10 +5636,10 @@ void actionSetTarget(SWFAppContext* app_context, const char* target_name)
 		printf("// SetTarget: (main)\n");
 		return;
 	}
-
+	
 	// Try to resolve the target path
 	MovieClip* target_mc = getMovieClipByTarget(target_name);
-
+	
 	if (target_mc) {
 		// Valid target found - change context
 		setCurrentContext(target_mc);
@@ -5649,7 +5649,7 @@ void actionSetTarget(SWFAppContext* app_context, const char* target_name)
 		// In Flash, if target is not found, the context doesn't change
 		printf("// SetTarget: %s (not found, context unchanged)\n", target_name);
 	}
-
+	
 	// Note: In NO_GRAPHICS mode, only _root is available as a target.
 	// Full MovieClip hierarchy (named sprites, nested clips) requires
 	// display list infrastructure which is only available in graphics mode.
@@ -5664,12 +5664,12 @@ void actionWithStart(SWFAppContext* app_context)
 	// Pop object from stack
 	ActionVar obj_var;
 	popVar(app_context, &obj_var);
-
+	
 	if (obj_var.type == ACTION_STACK_VALUE_OBJECT)
 	{
 		// Get the object pointer
 		ASObject* obj = (ASObject*) obj_var.data.numeric_value;
-
+		
 		// Push onto scope chain (if valid and space available)
 		if (obj != NULL && scope_depth < MAX_SCOPE_DEPTH)
 		{
@@ -5764,16 +5764,16 @@ void actionThrow(SWFAppContext* app_context)
 	// Pop value to throw
 	ActionVar throw_value;
 	popVar(app_context, &throw_value);
-
+	
 	// Set exception state
 	g_exception_state.exception_thrown = true;
 	g_exception_state.exception_value = throw_value;
-
+	
 	// Check if we're in a try block
 	if (g_exception_state.handler_depth == 0) {
 		// Uncaught exception - print error message and exit
 		printf("[Uncaught exception: ");
-
+		
 		if (throw_value.type == ACTION_STACK_VALUE_STRING) {
 			const char* str = (const char*) VAL(u64, &throw_value.data.numeric_value);
 			printf("%s", str);
@@ -5786,13 +5786,13 @@ void actionThrow(SWFAppContext* app_context)
 		} else {
 			printf("(type %d)", throw_value.type);
 		}
-
+		
 		printf("]\n");
-
+		
 		// Exit to stop script execution
 		exit(1);
 	}
-
+	
 	// Inside a try block - jump to catch handler using longjmp
 	// NOTE: Due to current implementation flaw (see TODO above), this doesn't
 	// properly skip remaining try block code. Fix requires inline setjmp in generated code.
@@ -5805,7 +5805,7 @@ void actionTryBegin(SWFAppContext* app_context)
 {
 	// Push exception handler onto handler stack
 	g_exception_state.handler_depth++;
-
+	
 	// Clear exception flag for new try block
 	g_exception_state.exception_thrown = false;
 	g_exception_state.has_jmp_buf = 0;
@@ -5818,13 +5818,13 @@ bool actionTryExecute(SWFAppContext* app_context)
 	// WARNING: This function-based approach has a control flow flaw (see TODO above)
 	int exception_occurred = setjmp(g_exception_state.exception_handler);
 	g_exception_state.has_jmp_buf = 1;
-
+	
 	// If exception occurred (longjmp was called), return false to execute catch block
 	if (exception_occurred != 0) {
 		g_exception_state.exception_thrown = true;
 		return false;
 	}
-
+	
 	// No exception yet, execute try block
 	return true;
 }
@@ -5861,10 +5861,10 @@ void actionCatchToRegister(SWFAppContext* app_context, u8 reg_num)
 			g_exception_state.exception_thrown = false;
 			return;
 		}
-
+		
 		// Store exception value in the specified register
 		g_registers[reg_num] = g_exception_state.exception_value;
-
+		
 		// Clear the exception flag
 		g_exception_state.exception_thrown = false;
 	}
@@ -5874,16 +5874,16 @@ void actionTryEnd(SWFAppContext* app_context)
 {
 	// Pop exception handler from handler stack
 	g_exception_state.handler_depth--;
-
+	
 	// Clear jmp_buf flag
 	g_exception_state.has_jmp_buf = 0;
-
+	
 	if (g_exception_state.handler_depth == 0)
 	{
 		// Clear exception if at top level
 		g_exception_state.exception_thrown = false;
 	}
-
+	
 #ifdef DEBUG
 	printf("[DEBUG] actionTryEnd: handler_depth=%d\n", g_exception_state.handler_depth);
 #endif
@@ -5899,7 +5899,7 @@ void actionDefineFunction(SWFAppContext* app_context, const char* name, void (*f
 		fprintf(stderr, "ERROR: Failed to allocate memory for function\n");
 		return;
 	}
-
+	
 	// Initialize function object
 	strncpy(as_func->name, name, 255);
 	as_func->name[255] = '\0';
@@ -5909,7 +5909,7 @@ void actionDefineFunction(SWFAppContext* app_context, const char* name, void (*f
 	as_func->advanced_func = NULL;
 	as_func->register_count = 0;
 	as_func->flags = 0;
-
+	
 	// Register function
 	if (function_count < MAX_FUNCTIONS) {
 		function_registry[function_count++] = as_func;
@@ -5918,7 +5918,7 @@ void actionDefineFunction(SWFAppContext* app_context, const char* name, void (*f
 		free(as_func);
 		return;
 	}
-
+	
 	// If named, store in variable
 	if (strlen(name) > 0) {
 		ActionVar func_var;
@@ -5940,7 +5940,7 @@ void actionDefineFunction2(SWFAppContext* app_context, const char* name, Functio
 		fprintf(stderr, "ERROR: Failed to allocate memory for function\n");
 		return;
 	}
-
+	
 	// Initialize function object
 	strncpy(as_func->name, name, 255);
 	as_func->name[255] = '\0';
@@ -5950,7 +5950,7 @@ void actionDefineFunction2(SWFAppContext* app_context, const char* name, Functio
 	as_func->advanced_func = func;
 	as_func->register_count = register_count;
 	as_func->flags = flags;
-
+	
 	// Register function
 	if (function_count < MAX_FUNCTIONS) {
 		function_registry[function_count++] = as_func;
@@ -5959,7 +5959,7 @@ void actionDefineFunction2(SWFAppContext* app_context, const char* name, Functio
 		free(as_func);
 		return;
 	}
-
+	
 	// If named, store in variable
 	if (strlen(name) > 0) {
 		ActionVar func_var;
@@ -5981,12 +5981,12 @@ void actionCallFunction(SWFAppContext* app_context, char* str_buffer)
 	const char* func_name = (const char*) VAL(u64, &STACK_TOP_VALUE);
 	u32 func_name_len = STACK_TOP_N;
 	POP();
-
+	
 	// 2. Pop number of arguments
 	ActionVar num_args_var;
 	popVar(app_context, &num_args_var);
 	u32 num_args = 0;
-
+	
 	if (num_args_var.type == ACTION_STACK_VALUE_F32)
 	{
 		num_args = (u32) VAL(float, &num_args_var.data.numeric_value);
@@ -5995,7 +5995,7 @@ void actionCallFunction(SWFAppContext* app_context, char* str_buffer)
 	{
 		num_args = (u32) VAL(double, &num_args_var.data.numeric_value);
 	}
-
+	
 	// 3. Pop arguments from stack (in reverse order)
 	ActionVar* args = NULL;
 	if (num_args > 0)
@@ -6006,10 +6006,10 @@ void actionCallFunction(SWFAppContext* app_context, char* str_buffer)
 			popVar(app_context, &args[num_args - 1 - i]);
 		}
 	}
-
+	
 	// 4. Check for built-in global functions first
 	int builtin_handled = 0;
-
+	
 	// parseInt(string) - Parse string to integer
 	if (func_name_len == 8 && strncmp(func_name, "parseInt", 8) == 0)
 	{
@@ -6018,7 +6018,7 @@ void actionCallFunction(SWFAppContext* app_context, char* str_buffer)
 			// Convert first argument to string
 			char arg_buffer[17];
 			const char* str_value = NULL;
-
+			
 			if (args[0].type == ACTION_STACK_VALUE_STRING)
 			{
 				str_value = (const char*) args[0].data.numeric_value;
@@ -6042,7 +6042,7 @@ void actionCallFunction(SWFAppContext* app_context, char* str_buffer)
 				// Undefined or other types -> NaN
 				str_value = "NaN";
 			}
-
+			
 			// Parse integer from string
 			float result = (float) atoi(str_value);
 			if (args != NULL) FREE(args);
@@ -6066,7 +6066,7 @@ void actionCallFunction(SWFAppContext* app_context, char* str_buffer)
 			// Convert first argument to string
 			char arg_buffer[17];
 			const char* str_value = NULL;
-
+			
 			if (args[0].type == ACTION_STACK_VALUE_STRING)
 			{
 				str_value = (const char*) args[0].data.numeric_value;
@@ -6090,7 +6090,7 @@ void actionCallFunction(SWFAppContext* app_context, char* str_buffer)
 				// Undefined or other types -> NaN
 				str_value = "NaN";
 			}
-
+			
 			// Parse float from string
 			float result = (float) atof(str_value);
 			if (args != NULL) FREE(args);
@@ -6127,7 +6127,7 @@ void actionCallFunction(SWFAppContext* app_context, char* str_buffer)
 				const char* str = (const char*) args[0].data.numeric_value;
 				val = (float) atof(str);
 			}
-
+			
 			float result = (val != val) ? 1.0f : 0.0f;  // NaN != NaN is true
 			if (args != NULL) FREE(args);
 			PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &result));
@@ -6162,7 +6162,7 @@ void actionCallFunction(SWFAppContext* app_context, char* str_buffer)
 				const char* str = (const char*) args[0].data.numeric_value;
 				val = (float) atof(str);
 			}
-
+			
 			// Check if finite (not NaN and not infinity)
 			float result = (val == val && val != INFINITY && val != -INFINITY) ? 1.0f : 0.0f;
 			if (args != NULL) FREE(args);
@@ -6178,12 +6178,12 @@ void actionCallFunction(SWFAppContext* app_context, char* str_buffer)
 			builtin_handled = 1;
 		}
 	}
-
+	
 	// If not a built-in function, look up user-defined functions
 	if (!builtin_handled)
 	{
 		ASFunction* func = lookupFunctionByName(func_name, func_name_len);
-
+		
 		if (func != NULL)
 		{
 			if (func->function_type == 2)
@@ -6193,30 +6193,30 @@ void actionCallFunction(SWFAppContext* app_context, char* str_buffer)
 				if (func->register_count > 0) {
 					registers = (ActionVar*) HCALLOC(func->register_count, sizeof(ActionVar));
 				}
-
+				
 				// Create local scope object for function-local variables
 				// Start with capacity for a few local variables
 				ASObject* local_scope = allocObject(app_context, 8);
-
+				
 				// Push local scope onto scope chain
 				if (scope_depth < MAX_SCOPE_DEPTH) {
 					scope_chain[scope_depth++] = local_scope;
 				}
-
+				
 				ActionVar result = func->advanced_func(app_context, args, num_args, registers, NULL);
-
+				
 				// Pop local scope from scope chain
 				if (scope_depth > 0) {
 					scope_depth--;
 				}
-
+				
 				// Clean up local scope object
 				// Release decrements refcount and frees if refcount reaches 0
 				releaseObject(app_context, local_scope);
-
+				
 				if (registers != NULL) FREE(registers);
 				if (args != NULL) FREE(args);
-
+				
 				pushVar(app_context, &result);
 			}
 			else
@@ -6224,25 +6224,25 @@ void actionCallFunction(SWFAppContext* app_context, char* str_buffer)
 				// Simple DefineFunction (type 1)
 				// Simple functions expect arguments on the stack, not in an array
 				// We need to push arguments back onto stack in correct order
-
+				
 				// Remember stack position BEFORE pushing arguments
 				// After function executes (pops args + pushes return), sp should be sp_before + 24
 				u32 sp_before_args = SP;
-
+				
 				// Push arguments onto stack in order (first to last)
 				// The function will pop them and bind to parameter names
 				for (u32 i = 0; i < num_args; i++)
 				{
 					pushVar(app_context, &args[i]);
 				}
-
+				
 				// Free args array before calling function
 				if (args != NULL) FREE(args);
-
+				
 				// Call the simple function
 				// It will pop parameters, execute body, and may push a return value
 				func->simple_func(app_context);
-
+				
 				// Check if a return value was pushed
 				// After function pops all args, sp should be back to sp_before_args
 				// If function pushed a return, sp should be sp_before_args + 24
@@ -6292,7 +6292,7 @@ static int callStringPrimitiveMethod(SWFAppContext* app_context, char* str_buffe
 		PUSH_STR(str_buffer, i);
 		return 1;
 	}
-
+	
 	// toLowerCase() - no arguments
 	if (method_name_len == 11 && strncmp(method_name, "toLowerCase", 11) == 0)
 	{
@@ -6314,7 +6314,7 @@ static int callStringPrimitiveMethod(SWFAppContext* app_context, char* str_buffe
 		PUSH_STR(str_buffer, i);
 		return 1;
 	}
-
+	
 	// charAt(index) - 1 argument
 	if (method_name_len == 6 && strncmp(method_name, "charAt", 6) == 0)
 	{
@@ -6323,7 +6323,7 @@ static int callStringPrimitiveMethod(SWFAppContext* app_context, char* str_buffe
 		{
 			index = (int)VAL(float, &args[0].data.numeric_value);
 		}
-
+		
 		// Bounds check
 		if (index < 0 || index >= str_len)
 		{
@@ -6338,13 +6338,13 @@ static int callStringPrimitiveMethod(SWFAppContext* app_context, char* str_buffe
 		}
 		return 1;
 	}
-
+	
 	// substr(start, length) - 2 arguments
 	if (method_name_len == 6 && strncmp(method_name, "substr", 6) == 0)
 	{
 		int start = 0;
 		int length = str_len;
-
+		
 		if (num_args > 0 && args[0].type == ACTION_STACK_VALUE_F32)
 		{
 			start = (int)VAL(float, &args[0].data.numeric_value);
@@ -6353,14 +6353,14 @@ static int callStringPrimitiveMethod(SWFAppContext* app_context, char* str_buffe
 		{
 			length = (int)VAL(float, &args[1].data.numeric_value);
 		}
-
+		
 		// Handle negative start (count from end)
 		if (start < 0)
 		{
 			start = str_len + start;
 			if (start < 0) start = 0;
 		}
-
+		
 		// Bounds check
 		if (start >= str_len || length <= 0)
 		{
@@ -6373,7 +6373,7 @@ static int callStringPrimitiveMethod(SWFAppContext* app_context, char* str_buffe
 			{
 				length = str_len - start;
 			}
-
+			
 			int i;
 			for (i = 0; i < length && i < 16; i++)
 			{
@@ -6384,13 +6384,13 @@ static int callStringPrimitiveMethod(SWFAppContext* app_context, char* str_buffe
 		}
 		return 1;
 	}
-
+	
 	// substring(start, end) - 2 arguments (different from substr!)
 	if (method_name_len == 9 && strncmp(method_name, "substring", 9) == 0)
 	{
 		int start = 0;
 		int end = str_len;
-
+		
 		if (num_args > 0 && args[0].type == ACTION_STACK_VALUE_F32)
 		{
 			start = (int)VAL(float, &args[0].data.numeric_value);
@@ -6399,13 +6399,13 @@ static int callStringPrimitiveMethod(SWFAppContext* app_context, char* str_buffe
 		{
 			end = (int)VAL(float, &args[1].data.numeric_value);
 		}
-
+		
 		// Clamp to valid range
 		if (start < 0) start = 0;
 		if (end < 0) end = 0;
 		if (start > str_len) start = str_len;
 		if (end > str_len) end = str_len;
-
+		
 		// Swap if start > end
 		if (start > end)
 		{
@@ -6413,7 +6413,7 @@ static int callStringPrimitiveMethod(SWFAppContext* app_context, char* str_buffe
 			start = end;
 			end = temp;
 		}
-
+		
 		int length = end - start;
 		if (length <= 0)
 		{
@@ -6432,14 +6432,14 @@ static int callStringPrimitiveMethod(SWFAppContext* app_context, char* str_buffe
 		}
 		return 1;
 	}
-
+	
 	// indexOf(searchString, startIndex) - 1-2 arguments
 	if (method_name_len == 7 && strncmp(method_name, "indexOf", 7) == 0)
 	{
 		const char* search_str = "";
 		int search_len = 0;
 		int start_index = 0;
-
+		
 		if (num_args > 0)
 		{
 			if (args[0].type == ACTION_STACK_VALUE_STRING)
@@ -6453,7 +6453,7 @@ static int callStringPrimitiveMethod(SWFAppContext* app_context, char* str_buffe
 			start_index = (int)VAL(float, &args[1].data.numeric_value);
 			if (start_index < 0) start_index = 0;
 		}
-
+		
 		// Search for substring
 		int found_index = -1;
 		if (search_len == 0)
@@ -6480,12 +6480,12 @@ static int callStringPrimitiveMethod(SWFAppContext* app_context, char* str_buffe
 				}
 			}
 		}
-
+		
 		float result = (float)found_index;
 		PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &result));
 		return 1;
 	}
-
+	
 	// Method not found
 	return 0;
 }
@@ -6498,16 +6498,16 @@ void actionCallMethod(SWFAppContext* app_context, char* str_buffer)
 	const char* method_name = (const char*) VAL(u64, &STACK_TOP_VALUE);
 	u32 method_name_len = STACK_TOP_N;
 	POP();
-
+	
 	// 2. Pop object (receiver/this) from stack
 	ActionVar obj_var;
 	popVar(app_context, &obj_var);
-
+	
 	// 3. Pop number of arguments
 	ActionVar num_args_var;
 	popVar(app_context, &num_args_var);
 	u32 num_args = 0;
-
+	
 	if (num_args_var.type == ACTION_STACK_VALUE_F32)
 	{
 		num_args = (u32) VAL(float, &num_args_var.data.numeric_value);
@@ -6516,7 +6516,7 @@ void actionCallMethod(SWFAppContext* app_context, char* str_buffer)
 	{
 		num_args = (u32) VAL(double, &num_args_var.data.numeric_value);
 	}
-
+	
 	// 4. Pop arguments from stack (in reverse order)
 	ActionVar* args = NULL;
 	if (num_args > 0)
@@ -6527,7 +6527,7 @@ void actionCallMethod(SWFAppContext* app_context, char* str_buffer)
 			popVar(app_context, &args[num_args - 1 - i]);
 		}
 	}
-
+	
 	// 5. Check for empty/blank method name - invoke object as function
 	if (method_name_len == 0 || (method_name_len == 1 && method_name[0] == '\0'))
 	{
@@ -6536,7 +6536,7 @@ void actionCallMethod(SWFAppContext* app_context, char* str_buffer)
 		{
 			// Object is a function - invoke it
 			ASFunction* func = lookupFunctionFromVar(&obj_var);
-
+			
 			if (func != NULL && func->function_type == 2)
 			{
 				// Invoke DefineFunction2
@@ -6544,13 +6544,13 @@ void actionCallMethod(SWFAppContext* app_context, char* str_buffer)
 				if (func->register_count > 0) {
 					registers = (ActionVar*) HCALLOC(func->register_count, sizeof(ActionVar));
 				}
-
+				
 				// No 'this' binding for direct function call (pass NULL)
 				ActionVar result = func->advanced_func(app_context, args, num_args, registers, NULL);
-
+				
 				if (registers != NULL) FREE(registers);
 				if (args != NULL) FREE(args);
-
+				
 				pushVar(app_context, &result);
 				return;
 			}
@@ -6570,12 +6570,12 @@ void actionCallMethod(SWFAppContext* app_context, char* str_buffer)
 			return;
 		}
 	}
-
+	
 	// 6. Look up the method on the object and invoke it
 	if (obj_var.type == ACTION_STACK_VALUE_OBJECT)
 	{
 		ASObject* obj = (ASObject*) obj_var.data.numeric_value;
-
+		
 		if (obj == NULL)
 		{
 			// Null object - push undefined
@@ -6583,15 +6583,15 @@ void actionCallMethod(SWFAppContext* app_context, char* str_buffer)
 			pushUndefined(app_context);
 			return;
 		}
-
+		
 		// Look up the method property
 		ActionVar* method_prop = getProperty(obj, method_name, method_name_len);
-
+		
 		if (method_prop != NULL && method_prop->type == ACTION_STACK_VALUE_FUNCTION)
 		{
 			// Get function object
 			ASFunction* func = lookupFunctionFromVar(method_prop);
-
+			
 			if (func != NULL && func->function_type == 2)
 			{
 				// Invoke DefineFunction2 with 'this' binding
@@ -6599,12 +6599,12 @@ void actionCallMethod(SWFAppContext* app_context, char* str_buffer)
 				if (func->register_count > 0) {
 					registers = (ActionVar*) HCALLOC(func->register_count, sizeof(ActionVar));
 				}
-
+				
 				ActionVar result = func->advanced_func(app_context, args, num_args, registers, (void*) obj);
-
+				
 				if (registers != NULL) FREE(registers);
 				if (args != NULL) FREE(args);
-
+				
 				pushVar(app_context, &result);
 			}
 			else
@@ -6627,14 +6627,14 @@ void actionCallMethod(SWFAppContext* app_context, char* str_buffer)
 		// String primitive - call built-in string methods
 		const char* str_value = (const char*) obj_var.data.numeric_value;
 		u32 str_len = obj_var.str_size;
-
+		
 		int handled = callStringPrimitiveMethod(app_context, str_buffer,
 		                                         str_value, str_len,
 		                                         method_name, method_name_len,
 		                                         args, num_args);
-
+		
 		if (args != NULL) FREE(args);
-
+		
 		if (!handled)
 		{
 			// Method not found - push undefined
@@ -6655,27 +6655,27 @@ void actionStartDrag(SWFAppContext* app_context)
 {
 	// Buffer for string conversion (needed for numeric targets)
 	char str_buffer[17];
-
+	
 	// Pop target sprite name (convert to string if needed)
 	convertString(app_context, str_buffer);
 	ActionVar target;
 	popVar(app_context, &target);
 	const char* target_name = (target.type == ACTION_STACK_VALUE_STRING) ?
 		(const char*) target.data.string_data.heap_ptr : "";
-
+		
 	// Pop lock center flag (convert to float if needed)
 	convertFloat(app_context);
 	ActionVar lock_center;
 	popVar(app_context, &lock_center);
-
+	
 	// Pop constrain flag (convert to float if needed)
 	convertFloat(app_context);
 	ActionVar constrain;
 	popVar(app_context, &constrain);
-
+	
 	float x1 = 0, y1 = 0, x2 = 0, y2 = 0;
 	int has_constraint = 0;
-
+	
 	// Check if we need to pop constraint rectangle
 	// Convert to integer to check if non-zero
 	if (constrain.type == ACTION_STACK_VALUE_F32) {
@@ -6683,45 +6683,45 @@ void actionStartDrag(SWFAppContext* app_context)
 	} else if (constrain.type == ACTION_STACK_VALUE_F64) {
 		has_constraint = ((int)VAL(double, &constrain.data.numeric_value) != 0);
 	}
-
+	
 	if (has_constraint) {
 		// Pop constraint rectangle (y2, x2, y1, x1 order)
 		// Convert each to float before popping
 		convertFloat(app_context);
 		ActionVar y2_var;
 		popVar(app_context, &y2_var);
-
+		
 		convertFloat(app_context);
 		ActionVar x2_var;
 		popVar(app_context, &x2_var);
-
+		
 		convertFloat(app_context);
 		ActionVar y1_var;
 		popVar(app_context, &y1_var);
-
+		
 		convertFloat(app_context);
 		ActionVar x1_var;
 		popVar(app_context, &x1_var);
-
+		
 		x1 = (x1_var.type == ACTION_STACK_VALUE_F32) ? VAL(float, &x1_var.data.numeric_value) : (float)VAL(double, &x1_var.data.numeric_value);
 		y1 = (y1_var.type == ACTION_STACK_VALUE_F32) ? VAL(float, &y1_var.data.numeric_value) : (float)VAL(double, &y1_var.data.numeric_value);
 		x2 = (x2_var.type == ACTION_STACK_VALUE_F32) ? VAL(float, &x2_var.data.numeric_value) : (float)VAL(double, &x2_var.data.numeric_value);
 		y2 = (y2_var.type == ACTION_STACK_VALUE_F32) ? VAL(float, &y2_var.data.numeric_value) : (float)VAL(double, &y2_var.data.numeric_value);
 	}
-
+	
 	int lock_flag = 0;
 	if (lock_center.type == ACTION_STACK_VALUE_F32) {
 		lock_flag = ((int)VAL(float, &lock_center.data.numeric_value) != 0);
 	} else if (lock_center.type == ACTION_STACK_VALUE_F64) {
 		lock_flag = ((int)VAL(double, &lock_center.data.numeric_value) != 0);
 	}
-
+	
 	// Set drag state
 	// First, clear any existing drag (Flash only allows one sprite to be dragged at a time)
 	if (is_dragging && dragged_target) {
 		free(dragged_target);
 	}
-
+	
 	is_dragging = 1;
 	// Duplicate the target name (manual strdup for portability)
 	if (target_name && *target_name) {
@@ -6733,7 +6733,7 @@ void actionStartDrag(SWFAppContext* app_context)
 	} else {
 		dragged_target = NULL;
 	}
-
+	
 	#ifdef DEBUG
 	printf("[StartDrag] %s (lock:%d, constrain:%d)\n",
 		   target_name ? target_name : "(null)", lock_flag, has_constraint);
@@ -6741,7 +6741,7 @@ void actionStartDrag(SWFAppContext* app_context)
 		printf("  Bounds: (%.1f,%.1f)-(%.1f,%.1f)\n", x1, y1, x2, y2);
 	}
 	#endif
-
+	
 	#ifndef NO_GRAPHICS
 	// Full implementation would also:
 	// 1. Find target MovieClip in display list
@@ -6771,22 +6771,22 @@ bool actionWaitForFrame(SWFAppContext* app_context, u16 frame)
 {
 	// Get the current MovieClip (simplified: always use root)
 	MovieClip* mc = &root_movieclip;
-
+	
 	if (!mc) {
 		// No MovieClip available - frame not loaded
 		return false;
 	}
-
+	
 	// Check if frame exists
 	// Note: Frame numbers in WaitForFrame are 0-based in the bytecode,
 	// but MovieClip properties are 1-based. Convert for comparison.
 	u16 frame_1based = frame + 1;
-
+	
 	if (frame_1based > mc->totalframes) {
 		// Frame doesn't exist
 		return false;
 	}
-
+	
 	// For non-streaming SWF files, all frames that exist are loaded
 	// In a full streaming implementation, we would check:
 	// if (frame_1based <= mc->frames_loaded) return true;
@@ -6799,11 +6799,11 @@ bool actionWaitForFrame2(SWFAppContext* app_context)
 	// Pop frame identifier from stack
 	ActionVar frame_var;
 	popVar(app_context, &frame_var);
-
+	
 	// For simplified implementation: assume all frames are loaded
 	// In a full implementation, this would check if the frame is actually loaded
 	// by examining the MovieClip's frames_loaded count
-
+	
 	// Debug output to show what frame was checked
 #ifdef DEBUG
 	if (frame_var.type == ACTION_STACK_VALUE_F32)
