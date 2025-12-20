@@ -65,7 +65,6 @@ void initTime();
 
 void pushVar(SWFAppContext* app_context, ActionVar* p);
 
-// Basic arithmetic (from upstream)
 void actionAdd(SWFAppContext* app_context);
 void actionSubtract(SWFAppContext* app_context);
 void actionMultiply(SWFAppContext* app_context);
@@ -76,20 +75,16 @@ void actionAnd(SWFAppContext* app_context);
 void actionOr(SWFAppContext* app_context);
 void actionNot(SWFAppContext* app_context);
 
-// String operations (from upstream)
 void actionStringEquals(SWFAppContext* app_context, char* a_str, char* b_str);
 void actionStringLength(SWFAppContext* app_context, char* v_str);
 void actionStringAdd(SWFAppContext* app_context, char* a_str, char* b_str);
 
-// Variable access (from upstream)
 void actionGetVariable(SWFAppContext* app_context);
 void actionSetVariable(SWFAppContext* app_context);
 
-// Debug/time (from upstream)
 void actionTrace(SWFAppContext* app_context);
 void actionGetTime(SWFAppContext* app_context);
 
-// New for objects/functions - Type-aware operations
 void actionAdd2(SWFAppContext* app_context, char* str_buffer);
 void actionLess2(SWFAppContext* app_context);
 void actionEquals2(SWFAppContext* app_context);
@@ -98,16 +93,10 @@ void actionIncrement(SWFAppContext* app_context);
 void actionDecrement(SWFAppContext* app_context);
 void actionStrictEquals(SWFAppContext* app_context);
 void actionGreater(SWFAppContext* app_context);
-
-// New for objects/functions - Type conversion
 void actionToNumber(SWFAppContext* app_context);
 void actionToString(SWFAppContext* app_context, char* str_buffer);
-
-// New for objects/functions - Stack operations
 void actionStackSwap(SWFAppContext* app_context);
 void actionDuplicate(SWFAppContext* app_context);
-
-// New for objects/functions - Object operations
 void actionGetMember(SWFAppContext* app_context);
 void actionSetMember(SWFAppContext* app_context);
 void actionTypeof(SWFAppContext* app_context, char* str_buffer);
@@ -121,24 +110,14 @@ void actionInitArray(SWFAppContext* app_context);
 void actionInitObject(SWFAppContext* app_context);
 void actionInstanceOf(SWFAppContext* app_context);
 void actionExtends(SWFAppContext* app_context);
-
-// New for objects/functions - Local variables
 void actionDefineLocal(SWFAppContext* app_context);
 void actionDeclareLocal(SWFAppContext* app_context);
-
-// New for objects/functions - Function operations
 void actionCallFunction(SWFAppContext* app_context, char* str_buffer);
 void actionCallMethod(SWFAppContext* app_context, char* str_buffer);
 void actionReturn(SWFAppContext* app_context);
-
-// New for objects/functions - Registers
 void actionStoreRegister(SWFAppContext* app_context, u8 register_num);
 void actionPushRegister(SWFAppContext* app_context, u8 register_num);
-
-// New for objects/functions - Function definitions
 void actionDefineFunction(SWFAppContext* app_context, const char* name, void (*func)(SWFAppContext*), u32 param_count);
 
-// Function pointer type for DefineFunction2
 typedef ActionVar (*Function2Ptr)(SWFAppContext* app_context, ActionVar* args, u32 arg_count, ActionVar* registers, void* this_obj);
-
 void actionDefineFunction2(SWFAppContext* app_context, const char* name, Function2Ptr func, u32 param_count, u8 register_count, u16 flags);
