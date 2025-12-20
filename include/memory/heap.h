@@ -2,9 +2,9 @@
 
 #include <swf.h>
 
-#define HALLOC(s) heap_alloc(app_context, s)
-#define HCALLOC(n, s) heap_calloc(app_context, n, s)
-#define FREE(p) heap_free(app_context, p)
+#define HALLOC(s) heap_alloc(app_context, s);
+#define HCALLOC(n, s) heap_calloc(app_context, n, s);
+#define FREE(p) heap_free(app_context, p);
 
 /**
  * Memory Heap Manager
@@ -53,7 +53,7 @@ void heap_free(SWFAppContext* app_context, void* ptr);
  * Shutdown the heap system
  *
  * Frees all heap arenas. Should be called at program exit.
- *
+ * 
  * @param app_context Main app context
  */
 void heap_shutdown(SWFAppContext* app_context);
