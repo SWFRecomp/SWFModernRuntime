@@ -3,9 +3,11 @@
 #include <SDL3/SDL.h>
 
 #include <common.h>
-#include <swf.h>
 
-typedef struct
+// Forward declaration
+typedef struct SWFAppContext SWFAppContext;
+
+struct FlashbangContext
 {
 	int width;
 	int height;
@@ -33,7 +35,7 @@ typedef struct
 	size_t bitmap_data_size;
 	char* cxform_data;
 	size_t cxform_data_size;
-	
+
 	SDL_Window* window;
 	SDL_GPUDevice* device;
 	
@@ -47,7 +49,7 @@ typedef struct
 	SDL_GPUBuffer* inv_mat_buffer;
 	SDL_GPUBuffer* bitmap_sizes_buffer;
 	SDL_GPUBuffer* cxform_buffer;
-	
+
 	SDL_GPUTexture* gradient_tex_array;
 	SDL_GPUSampler* gradient_sampler;
 	
@@ -68,9 +70,12 @@ typedef struct
 	u8 red;
 	u8 green;
 	u8 blue;
-} FlashbangContext;
+};
 
-void flashbang_init(FlashbangContext* context, SWFAppContext* app_context);
+typedef struct FlashbangContext FlashbangContext;
+
+FlashbangContext* flashbang_new();
+void flashbang_init(SWFAppContext* app_context, FlashbangContext* context);
 int flashbang_poll();
 void flashbang_set_window_background(FlashbangContext* context, u8 r, u8 g, u8 b);
 void flashbang_upload_bitmap(FlashbangContext* context, size_t offset, size_t size, u32 width, u32 height);
@@ -82,4 +87,4 @@ void flashbang_upload_cxform_id(FlashbangContext* context, u32 cxform_id);
 void flashbang_upload_cxform(FlashbangContext* context, float* cxform);
 void flashbang_draw_shape(FlashbangContext* context, size_t offset, size_t num_verts, u32 transform_id);
 void flashbang_close_pass(FlashbangContext* context);
-void flashbang_release(FlashbangContext* context, SWFAppContext* app_context);
+void flashbang_free(SWFAppContext* app_context, FlashbangContext* context);
