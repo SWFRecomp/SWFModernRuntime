@@ -65,6 +65,32 @@ void initTime(SWFAppContext* app_context);
 
 void pushVar(SWFAppContext* app_context, ActionVar* p);
 
+// Arithmetic Operations
+void actionAdd(SWFAppContext* app_context);
+void actionSubtract(SWFAppContext* app_context);
+void actionMultiply(SWFAppContext* app_context);
+void actionDivide(SWFAppContext* app_context);
+
+// Comparison Operations
+void actionEquals(SWFAppContext* app_context);
+void actionLess(SWFAppContext* app_context);
+void actionAnd(SWFAppContext* app_context);
+void actionOr(SWFAppContext* app_context);
+void actionNot(SWFAppContext* app_context);
+
+// String Operations
+void actionStringEquals(SWFAppContext* app_context, char* a_str, char* b_str);
+void actionStringLength(SWFAppContext* app_context, char* v_str);
+void actionStringAdd(SWFAppContext* app_context, char* a_str, char* b_str);
+
+// Variable Operations
+void actionGetVariable(SWFAppContext* app_context);
+void actionSetVariable(SWFAppContext* app_context);
+
+// Utility Operations
+void actionTrace(SWFAppContext* app_context);
+void actionGetTime(SWFAppContext* app_context);
+
 // Object Operations
 void actionGetMember(SWFAppContext* app_context);
 void actionSetMember(SWFAppContext* app_context);

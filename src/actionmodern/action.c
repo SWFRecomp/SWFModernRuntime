@@ -228,6 +228,587 @@ void peekSecondVar(SWFAppContext* app_context, ActionVar* var)
 }
 
 // ==================================================================
+// Arithmetic Operations
+// ==================================================================
+
+void actionAdd(SWFAppContext* app_context)
+{
+	convertFloat(app_context);
+	ActionVar a;
+	popVar(app_context, &a);
+	
+	convertFloat(app_context);
+	ActionVar b;
+	popVar(app_context, &b);
+	
+	if (a.type == ACTION_STACK_VALUE_F64)
+	{
+		double a_val = VAL(double, &a.value);
+		double b_val = b.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &b.value) : VAL(double, &b.value);
+		
+		double c = b_val + a_val;
+		PUSH(ACTION_STACK_VALUE_F64, VAL(u64, &c));
+	}
+	
+	else if (b.type == ACTION_STACK_VALUE_F64)
+	{
+		double a_val = a.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &a.value) : VAL(double, &a.value);
+		double b_val = VAL(double, &b.value);
+		
+		double c = b_val + a_val;
+		PUSH(ACTION_STACK_VALUE_F64, VAL(u64, &c));
+	}
+	
+	else
+	{
+		float c = VAL(float, &b.value) + VAL(float, &a.value);
+		PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &c));
+	}
+}
+
+void actionSubtract(SWFAppContext* app_context)
+{
+	convertFloat(app_context);
+	ActionVar a;
+	popVar(app_context, &a);
+	
+	convertFloat(app_context);
+	ActionVar b;
+	popVar(app_context, &b);
+	
+	if (a.type == ACTION_STACK_VALUE_F64)
+	{
+		double a_val = VAL(double, &a.value);
+		double b_val = b.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &b.value) : VAL(double, &b.value);
+		
+		double c = b_val - a_val;
+		PUSH(ACTION_STACK_VALUE_F64, VAL(u64, &c));
+	}
+	
+	else if (b.type == ACTION_STACK_VALUE_F64)
+	{
+		double a_val = a.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &a.value) : VAL(double, &a.value);
+		double b_val = VAL(double, &b.value);
+		
+		double c = b_val - a_val;
+		PUSH(ACTION_STACK_VALUE_F64, VAL(u64, &c));
+	}
+	
+	else
+	{
+		float c = VAL(float, &b.value) - VAL(float, &a.value);
+		PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &c));
+	}
+}
+
+void actionMultiply(SWFAppContext* app_context)
+{
+	convertFloat(app_context);
+	ActionVar a;
+	popVar(app_context, &a);
+	
+	convertFloat(app_context);
+	ActionVar b;
+	popVar(app_context, &b);
+	
+	if (a.type == ACTION_STACK_VALUE_F64)
+	{
+		double a_val = VAL(double, &a.value);
+		double b_val = b.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &b.value) : VAL(double, &b.value);
+		
+		double c = b_val*a_val;
+		PUSH(ACTION_STACK_VALUE_F64, VAL(u64, &c));
+	}
+	
+	else if (b.type == ACTION_STACK_VALUE_F64)
+	{
+		double a_val = a.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &a.value) : VAL(double, &a.value);
+		double b_val = VAL(double, &b.value);
+		
+		double c = b_val*a_val;
+		PUSH(ACTION_STACK_VALUE_F64, VAL(u64, &c));
+	}
+	
+	else
+	{
+		float c = VAL(float, &b.value)*VAL(float, &a.value);
+		PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &c));
+	}
+}
+
+void actionDivide(SWFAppContext* app_context)
+{
+	convertFloat(app_context);
+	ActionVar a;
+	popVar(app_context, &a);
+	
+	convertFloat(app_context);
+	ActionVar b;
+	popVar(app_context, &b);
+	
+	if (VAL(float, &a.value) == 0.0f)
+	{
+		// SWF 4:
+		PUSH_STR("#ERROR#", 8);
+		
+		// SWF 5:
+		//~ if (a->value == 0.0f)
+		//~ {
+			//~ float c = NAN;
+		//~ }
+		
+		//~ else if (a->value > 0.0f)
+		//~ {
+			//~ float c = INFINITY;
+		//~ }
+		
+		//~ else
+		//~ {
+			//~ float c = -INFINITY;
+		//~ }
+	}
+	
+	else
+	{
+		if (a.type == ACTION_STACK_VALUE_F64)
+		{
+			double a_val = VAL(double, &a.value);
+			double b_val = b.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &b.value) : VAL(double, &b.value);
+			
+			double c = b_val/a_val;
+			PUSH(ACTION_STACK_VALUE_F64, VAL(u64, &c));
+		}
+		
+		else if (b.type == ACTION_STACK_VALUE_F64)
+		{
+			double a_val = a.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &a.value) : VAL(double, &a.value);
+			double b_val = VAL(double, &b.value);
+			
+			double c = b_val/a_val;
+			PUSH(ACTION_STACK_VALUE_F64, VAL(u64, &c));
+		}
+		
+		else
+		{
+			float c = VAL(float, &b.value)/VAL(float, &a.value);
+			PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &c));
+		}
+	}
+}
+
+// ==================================================================
+// Comparison Operations
+// ==================================================================
+
+void actionEquals(SWFAppContext* app_context)
+{
+	convertFloat(app_context);
+	ActionVar a;
+	popVar(app_context, &a);
+	
+	convertFloat(app_context);
+	ActionVar b;
+	popVar(app_context, &b);
+	
+	if (a.type == ACTION_STACK_VALUE_F64)
+	{
+		double a_val = VAL(double, &a.value);
+		double b_val = b.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &b.value) : VAL(double, &b.value);
+		
+		float c = b_val == a_val ? 1.0f : 0.0f;
+		PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &c));
+	}
+	
+	else if (b.type == ACTION_STACK_VALUE_F64)
+	{
+		double a_val = a.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &a.value) : VAL(double, &a.value);
+		double b_val = VAL(double, &b.value);
+		
+		float c = b_val == a_val ? 1.0f : 0.0f;
+		PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &c));
+	}
+	
+	else
+	{
+		float c = VAL(float, &b.value) == VAL(float, &a.value) ? 1.0f : 0.0f;
+		PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &c));
+	}
+}
+
+void actionLess(SWFAppContext* app_context)
+{
+	ActionVar a;
+	convertFloat(app_context);
+	popVar(app_context, &a);
+	
+	ActionVar b;
+	convertFloat(app_context);
+	popVar(app_context, &b);
+	
+	if (a.type == ACTION_STACK_VALUE_F64)
+	{
+		double a_val = VAL(double, &a.value);
+		double b_val = b.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &b.value) : VAL(double, &b.value);
+		
+		float c = b_val < a_val ? 1.0f : 0.0f;
+		PUSH(ACTION_STACK_VALUE_F64, VAL(u64, &c));
+	}
+	
+	else if (b.type == ACTION_STACK_VALUE_F64)
+	{
+		double a_val = a.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &a.value) : VAL(double, &a.value);
+		double b_val = VAL(double, &b.value);
+		
+		float c = b_val < a_val ? 1.0f : 0.0f;
+		PUSH(ACTION_STACK_VALUE_F64, VAL(u64, &c));
+	}
+	
+	else
+	{
+		float c = VAL(float, &b.value) < VAL(float, &a.value) ? 1.0f : 0.0f;
+		PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &c));
+	}
+}
+
+void actionAnd(SWFAppContext* app_context)
+{
+	ActionVar a;
+	convertFloat(app_context);
+	popVar(app_context, &a);
+	
+	ActionVar b;
+	convertFloat(app_context);
+	popVar(app_context, &b);
+	
+	if (a.type == ACTION_STACK_VALUE_F64)
+	{
+		double a_val = VAL(double, &a.value);
+		double b_val = b.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &b.value) : VAL(double, &b.value);
+		
+		float c = b_val != 0.0 && a_val != 0.0 ? 1.0f : 0.0f;
+		PUSH(ACTION_STACK_VALUE_F64, VAL(u64, &c));
+	}
+	
+	else if (b.type == ACTION_STACK_VALUE_F64)
+	{
+		double a_val = a.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &a.value) : VAL(double, &a.value);
+		double b_val = VAL(double, &b.value);
+		
+		float c = b_val != 0.0 && a_val != 0.0 ? 1.0f : 0.0f;
+		PUSH(ACTION_STACK_VALUE_F64, VAL(u64, &c));
+	}
+	
+	else
+	{
+		float c = VAL(float, &b.value) != 0.0f && VAL(float, &a.value) != 0.0f ? 1.0f : 0.0f;
+		PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &c));
+	}
+}
+
+void actionOr(SWFAppContext* app_context)
+{
+	ActionVar a;
+	convertFloat(app_context);
+	popVar(app_context, &a);
+	
+	ActionVar b;
+	convertFloat(app_context);
+	popVar(app_context, &b);
+	
+	if (a.type == ACTION_STACK_VALUE_F64)
+	{
+		double a_val = VAL(double, &a.value);
+		double b_val = b.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &b.value) : VAL(double, &b.value);
+		
+		float c = b_val != 0.0 || a_val != 0.0 ? 1.0f : 0.0f;
+		PUSH(ACTION_STACK_VALUE_F64, VAL(u64, &c));
+	}
+	
+	else if (b.type == ACTION_STACK_VALUE_F64)
+	{
+		double a_val = a.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &a.value) : VAL(double, &a.value);
+		double b_val = VAL(double, &b.value);
+		
+		float c = b_val != 0.0 || a_val != 0.0 ? 1.0f : 0.0f;
+		PUSH(ACTION_STACK_VALUE_F64, VAL(u64, &c));
+	}
+	
+	else
+	{
+		float c = VAL(float, &b.value) != 0.0f || VAL(float, &a.value) != 0.0f ? 1.0f : 0.0f;
+		PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &c));
+	}
+}
+
+void actionNot(SWFAppContext* app_context)
+{
+	ActionVar v;
+	convertFloat(app_context);
+	popVar(app_context, &v);
+	
+	float result = v.value == 0.0f ? 1.0f : 0.0f;
+	PUSH(ACTION_STACK_VALUE_F32, VAL(u64, &result));
+}
+
+// ==================================================================
+// String Operations
+// ==================================================================
+
+void actionStringEquals(SWFAppContext* app_context, char* a_str, char* b_str)
+{
+	ActionVar a;
+	convertString(app_context, a_str);
+	popVar(app_context, &a);
+	
+	ActionVar b;
+	convertString(app_context, b_str);
+	popVar(app_context, &b);
+	
+	int cmp_result;
+	
+	int a_is_list = a.type == ACTION_STACK_VALUE_STR_LIST;
+	int b_is_list = b.type == ACTION_STACK_VALUE_STR_LIST;
+	
+	if (a_is_list && b_is_list)
+	{
+		cmp_result = strcmp_list_a_list_b(a.value, b.value);
+	}
+	
+	else if (a_is_list && !b_is_list)
+	{
+		cmp_result = strcmp_list_a_not_b(a.value, b.value);
+	}
+	
+	else if (!a_is_list && b_is_list)
+	{
+		cmp_result = strcmp_not_a_list_b(a.value, b.value);
+	}
+	
+	else
+	{
+		cmp_result = strcmp((char*) a.value, (char*) b.value);
+	}
+	
+	float result = cmp_result == 0 ? 1.0f : 0.0f;
+	PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &result));
+}
+
+void actionStringLength(SWFAppContext* app_context, char* v_str)
+{
+	ActionVar v;
+	convertString(app_context, v_str);
+	popVar(app_context, &v);
+	
+	float str_size = (float) v.str_size;
+	PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &str_size));
+}
+
+void actionStringAdd(SWFAppContext* app_context, char* a_str, char* b_str)
+{
+	ActionVar a;
+	convertString(app_context, a_str);
+	peekVar(app_context, &a);
+	
+	ActionVar b;
+	convertString(app_context, b_str);
+	peekSecondVar(app_context, &b);
+	
+	u64 num_a_strings;
+	u64 num_b_strings;
+	u64 num_strings = 0;
+	
+	if (b.type == ACTION_STACK_VALUE_STR_LIST)
+	{
+		num_b_strings = *((u64*) b.value);
+	}
+	
+	else
+	{
+		num_b_strings = 1;
+	}
+	
+	num_strings += num_b_strings;
+	
+	if (a.type == ACTION_STACK_VALUE_STR_LIST)
+	{
+		num_a_strings = *((u64*) a.value);
+	}
+	
+	else
+	{
+		num_a_strings = 1;
+	}
+	
+	num_strings += num_a_strings;
+	
+	PUSH_STR_LIST(b.str_size + a.str_size, (u32) sizeof(u64)*(2*num_strings + 1));
+	
+	u64* str_list = (u64*) &STACK_TOP_VALUE;
+	str_list[0] = num_strings;
+	
+	if (b.type == ACTION_STACK_VALUE_STR_LIST)
+	{
+		u64* b_list = (u64*) b.value;
+		
+		for (u64 i = 0; i < num_b_strings; ++i)
+		{
+			u64 str_i = 2*i;
+			str_list[str_i + 1] = b_list[str_i + 1];
+			str_list[str_i + 2] = b_list[str_i + 2];
+		}
+	}
+	
+	else
+	{
+		str_list[1] = b.value;
+		str_list[2] = b.str_size;
+	}
+	
+	if (a.type == ACTION_STACK_VALUE_STR_LIST)
+	{
+		u64* a_list = (u64*) a.value;
+		
+		for (u64 i = 0; i < num_a_strings; ++i)
+		{
+			u64 str_i = 2*i;
+			str_list[str_i + 1 + 2*num_b_strings] = a_list[str_i + 1];
+			str_list[str_i + 2 + 2*num_b_strings] = a_list[str_i + 2];
+		}
+	}
+	
+	else
+	{
+		str_list[1 + 2*num_b_strings] = a.value;
+		str_list[1 + 2*num_b_strings + 1] = a.str_size;
+	}
+}
+
+// ==================================================================
+// Variable Operations
+// ==================================================================
+
+void actionGetVariable(SWFAppContext* app_context)
+{
+	// Read variable name info from stack
+	u32 string_id = STACK_TOP_ID;
+	char* var_name = (char*) STACK_TOP_VALUE;
+	u32 var_name_len = STACK_TOP_N;
+	
+	// Pop variable name
+	POP();
+	
+	// Get variable (fast path for constant strings)
+	ActionVar* var = NULL;
+	
+	if (string_id != 0)
+	{
+		// Constant string - use array (O(1))
+		var = getVariableById(app_context, string_id);
+	}
+	
+	else
+	{
+		// Dynamic string - use hashmap (O(n))
+		var = getVariable(app_context, var_name, var_name_len);
+	}
+	
+	assert(var != NULL);
+	
+	// Push variable value to stack
+	PUSH_VAR(var);
+}
+
+void actionSetVariable(SWFAppContext* app_context)
+{
+	// Stack layout: [value] [name] <- sp
+	// We need value at top, name at second
+	
+	// Read variable name info
+	u32 string_id = STACK_SECOND_TOP_ID;
+	char* var_name = (char*) STACK_SECOND_TOP_VALUE;
+	u32 var_name_len = STACK_SECOND_TOP_N;
+	
+	// Get variable (fast path for constant strings)
+	ActionVar* var = NULL;
+	
+	if (string_id != 0)
+	{
+		// Constant string - use array (O(1))
+		var = getVariableById(app_context, string_id);
+	}
+	
+	else
+	{
+		// Dynamic string - use hashmap (O(n))
+		var = getVariable(app_context, var_name, var_name_len);
+	}
+	
+	assert(var != NULL);
+	
+	// Set variable value (uses existing string materialization!)
+	setVariableWithValue(app_context, var);
+	
+	// Pop both value and name
+	POP_2();
+}
+
+// ==================================================================
+// Utility Operations
+// ==================================================================
+
+void actionTrace(SWFAppContext* app_context)
+{
+	ActionStackValueType type = STACK_TOP_TYPE;
+	
+	switch (type)
+	{
+		case ACTION_STACK_VALUE_STRING:
+		{
+			printf("%s\n", (char*) STACK_TOP_VALUE);
+			break;
+		}
+		
+		case ACTION_STACK_VALUE_STR_LIST:
+		{
+			u64* str_list = (u64*) &STACK_TOP_VALUE;
+			
+			for (u64 i = 0; i < 2*str_list[0]; i += 2)
+			{
+				printf("%s", (char*) str_list[i + 1]);
+			}
+			
+			printf("\n");
+			
+			break;
+		}
+		
+		case ACTION_STACK_VALUE_F32:
+		{
+			printf("%.15g\n", VAL(float, &STACK_TOP_VALUE));
+			break;
+		}
+		
+		case ACTION_STACK_VALUE_F64:
+		{
+			printf("%.15g\n", VAL(double, &STACK_TOP_VALUE));
+			break;
+		}
+	}
+	
+	fflush(stdout);
+	
+	POP();
+}
+
+void actionGetTime(SWFAppContext* app_context)
+{
+	u32 delta_ms = get_elapsed_ms() - start_time;
+	float delta_ms_f32 = (float) delta_ms;
+	
+	PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &delta_ms_f32));
+}
+
+// ==================================================================
 // EnumeratedName helper structures for property enumeration
 // ==================================================================
 
