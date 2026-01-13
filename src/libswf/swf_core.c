@@ -35,7 +35,7 @@ void swfStart(SWFAppContext* app_context)
 	
 	initVarArray(app_context, app_context->max_string_id);
 	
-	initTime();
+	initTime(app_context);
 	initMap();
 	tagInit();
 	

@@ -53,7 +53,7 @@ void heap_free(SWFAppContext* app_context, void* ptr);
  * Shutdown the heap system
  *
  * Frees all heap arenas. Should be called at program exit.
- * 
+ *
  * @param app_context Main app context
  */
 void heap_shutdown(SWFAppContext* app_context);
