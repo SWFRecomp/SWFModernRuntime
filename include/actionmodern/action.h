@@ -61,26 +61,66 @@
 
 extern ActionVar* temp_val;
 
-void initTime();
+void initTime(SWFAppContext* app_context);
 
 void pushVar(SWFAppContext* app_context, ActionVar* p);
 
+// Arithmetic Operations
 void actionAdd(SWFAppContext* app_context);
 void actionSubtract(SWFAppContext* app_context);
 void actionMultiply(SWFAppContext* app_context);
 void actionDivide(SWFAppContext* app_context);
+
+// Comparison Operations
 void actionEquals(SWFAppContext* app_context);
 void actionLess(SWFAppContext* app_context);
 void actionAnd(SWFAppContext* app_context);
 void actionOr(SWFAppContext* app_context);
 void actionNot(SWFAppContext* app_context);
 
+// String Operations
 void actionStringEquals(SWFAppContext* app_context, char* a_str, char* b_str);
 void actionStringLength(SWFAppContext* app_context, char* v_str);
 void actionStringAdd(SWFAppContext* app_context, char* a_str, char* b_str);
 
+// Variable Operations
 void actionGetVariable(SWFAppContext* app_context);
 void actionSetVariable(SWFAppContext* app_context);
 
+// Utility Operations
 void actionTrace(SWFAppContext* app_context);
 void actionGetTime(SWFAppContext* app_context);
+
+// Object Operations
+void actionGetMember(SWFAppContext* app_context);
+void actionSetMember(SWFAppContext* app_context);
+void actionTypeof(SWFAppContext* app_context, char* str_buffer);
+void actionEnumerate(SWFAppContext* app_context, char* str_buffer);
+void actionEnumerate2(SWFAppContext* app_context, char* str_buffer);
+void actionDelete(SWFAppContext* app_context);
+void actionDelete2(SWFAppContext* app_context, char* str_buffer);
+void actionNewObject(SWFAppContext* app_context);
+void actionNewMethod(SWFAppContext* app_context);
+void actionInitObject(SWFAppContext* app_context);
+void actionInstanceOf(SWFAppContext* app_context);
+void actionExtends(SWFAppContext* app_context);
+
+// Array Operations
+void actionInitArray(SWFAppContext* app_context);
+
+// Function Operations
+void actionDefineLocal(SWFAppContext* app_context);
+void actionDeclareLocal(SWFAppContext* app_context);
+void actionCallFunction(SWFAppContext* app_context, char* str_buffer);
+void actionCallMethod(SWFAppContext* app_context, char* str_buffer);
+void actionReturn(SWFAppContext* app_context);
+
+// Stack/Register Operations
+void actionStoreRegister(SWFAppContext* app_context, u8 register_num);
+void actionPushRegister(SWFAppContext* app_context, u8 register_num);
+
+// Function Definitions
+void actionDefineFunction(SWFAppContext* app_context, const char* name, void (*func)(SWFAppContext*), u32 param_count);
+
+typedef ActionVar (*Function2Ptr)(SWFAppContext* app_context, ActionVar* args, u32 arg_count, ActionVar* registers, void* this_obj);
+void actionDefineFunction2(SWFAppContext* app_context, const char* name, Function2Ptr func, u32 param_count, u8 register_count, u16 flags);
