@@ -1,5 +1,8 @@
-#include <common.h>
+#ifdef NO_GRAPHICS
+
 #include <tag.h>
+#include <swf.h>
+#include <common.h>
 
 // Stub implementations for console-only mode
 // Note: tagInit() is provided by the generated tagMain.c file
@@ -9,8 +12,9 @@ void tagSetBackgroundColor(u8 red, u8 green, u8 blue)
 	printf("[Tag] SetBackgroundColor(%d, %d, %d)\n", red, green, blue);
 }
 
-void tagShowFrame()
+void tagShowFrame(SWFAppContext* app_context)
 {
+	(void)app_context;  // Unused in NO_GRAPHICS mode
 	printf("[Tag] ShowFrame()\n");
 }
 
@@ -37,3 +41,5 @@ void finalizeBitmaps()
 	printf("[Tag] FinalizeBitmaps() [ignored in NO_GRAPHICS mode]\n");
 }
 #endif
+
+#endif // NO_GRAPHICS

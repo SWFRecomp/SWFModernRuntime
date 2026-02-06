@@ -33,7 +33,9 @@ void swfStart(SWFAppContext* app_context)
 	next_frame = 0;
 	manual_next_frame = 0;
 	
-	initTime();
+	initVarArray(app_context, app_context->max_string_id);
+	
+	initTime(app_context);
 	initMap();
 	tagInit();
 	
@@ -75,7 +77,7 @@ void swfStart(SWFAppContext* app_context)
 	printf("\n=== SWF Execution Completed ===\n");
 	
 	// Cleanup
-	freeMap();
+	freeMap(app_context);
 	FREE(stack);
 	
 	heap_shutdown(app_context);
