@@ -407,7 +407,7 @@ ASObject* getConstructor(ASObject* obj)
 
 	// Look for "constructor" property
 	static const char* constructor_name = "constructor";
-	ActionVar* constructor_var = getProperty(obj, constructor_name, 12);
+	ActionVar* constructor_var = getProperty(obj, constructor_name, 11);
 
 	if (constructor_var != NULL && constructor_var->type == ACTION_STACK_VALUE_OBJECT)
 	{
