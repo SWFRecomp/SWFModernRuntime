@@ -20,15 +20,11 @@ ASObject* allocObject(SWFAppContext* app_context, u32 initial_capacity)
 		fprintf(stderr, "ERROR: Failed to allocate ASObject\n");
 		return NULL;
 	}
-
+	
 	obj->refcount = 1;  // Initial reference owned by caller
 	obj->num_properties = initial_capacity;
 	obj->num_used = 0;
-
-	// Initialize interface fields
-	obj->interface_count = 0;
-	obj->interfaces = NULL;
-
+	
 	// Allocate property array
 	if (initial_capacity > 0)
 	{
@@ -39,7 +35,7 @@ ASObject* allocObject(SWFAppContext* app_context, u32 initial_capacity)
 			free(obj);
 			return NULL;
 		}
-
+		
 		// Initialize properties to zero
 		memset(obj->properties, 0, sizeof(ASProperty) * initial_capacity);
 	}
@@ -47,12 +43,12 @@ ASObject* allocObject(SWFAppContext* app_context, u32 initial_capacity)
 	{
 		obj->properties = NULL;
 	}
-
+	
 #ifdef DEBUG
 	printf("[DEBUG] allocObject: obj=%p, refcount=%u, capacity=%u\n",
 		(void*)obj, obj->refcount, obj->num_properties);
 #endif
-
+	
 	return obj;
 }
 
@@ -131,16 +127,6 @@ void releaseObject(SWFAppContext* app_context, ASObject* obj)
 		if (obj->properties != NULL)
 		{
 			free(obj->properties);
-		}
-
-		// Release interface objects
-		if (obj->interfaces != NULL)
-		{
-			for (u32 i = 0; i < obj->interface_count; i++)
-			{
-				releaseObject(app_context, obj->interfaces[i]);
-			}
-			free(obj->interfaces);
 		}
 
 		// Free object itself
@@ -407,103 +393,6 @@ bool deleteProperty(SWFAppContext* app_context, ASObject* obj, const char* name,
 }
 
 /**
- * Interface Management (ActionScript 2.0)
- */
-
-/**
- * Set Interface List
- *
- * Sets the list of interfaces that a constructor implements.
- * Takes ownership of the interfaces array.
- * Called by ActionImplementsOp (0x2C).
- */
-void setInterfaceList(SWFAppContext* app_context, ASObject* constructor, ASObject** interfaces, u32 count)
-{
-	if (constructor == NULL)
-	{
-		// Free interfaces array if constructor is NULL
-		if (interfaces != NULL)
-		{
-			for (u32 i = 0; i < count; i++)
-			{
-				releaseObject(app_context, interfaces[i]);
-			}
-			free(interfaces);
-		}
-		return;
-	}
-
-	// Release old interfaces if they exist
-	if (constructor->interfaces != NULL)
-	{
-		for (u32 i = 0; i < constructor->interface_count; i++)
-		{
-			releaseObject(app_context, constructor->interfaces[i]);
-		}
-		free(constructor->interfaces);
-	}
-
-	// Set new interfaces
-	constructor->interfaces = interfaces;
-	constructor->interface_count = count;
-
-	// Retain each interface object
-	if (interfaces != NULL)
-	{
-		for (u32 i = 0; i < count; i++)
-		{
-			retainObject(interfaces[i]);
-		}
-	}
-
-#ifdef DEBUG
-	printf("[DEBUG] setInterfaceList: constructor=%p, interface_count=%u\n",
-		(void*)constructor, count);
-#endif
-}
-
-/**
- * Implements Interface
- *
- * Check if an object implements a specific interface.
- * Returns 1 if the object's constructor implements the interface, 0 otherwise.
- * Performs recursive check for interface inheritance.
- */
-int implementsInterface(ASObject* obj, ASObject* interface_ctor)
-{
-	if (obj == NULL || interface_ctor == NULL)
-	{
-		return 0;
-	}
-
-	// Get the object's constructor
-	ASObject* obj_ctor = getConstructor(obj);
-	if (obj_ctor == NULL)
-	{
-		return 0;
-	}
-
-	// Check if constructor implements the interface
-	for (u32 i = 0; i < obj_ctor->interface_count; i++)
-	{
-		// Direct match
-		if (obj_ctor->interfaces[i] == interface_ctor)
-		{
-			return 1;
-		}
-
-		// Recursive check for interface inheritance
-		// (interfaces can extend other interfaces)
-		if (implementsInterface(obj_ctor->interfaces[i], interface_ctor))
-		{
-			return 1;
-		}
-	}
-
-	return 0;
-}
-
-/**
  * Get Constructor
  *
  * Get the constructor function for an object.
@@ -518,7 +407,7 @@ ASObject* getConstructor(ASObject* obj)
 
 	// Look for "constructor" property
 	static const char* constructor_name = "constructor";
-	ActionVar* constructor_var = getProperty(obj, constructor_name, strlen(constructor_name));
+	ActionVar* constructor_var = getProperty(obj, constructor_name, 12);
 
 	if (constructor_var != NULL && constructor_var->type == ACTION_STACK_VALUE_OBJECT)
 	{

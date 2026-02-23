@@ -1,22 +1,14 @@
+#include <assert.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <math.h>
 #include <string.h>
 #include <time.h>
-
-// constants.h is generated per-test and contains SWF_FRAME_COUNT
-// It's optional - if not present, SWF_FRAME_COUNT defaults are used
-#ifdef __has_include
-#  if __has_include("constants.h")
-#    include "constants.h"
-#  endif
-#endif
-
 #include <recomp.h>
 #include <utils.h>
 #include <swf.h>
 #include <heap.h>
-#include <actionmodern/object.h>
+#include <object.h>
 
 u32 start_time;
 
@@ -24,7 +16,7 @@ u32 start_time;
 // Scope Chain for WITH statement
 // ==================================================================
 
-#define MAX_SCOPE_DEPTH 32
+#define MAX_SCOPE_DEPTH 16
 static ASObject* scope_chain[MAX_SCOPE_DEPTH];
 static u32 scope_depth = 0;
 
@@ -32,18 +24,14 @@ static u32 scope_depth = 0;
 // Function Storage and Management
 // ==================================================================
 
-// Function pointer types
-typedef void (*SimpleFunctionPtr)(SWFAppContext* app_context);
-typedef ActionVar (*Function2Ptr)(SWFAppContext* app_context, ActionVar* args, u32 arg_count, ActionVar* registers, void* this_obj);
-
 // Function object structure
-typedef struct ASFunction {
-	char name[256];           // Function name (can be empty for anonymous)
+typedef struct {
+	char* name;           // Function name (can be NULL for anonymous)
 	u8 function_type;         // 1 = simple (DefineFunction), 2 = advanced (DefineFunction2)
 	u32 param_count;          // Number of parameters
 	
 	// For DefineFunction (type 1)
-	SimpleFunctionPtr simple_func;
+	action_func simple_func;
 	
 	// For DefineFunction2 (type 2)
 	Function2Ptr advanced_func;
@@ -51,20 +39,9 @@ typedef struct ASFunction {
 	u16 flags;
 } ASFunction;
 
-// Function registry
-#define MAX_FUNCTIONS 256
-static ASFunction* function_registry[MAX_FUNCTIONS];
-static u32 function_count = 0;
-
 // Helper to look up function by name
-static ASFunction* lookupFunctionByName(const char* name, u32 name_len) {
-	for (u32 i = 0; i < function_count; i++) {
-		if (strlen(function_registry[i]->name) == name_len &&
-		    strncmp(function_registry[i]->name, name, name_len) == 0) {
-			return function_registry[i];
-		}
-	}
-	return NULL;
+static action_func lookupFunctionByName(SWFAppContext* app_context, u32 string_id, const char* name, u32 name_len) {
+	return app_context->func_table[string_id];
 }
 
 // Helper to look up function from ActionVar
@@ -78,11 +55,6 @@ static ASFunction* lookupFunctionFromVar(ActionVar* var) {
 void initTime(SWFAppContext* app_context)
 {
 	start_time = get_elapsed_ms();
-	
-	// Initialize global object if not already initialized
-	if (global_object == NULL) {
-		global_object = allocObject(app_context, 16);  // Start with capacity for 16 global properties
-	}
 }
 
 // ==================================================================
@@ -94,10 +66,10 @@ ActionStackValueType convertString(SWFAppContext* app_context, char* var_str)
 {
 	if (STACK_TOP_TYPE == ACTION_STACK_VALUE_F32)
 	{
-		float temp_val = VAL(float, &STACK_TOP_VALUE);  // Save the float value first!
+		float temp_val = VAL(float, &STACK_TOP_VALUE);
 		STACK_TOP_TYPE = ACTION_STACK_VALUE_STRING;
 		VAL(u64, &STACK_TOP_VALUE) = (u64) var_str;
-		snprintf(var_str, 17, "%.15g", temp_val);  // Use the saved value
+		snprintf(var_str, 17, "%.15g", temp_val);
 	}
 	
 	return ACTION_STACK_VALUE_STRING;
@@ -166,27 +138,17 @@ void peekVar(SWFAppContext* app_context, ActionVar* var)
 	if (STACK_TOP_TYPE == ACTION_STACK_VALUE_STR_LIST)
 	{
 		var->value = (u64) &STACK_TOP_VALUE;
-		var->string_id = 0;  // String lists don't have IDs
 	}
 	else if (STACK_TOP_TYPE == ACTION_STACK_VALUE_STRING)
 	{
-		// For strings, store pointer and mark as not owning memory (it's on the stack)
-		var->value = VAL(u64, &STACK_TOP_VALUE);
-		var->heap_ptr = (char*) var->value;
+		// For strings, mark as not owning memory (it's on the stack)
+		var->value = STACK_TOP_VALUE;
 		var->owns_memory = false;
-		var->string_id = VAL(u32, &STACK[SP + 12]);  // Read string_id from stack
+		var->string_id = STACK_TOP_ID;
 	}
 	else
 	{
-		var->value = VAL(u64, &STACK_TOP_VALUE);
-		var->string_id = 0;  // Non-string types don't have IDs
-	}
-	
-	// Initialize owns_memory to false for non-heap strings
-	// (When the value is in numeric_value, not string_data.heap_ptr)
-	if (var->type == ACTION_STACK_VALUE_STRING)
-	{
-		var->owns_memory = false;
+		var->value = STACK_TOP_VALUE;
 	}
 }
 
@@ -199,37 +161,26 @@ void popVar(SWFAppContext* app_context, ActionVar* var)
 
 void peekSecondVar(SWFAppContext* app_context, ActionVar* var)
 {
-	u32 second_sp = SP_SECOND_TOP;
-	var->type = STACK[second_sp];
-	var->str_size = VAL(u32, &STACK[second_sp + 8]);
+	var->type = STACK_SECOND_TOP_TYPE;
+	var->str_size = STACK_SECOND_TOP_N;
 	
-	if (STACK[second_sp] == ACTION_STACK_VALUE_STR_LIST)
+	if (STACK_SECOND_TOP_TYPE == ACTION_STACK_VALUE_STR_LIST)
 	{
-		var->value = (u64) &VAL(u64, &STACK[second_sp + 16]);
-		var->string_id = 0;
+		var->value = (u64) &STACK_SECOND_TOP_VALUE;
 	}
-	else if (STACK[second_sp] == ACTION_STACK_VALUE_STRING)
+	
+	else if (STACK_SECOND_TOP_TYPE == ACTION_STACK_VALUE_STRING)
 	{
-		var->value = VAL(u64, &STACK[second_sp + 16]);
-		var->heap_ptr = (char*) var->value;
+		var->value = STACK_SECOND_TOP_VALUE;
 		var->owns_memory = false;
-		var->string_id = VAL(u32, &STACK[second_sp + 12]);
+		var->string_id = STACK_SECOND_TOP_ID;
 	}
+	
 	else
 	{
-		var->value = VAL(u64, &STACK[second_sp + 16]);
-		var->string_id = 0;
-	}
-	
-	if (var->type == ACTION_STACK_VALUE_STRING)
-	{
-		var->owns_memory = false;
+		var->value = STACK_SECOND_TOP_VALUE;
 	}
 }
-
-// ==================================================================
-// Arithmetic Operations
-// ==================================================================
 
 void actionAdd(SWFAppContext* app_context)
 {
@@ -1535,187 +1486,6 @@ void actionReturn(SWFAppContext* app_context)
 	// the actual return via C return statement.
 }
 
-void actionInstanceOf(SWFAppContext* app_context)
-{
-	// Pop constructor function
-	ActionVar constr_var;
-	popVar(app_context, &constr_var);
-	
-	// Pop object
-	ActionVar obj_var;
-	popVar(app_context, &obj_var);
-	
-	// Check if object is an instance of constructor using prototype chain + interfaces
-	int result = checkInstanceOf(&obj_var, &constr_var);
-	
-	// Push result as float (1.0 for true, 0.0 for false)
-	float result_val = result ? 1.0f : 0.0f;
-	PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &result_val));
-}
-
-void actionEnumerate2(SWFAppContext* app_context, char* str_buffer)
-{
-	// Pop object reference from stack
-	ActionVar obj_var;
-	popVar(app_context, &obj_var);
-	
-	// Push undefined as terminator
-	PUSH(ACTION_STACK_VALUE_UNDEFINED, 0);
-	
-	// Handle different types
-	if (obj_var.type == ACTION_STACK_VALUE_OBJECT)
-	{
-		// Object enumeration - push property names in reverse order
-		ASObject* obj = (ASObject*) obj_var.value;
-		
-		if (obj != NULL && obj->num_used > 0)
-		{
-			// Enumerate properties in reverse order (last to first)
-			// This way when they're popped, they'll come out in the correct order
-			for (int i = obj->num_used - 1; i >= 0; i--)
-			{
-				const char* prop_name = obj->properties[i].name;
-				u32 prop_name_len = obj->properties[i].name_length;
-				
-				// Push property name as string
-				PUSH_STR(prop_name, prop_name_len);
-			}
-		}
-		
-		#ifdef DEBUG
-		printf("// Enumerate2: enumerated %u properties from object\n",
-			obj ? obj->num_used : 0);
-		#endif
-	}
-	else if (obj_var.type == ACTION_STACK_VALUE_ARRAY)
-	{
-		// Array enumeration - push indices as strings
-		ASArray* arr = (ASArray*) obj_var.value;
-		
-		if (arr != NULL && arr->length > 0)
-		{
-			// Enumerate indices in reverse order
-			for (int i = arr->length - 1; i >= 0; i--)
-			{
-				// Convert index to string
-				snprintf(str_buffer, 17, "%d", i);
-				u32 len = strlen(str_buffer);
-				
-				// Push index as string
-				PUSH_STR(str_buffer, len);
-			}
-		}
-		
-		#ifdef DEBUG
-		printf("// Enumerate2: enumerated %u indices from array\n",
-			arr ? arr->length : 0);
-		#endif
-	}
-	else
-	{
-		// Non-object/non-array: just the undefined terminator
-		#ifdef DEBUG
-		printf("// Enumerate2: non-enumerable type, only undefined pushed\n");
-		#endif
-	}
-}
-
-void actionExtends(SWFAppContext* app_context)
-{
-	// Pop superclass constructor from stack
-	ActionVar superclass;
-	popVar(app_context, &superclass);
-	
-	// Pop subclass constructor from stack
-	ActionVar subclass;
-	popVar(app_context, &subclass);
-	
-	// Verify both are objects/functions
-	if (superclass.type != ACTION_STACK_VALUE_OBJECT &&
-	    superclass.type != ACTION_STACK_VALUE_FUNCTION)
-	{
-#ifdef DEBUG
-		printf("[DEBUG] actionExtends: superclass is not an object/function (type=%d)\n",
-		       superclass.type);
-#endif
-		return;
-	}
-	
-	if (subclass.type != ACTION_STACK_VALUE_OBJECT &&
-	    subclass.type != ACTION_STACK_VALUE_FUNCTION)
-	{
-#ifdef DEBUG
-		printf("[DEBUG] actionExtends: subclass is not an object/function (type=%d)\n",
-		       subclass.type);
-#endif
-		return;
-	}
-	
-	// Get constructor objects
-	ASObject* super_func = (ASObject*) superclass.value;
-	ASObject* sub_func = (ASObject*) subclass.value;
-	
-	if (super_func == NULL || sub_func == NULL)
-	{
-#ifdef DEBUG
-		printf("[DEBUG] actionExtends: NULL constructor object\n");
-#endif
-		return;
-	}
-	
-	// Create new prototype object
-	ASObject* new_proto = allocObject(app_context, 0);
-	if (new_proto == NULL)
-	{
-#ifdef DEBUG
-		printf("[DEBUG] actionExtends: Failed to allocate new prototype\n");
-#endif
-		return;
-	}
-	
-	// Get superclass prototype property
-	ActionVar* super_proto_var = getProperty(super_func, "prototype", 9);
-	
-	// Set __proto__ of new prototype to superclass prototype
-	if (super_proto_var != NULL)
-	{
-		setProperty(app_context, new_proto, "__proto__", 9, super_proto_var);
-	}
-	
-	// Set constructor property to superclass
-	setProperty(app_context, new_proto, "constructor", 11, &superclass);
-	
-#ifdef DEBUG
-	printf("[DEBUG] actionExtends: Set constructor property - type=%d, ptr=%p\n",
-		superclass.type, (void*)superclass.value);
-		
-	// Verify it was set correctly
-	ActionVar* check = getProperty(new_proto, "constructor", 11);
-	if (check != NULL) {
-		printf("[DEBUG] actionExtends: Retrieved constructor - type=%d, ptr=%p\n",
-			check->type, (void*)check->value);
-	}
-#endif
-
-	// Set subclass prototype to new object
-	ActionVar new_proto_var;
-	new_proto_var.type = ACTION_STACK_VALUE_OBJECT;
-	new_proto_var.value = (u64) new_proto;
-	new_proto_var.str_size = 0;
-	
-	setProperty(app_context, sub_func, "prototype", 9, &new_proto_var);
-	
-	// Release our reference to new_proto
-	// (setProperty retained it when setting as prototype)
-	releaseObject(app_context, new_proto);
-	
-#ifdef DEBUG
-	printf("[DEBUG] actionExtends: Prototype chain established\n");
-#endif
-
-	// Note: No values pushed back on stack
-}
-
 // ==================================================================
 // Register Storage (up to 256 registers for SWF 5+)
 // ==================================================================
@@ -1736,34 +1506,6 @@ void actionStoreRegister(SWFAppContext* app_context, u8 register_num)
 	
 	// Store value in register
 	g_registers[register_num] = value;
-}
-
-void actionPushRegister(SWFAppContext* app_context, u8 register_num)
-{
-	// Validate register number
-	if (register_num >= MAX_REGISTERS) {
-		// Push undefined for invalid register
-		float undef = 0.0f;
-		PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &undef));
-		return;
-	}
-	
-	ActionVar* reg = &g_registers[register_num];
-	
-	// Push register value to stack
-	if (reg->type == ACTION_STACK_VALUE_F32 || reg->type == ACTION_STACK_VALUE_F64) {
-		PUSH(reg->type, reg->value);
-	} else if (reg->type == ACTION_STACK_VALUE_STRING) {
-		const char* str = (const char*) reg->value;
-		PUSH_STR(str, reg->str_size);
-	} else if (reg->type == ACTION_STACK_VALUE_STR_LIST) {
-		// String list - push reference
-		PUSH_STR_LIST(reg->str_size, 0);
-	} else {
-		// Undefined or unknown type - push 0
-		float undef = 0.0f;
-		PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &undef));
-	}
 }
 
 void actionInitArray(SWFAppContext* app_context)
@@ -2189,7 +1931,7 @@ void actionNewObject(SWFAppContext* app_context)
 	}
 	
 	// Pop arguments in reverse order (first arg is deepest on stack)
-	for (int i = (int)num_args - 1; i >= 0; i--)
+	for (int i = (int) num_args - 1; i >= 0; i--)
 	{
 		popVar(app_context, &args[i]);
 	}
@@ -2405,7 +2147,8 @@ void actionNewObject(SWFAppContext* app_context)
 	else
 	{
 		// Try to find user-defined constructor function
-		ASFunction* ctor_func = lookupFunctionByName(ctor_name, ctor_name_len);
+		//~ ASFunction* ctor_func = lookupFunctionByName(ctor_name, ctor_name_len);
+		ASFunction* ctor_func = NULL;
 		
 		if (ctor_func != NULL)
 		{
@@ -2907,382 +2650,117 @@ void actionNewMethod(SWFAppContext* app_context)
 	}
 }
 
-void actionDefineFunction(SWFAppContext* app_context, const char* name, void (*func)(SWFAppContext*), u32 param_count)
+void actionDefineFunction(SWFAppContext* app_context, const char* name, action_func func, u32 param_count)
 {
-	// Create function object
-	ASFunction* as_func = (ASFunction*) malloc(sizeof(ASFunction));
-	if (as_func == NULL) {
-		fprintf(stderr, "ERROR: Failed to allocate memory for function\n");
-		return;
-	}
+	//~ // Create function object
+	//~ ASFunction* as_func = (ASFunction*) malloc(sizeof(ASFunction));
+	//~ if (as_func == NULL) {
+		//~ fprintf(stderr, "ERROR: Failed to allocate memory for function\n");
+		//~ return;
+	//~ }
 	
-	// Initialize function object
-	strncpy(as_func->name, name, 255);
-	as_func->name[255] = '\0';
-	as_func->function_type = 1;  // Simple function
-	as_func->param_count = param_count;
-	as_func->simple_func = (SimpleFunctionPtr) func;
-	as_func->advanced_func = NULL;
-	as_func->register_count = 0;
-	as_func->flags = 0;
+	//~ // Initialize function object
+	//~ strncpy(as_func->name, name, 255);
+	//~ as_func->name[255] = '\0';
+	//~ as_func->function_type = 1;  // Simple function
+	//~ as_func->param_count = param_count;
+	//~ as_func->simple_func = (action_func) func;
+	//~ as_func->advanced_func = NULL;
+	//~ as_func->register_count = 0;
+	//~ as_func->flags = 0;
 	
-	// Register function
-	if (function_count < MAX_FUNCTIONS) {
-		function_registry[function_count++] = as_func;
-	} else {
-		fprintf(stderr, "ERROR: Function registry full\n");
-		free(as_func);
-		return;
-	}
+	//~ // Register function
+	//~ if (function_count < MAX_FUNCTIONS) {
+		//~ function_registry[function_count++] = as_func;
+	//~ } else {
+		//~ fprintf(stderr, "ERROR: Function registry full\n");
+		//~ free(as_func);
+		//~ return;
+	//~ }
 	
-	// If named, store in variable
-	if (strlen(name) > 0) {
-		ActionVar func_var;
-		func_var.type = ACTION_STACK_VALUE_FUNCTION;
-		func_var.str_size = 0;
-		func_var.value = (u64) as_func;
-		ActionVar* var = getVariable(app_context, (char*)name, strlen(name));
-		if (var) {
-			*var = func_var;
-		}
-	} else {
-		// Anonymous function: push to stack
-		PUSH(ACTION_STACK_VALUE_FUNCTION, (u64) as_func);
-	}
+	//~ // If named, store in variable
+	//~ if (strlen(name) > 0) {
+		//~ ActionVar func_var;
+		//~ func_var.type = ACTION_STACK_VALUE_FUNCTION;
+		//~ func_var.str_size = 0;
+		//~ func_var.value = (u64) as_func;
+		//~ ActionVar* var = getVariable(app_context, (char*)name, strlen(name));
+		//~ if (var) {
+			//~ *var = func_var;
+		//~ }
+	//~ } else {
+		//~ // Anonymous function: push to stack
+		//~ PUSH(ACTION_STACK_VALUE_FUNCTION, (u64) as_func);
+	//~ }
 }
 
-void actionDefineFunction2(SWFAppContext* app_context, const char* name, Function2Ptr func, u32 param_count, u8 register_count, u16 flags)
-{
-	// Create function object
-	ASFunction* as_func = (ASFunction*) malloc(sizeof(ASFunction));
-	if (as_func == NULL) {
-		fprintf(stderr, "ERROR: Failed to allocate memory for function\n");
-		return;
-	}
-	
-	// Initialize function object
-	strncpy(as_func->name, name, 255);
-	as_func->name[255] = '\0';
-	as_func->function_type = 2;  // Advanced function
-	as_func->param_count = param_count;
-	as_func->simple_func = NULL;
-	as_func->advanced_func = func;
-	as_func->register_count = register_count;
-	as_func->flags = flags;
-	
-	// Register function
-	if (function_count < MAX_FUNCTIONS) {
-		function_registry[function_count++] = as_func;
-	} else {
-		fprintf(stderr, "ERROR: Function registry full\n");
-		free(as_func);
-		return;
-	}
-	
-	// If named, store in variable
-	if (strlen(name) > 0) {
-		ActionVar func_var;
-		func_var.type = ACTION_STACK_VALUE_FUNCTION;
-		func_var.str_size = 0;
-		func_var.value = (u64) as_func;
-		ActionVar* var = getVariable(app_context, (char*)name, strlen(name));
-		if (var) {
-			*var = func_var;
-		}
-	} else {
-		// Anonymous function: push to stack
-		PUSH(ACTION_STACK_VALUE_FUNCTION, (u64) as_func);
-	}
-}
-
-void actionCallFunction(SWFAppContext* app_context, char* str_buffer)
+void actionCallFunction(SWFAppContext* app_context)
 {
 	// 1. Pop function name (string) from stack
-	char func_name_buffer[17];
-	convertString(app_context, func_name_buffer);
-	const char* func_name = (const char*) VAL(u64, &STACK_TOP_VALUE);
+	const char* func_name = (const char*) STACK_TOP_VALUE;
 	u32 func_name_len = STACK_TOP_N;
+	u32 string_id = STACK_TOP_ID;
 	POP();
 	
 	// 2. Pop number of arguments
 	ActionVar num_args_var;
 	popVar(app_context, &num_args_var);
-	u32 num_args = 0;
+	//~ u32 num_args = (u32) num_args_var.value;
 	
-	if (num_args_var.type == ACTION_STACK_VALUE_F32)
-	{
-		num_args = (u32) VAL(float, &num_args_var.value);
-	}
-	else if (num_args_var.type == ACTION_STACK_VALUE_F64)
-	{
-		num_args = (u32) VAL(double, &num_args_var.value);
-	}
+	//~ // 3. Pop arguments from stack (in reverse order)
+	//~ ActionVar* args = NULL;
+	//~ if (num_args > 0)
+	//~ {
+		//~ args = (ActionVar*) HALLOC(sizeof(ActionVar)*num_args);
+		//~ for (u32 i = 0; i < num_args; i++)
+		//~ {
+			//~ popVar(app_context, &args[num_args - 1 - i]);
+		//~ }
+	//~ }
 	
-	// 3. Pop arguments from stack (in reverse order)
-	ActionVar* args = NULL;
-	if (num_args > 0)
-	{
-		args = (ActionVar*) HALLOC(sizeof(ActionVar) * num_args);
-		for (u32 i = 0; i < num_args; i++)
-		{
-			popVar(app_context, &args[num_args - 1 - i]);
-		}
-	}
+	action_func func = lookupFunctionByName(app_context, string_id, func_name, func_name_len);
 	
-	// 4. Check for built-in global functions first
-	int builtin_handled = 0;
-	
-	// parseInt(string) - Parse string to integer
-	if (func_name_len == 8 && strncmp(func_name, "parseInt", 8) == 0)
+	if (func != NULL)
 	{
-		if (num_args > 0)
-		{
-			// Convert first argument to string
-			char arg_buffer[17];
-			const char* str_value = NULL;
-			
-			if (args[0].type == ACTION_STACK_VALUE_STRING)
-			{
-				str_value = (const char*) args[0].value;
-			}
-			else if (args[0].type == ACTION_STACK_VALUE_F32)
-			{
-				// Convert float to string
-				float fval = VAL(float, &args[0].value);
-				snprintf(arg_buffer, 17, "%.15g", fval);
-				str_value = arg_buffer;
-			}
-			else if (args[0].type == ACTION_STACK_VALUE_F64)
-			{
-				// Convert double to string
-				double dval = VAL(double, &args[0].value);
-				snprintf(arg_buffer, 17, "%.15g", dval);
-				str_value = arg_buffer;
-			}
-			else
-			{
-				// Undefined or other types -> NaN
-				str_value = "NaN";
-			}
-			
-			// Parse integer from string
-			float result = (float) atoi(str_value);
-			if (args != NULL) FREE(args);
-			PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &result));
-			builtin_handled = 1;
-		}
-		else
-		{
-			// No arguments - return NaN
-			if (args != NULL) FREE(args);
-			float nan_val = 0.0f / 0.0f;
-			PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &nan_val));
-			builtin_handled = 1;
-		}
-	}
-	// parseFloat(string) - Parse string to float
-	else if (func_name_len == 10 && strncmp(func_name, "parseFloat", 10) == 0)
-	{
-		if (num_args > 0)
-		{
-			// Convert first argument to string
-			char arg_buffer[17];
-			const char* str_value = NULL;
-			
-			if (args[0].type == ACTION_STACK_VALUE_STRING)
-			{
-				str_value = (const char*) args[0].value;
-			}
-			else if (args[0].type == ACTION_STACK_VALUE_F32)
-			{
-				// Convert float to string
-				float fval = VAL(float, &args[0].value);
-				snprintf(arg_buffer, 17, "%.15g", fval);
-				str_value = arg_buffer;
-			}
-			else if (args[0].type == ACTION_STACK_VALUE_F64)
-			{
-				// Convert double to string
-				double dval = VAL(double, &args[0].value);
-				snprintf(arg_buffer, 17, "%.15g", dval);
-				str_value = arg_buffer;
-			}
-			else
-			{
-				// Undefined or other types -> NaN
-				str_value = "NaN";
-			}
-			
-			// Parse float from string
-			float result = (float) atof(str_value);
-			if (args != NULL) FREE(args);
-			PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &result));
-			builtin_handled = 1;
-		}
-		else
-		{
-			// No arguments - return NaN
-			if (args != NULL) FREE(args);
-			float nan_val = 0.0f / 0.0f;
-			PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &nan_val));
-			builtin_handled = 1;
-		}
-	}
-	// isNaN(value) - Check if value is NaN
-	else if (func_name_len == 5 && strncmp(func_name, "isNaN", 5) == 0)
-	{
-		if (num_args > 0)
-		{
-			// Convert to number and check if NaN
-			float val = 0.0f;
-			if (args[0].type == ACTION_STACK_VALUE_F32)
-			{
-				val = VAL(float, &args[0].value);
-			}
-			else if (args[0].type == ACTION_STACK_VALUE_F64)
-			{
-				val = (float) VAL(double, &args[0].value);
-			}
-			else if (args[0].type == ACTION_STACK_VALUE_STRING)
-			{
-				// Try to parse as number
-				const char* str = (const char*) args[0].value;
-				val = (float) atof(str);
-			}
-			
-			float result = (val != val) ? 1.0f : 0.0f;  // NaN != NaN is true
-			if (args != NULL) FREE(args);
-			PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &result));
-			builtin_handled = 1;
-		}
-		else
-		{
-			// No arguments - isNaN(undefined) = true
-			if (args != NULL) FREE(args);
-			float result = 1.0f;
-			PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &result));
-			builtin_handled = 1;
-		}
-	}
-	// isFinite(value) - Check if value is finite
-	else if (func_name_len == 8 && strncmp(func_name, "isFinite", 8) == 0)
-	{
-		if (num_args > 0)
-		{
-			// Convert to number and check if finite
-			float val = 0.0f;
-			if (args[0].type == ACTION_STACK_VALUE_F32)
-			{
-				val = VAL(float, &args[0].value);
-			}
-			else if (args[0].type == ACTION_STACK_VALUE_F64)
-			{
-				val = (float) VAL(double, &args[0].value);
-			}
-			else if (args[0].type == ACTION_STACK_VALUE_STRING)
-			{
-				const char* str = (const char*) args[0].value;
-				val = (float) atof(str);
-			}
-			
-			// Check if finite (not NaN and not infinity)
-			float result = (val == val && val != INFINITY && val != -INFINITY) ? 1.0f : 0.0f;
-			if (args != NULL) FREE(args);
-			PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &result));
-			builtin_handled = 1;
-		}
-		else
-		{
-			// No arguments - isFinite(undefined) = false
-			if (args != NULL) FREE(args);
-			float result = 0.0f;
-			PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &result));
-			builtin_handled = 1;
-		}
-	}
-	
-	// If not a built-in function, look up user-defined functions
-	if (!builtin_handled)
-	{
-		ASFunction* func = lookupFunctionByName(func_name, func_name_len);
+		// Simple DefineFunction (type 1)
+		// Simple functions expect arguments on the stack, not in an array
+		// We need to push arguments back onto stack in correct order
 		
-		if (func != NULL)
-		{
-			if (func->function_type == 2)
-			{
-				// DefineFunction2 with registers and this context
-				ActionVar* registers = NULL;
-				if (func->register_count > 0) {
-					registers = (ActionVar*) HCALLOC(func->register_count, sizeof(ActionVar));
-				}
-				
-				// Create local scope object for function-local variables
-				// Start with capacity for a few local variables
-				ASObject* local_scope = allocObject(app_context, 8);
-				
-				// Push local scope onto scope chain
-				if (scope_depth < MAX_SCOPE_DEPTH) {
-					scope_chain[scope_depth++] = local_scope;
-				}
-				
-				ActionVar result = func->advanced_func(app_context, args, num_args, registers, NULL);
-				
-				// Pop local scope from scope chain
-				if (scope_depth > 0) {
-					scope_depth--;
-				}
-				
-				// Clean up local scope object
-				// Release decrements refcount and frees if refcount reaches 0
-				releaseObject(app_context, local_scope);
-				
-				if (registers != NULL) FREE(registers);
-				if (args != NULL) FREE(args);
-				
-				pushVar(app_context, &result);
-			}
-			else
-			{
-				// Simple DefineFunction (type 1)
-				// Simple functions expect arguments on the stack, not in an array
-				// We need to push arguments back onto stack in correct order
-				
-				// Remember stack position BEFORE pushing arguments
-				// After function executes (pops args + pushes return), sp should be sp_before + 24
-				u32 sp_before_args = SP;
-				
-				// Push arguments onto stack in order (first to last)
-				// The function will pop them and bind to parameter names
-				for (u32 i = 0; i < num_args; i++)
-				{
-					pushVar(app_context, &args[i]);
-				}
-				
-				// Free args array before calling function
-				if (args != NULL) FREE(args);
-				
-				// Call the simple function
-				// It will pop parameters, execute body, and may push a return value
-				func->simple_func(app_context);
-				
-				// Check if a return value was pushed
-				// After function pops all args, sp should be back to sp_before_args
-				// If function pushed a return, sp should be sp_before_args + 24
-				if (SP == sp_before_args)
-				{
-					// No return value was pushed - push undefined
-					// In ActionScript, functions that don't explicitly return push undefined
-					pushUndefined(app_context);
-				}
-				// else: return value (or multiple values) already on stack - keep it
-			}
-		}
-		else
-		{
-			// Function not found - push undefined
-			if (args != NULL) FREE(args);
-			pushUndefined(app_context);
-		}
+		//~ // Remember stack position BEFORE pushing arguments
+		//~ // After function executes (pops args + pushes return), sp should be sp_before + 24
+		//~ u32 sp_before_args = SP;
+		
+		//~ // Push arguments onto stack in order (first to last)
+		//~ // The function will pop them and bind to parameter names
+		//~ for (u32 i = 0; i < num_args; i++)
+		//~ {
+			//~ pushVar(app_context, &args[i]);
+		//~ }
+		
+		//~ // Free args array before calling function
+		//~ if (args != NULL) FREE(args);
+		
+		// Call the simple function
+		// It will pop parameters, execute body, and may push a return value
+		func(app_context);
+		
+		//~ // Check if a return value was pushed
+		//~ // After function pops all args, sp should be back to sp_before_args
+		//~ // If function pushed a return, sp should be sp_before_args + 24
+		//~ if (SP == sp_before_args)
+		//~ {
+			//~ // No return value was pushed - push undefined
+			//~ // In ActionScript, functions that don't explicitly return push undefined
+			//~ pushUndefined(app_context);
+		//~ }
+		//~ // else: return value (or multiple values) already on stack - keep it
+	}
+	
+	else
+	{
+		// Function not found - throw
+		//~ if (args != NULL) FREE(args);
+		EXC_ARG("Function not found: %s\n", func_name);
 	}
 }
 

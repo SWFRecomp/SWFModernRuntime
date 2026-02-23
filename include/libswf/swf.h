@@ -48,6 +48,7 @@ typedef struct DisplayObject
 typedef struct SWFAppContext SWFAppContext;
 
 typedef void (*frame_func)(SWFAppContext* app_context);
+typedef void (*action_func)(SWFAppContext*);
 
 extern frame_func frame_funcs[];
 
@@ -60,6 +61,7 @@ typedef struct SWFAppContext
 	u32 oldSP;
 	
 	frame_func* frame_funcs;
+	action_func* func_table;
 	
 	int width;
 	int height;

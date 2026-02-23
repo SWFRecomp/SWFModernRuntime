@@ -32,16 +32,12 @@ typedef struct ASProperty ASProperty;
 // Flags for DontEnum properties (internal/built-in properties)
 #define PROPERTY_FLAGS_DONTENUM (PROPERTY_FLAG_WRITABLE | PROPERTY_FLAG_CONFIGURABLE)
 
-typedef struct ASObject
+typedef struct
 {
 	u32 refcount;           // Reference count (starts at 1 on allocation)
 	u32 num_properties;     // Number of properties allocated
 	u32 num_used;           // Number of properties actually used
 	ASProperty* properties; // Dynamic array of properties
-
-	// Interface support (for ActionScript 2.0 implements keyword)
-	u32 interface_count;           // Number of interfaces this class implements
-	struct ASObject** interfaces;  // Array of interface constructors
 } ASObject;
 
 struct ASProperty
@@ -108,22 +104,6 @@ void setProperty(SWFAppContext* app_context, ASObject* obj, const char* name, u3
 // Delete property by name (returns true if deleted or not found, false if protected)
 // Handles refcount management if value is an object
 bool deleteProperty(SWFAppContext* app_context, ASObject* obj, const char* name, u32 name_length);
-
-/**
- * Interface Management (ActionScript 2.0)
- *
- * Functions for implementing interface support via the implements keyword.
- */
-
-// Set the list of interfaces that a constructor implements
-// Used by ActionImplementsOp (0x2C)
-// Takes ownership of the interfaces array
-void setInterfaceList(SWFAppContext* app_context, ASObject* constructor, ASObject** interfaces, u32 count);
-
-// Check if an object implements a specific interface
-// Returns 1 if the object's constructor implements the interface, 0 otherwise
-// Performs recursive check for interface inheritance
-int implementsInterface(ASObject* obj, ASObject* interface_ctor);
 
 // Get the constructor function for an object
 // Returns the constructor property if it exists, NULL otherwise

@@ -10,12 +10,6 @@ extern FlashbangContext* context;
 size_t dictionary_capacity = INITIAL_DICTIONARY_CAPACITY;
 size_t display_list_capacity = INITIAL_DISPLAYLIST_CAPACITY;
 
-void tagInit()
-{
-	// Graphics initialization happens in flashbang_init
-	// This is called after flashbang is set up
-}
-
 void tagSetBackgroundColor(u8 red, u8 green, u8 blue)
 {
 	flashbang_set_window_background(context, red, green, blue);

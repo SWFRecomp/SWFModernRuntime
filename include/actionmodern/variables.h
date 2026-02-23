@@ -9,14 +9,11 @@ typedef struct
 	ActionStackValueType type;
 	u32 str_size;
 	u32 string_id;
+	bool owns_memory;
 	union
 	{
 		u64 value;
-		struct
-		{
-			char* heap_ptr;
-			bool owns_memory;
-		};
+		char* heap_ptr;
 	};
 } ActionVar;
 
