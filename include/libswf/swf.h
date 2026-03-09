@@ -25,14 +25,14 @@ typedef struct Character
 		// DefineShape
 		struct
 		{
-			size_t shape_offset;
-			size_t size;
+			u32 shape_offset;
+			u32 size;
 		};
 		// DefineText
 		struct
 		{
-			size_t text_start;
-			size_t text_size;
+			u32 text_start;
+			u32 text_size;
 			u32 transform_start;
 			u32 cxform_id;
 		};
@@ -61,7 +61,7 @@ typedef struct SWFAppContext
 	u32 oldSP;
 	
 	frame_func* frame_funcs;
-	action_func* func_table;
+	char** str_table;
 	
 	int width;
 	int height;

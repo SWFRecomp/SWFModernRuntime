@@ -1,21 +1,25 @@
 #pragma once
 
 #include <swf.h>
+#include <objects.h>
 #include <variables.h>
 #include <stackvalue.h>
 
+#define STACK_VAR_SIZE (4 + 4 + 8 + 8)
+#define STACK_FUNC_SIZE (4 + 4 + 8 + 8 + 8 + 8)
+
 #define PUSH(t, v) \
 	OLDSP = SP; \
-	SP -= 4 + 4 + 8 + 8; \
+	SP -= STACK_VAR_SIZE; \
 	SP &= ~7; \
 	STACK[SP] = t; \
 	VAL(u32, &STACK[SP + 4]) = OLDSP; \
 	VAL(u64, &STACK[SP + 16]) = v; \
 
 // Push string with ID (for constant strings from compiler)
-#define PUSH_STR_ID(v, n, id) \
+#define PUSH_STR_ID(v, id, n) \
 	OLDSP = SP; \
-	SP -= 4 + 4 + 8 + 8; \
+	SP -= STACK_VAR_SIZE; \
 	SP &= ~7; \
 	STACK[SP] = ACTION_STACK_VALUE_STRING; \
 	VAL(u32, &STACK[SP + 4]) = OLDSP; \
@@ -24,7 +28,7 @@
 	VAL(char*, &STACK[SP + 16]) = v; \
 
 // Push string without ID (for dynamic strings, ID = 0)
-#define PUSH_STR(v, n) PUSH_STR_ID(v, n, 0)
+#define PUSH_STR(v, n) PUSH_STR_ID(v, 0, n)
 
 #define PUSH_STR_LIST(n, size) \
 	OLDSP = VAL(u32, &STACK[SP_SECOND_TOP + 4]); \
@@ -34,7 +38,22 @@
 	VAL(u32, &STACK[SP + 4]) = OLDSP; \
 	VAL(u32, &STACK[SP + 8]) = n; \
 
-#define PUSH_VAR(p) pushVar(app_context, p);
+#define PUSH_FUNC(v, id, f, args) \
+	OLDSP = SP; \
+	SP -= STACK_FUNC_SIZE; \
+	SP &= ~7; \
+	STACK[SP] = ACTION_STACK_VALUE_FUNCTION; \
+	VAL(u32, &STACK[SP + 4]) = OLDSP; \
+	VAL(u32, &STACK[SP + 12]) = id; \
+	VAL(u64, &STACK[SP + 16]) = (u64) v; \
+	VAL(u64, &STACK[SP + 24]) = (u64) f; \
+	VAL(u64, &STACK[SP + 32]) = (u64) args; \
+
+#define PUSH_UNDEFINED() PUSH(ACTION_STACK_VALUE_UNDEFINED, 0)
+
+#define PUSH_OBJ(o) PUSH(ACTION_STACK_VALUE_OBJECT, (u64) o)
+
+#define PUSH_VAR(p) pushVar(app_context, p)
 
 #define POP() \
 	SP = VAL(u32, &STACK[SP + 4]); \
@@ -47,12 +66,18 @@
 #define STACK_TOP_N VAL(u32, &STACK[SP + 8])
 #define STACK_TOP_ID VAL(u32, &STACK[SP + 12])
 #define STACK_TOP_VALUE VAL(u64, &STACK[SP + 16])
+#define STACK_TOP_FUNC VAL(u64, &STACK[SP + 24])
+#define STACK_TOP_FUNC_ARGS VAL(u64, &STACK[SP + 32])
 
 #define SP_SECOND_TOP VAL(u32, &STACK[SP + 4])
 #define STACK_SECOND_TOP_TYPE STACK[SP_SECOND_TOP]
 #define STACK_SECOND_TOP_N VAL(u32, &STACK[SP_SECOND_TOP + 8])
 #define STACK_SECOND_TOP_ID VAL(u32, &STACK[SP_SECOND_TOP + 12])
 #define STACK_SECOND_TOP_VALUE VAL(u64, &STACK[SP_SECOND_TOP + 16])
+#define STACK_SECOND_TOP_FUNC VAL(u64, &STACK[SP_SECOND_TOP + 24])
+#define STACK_SECOND_TOP_FUNC_ARGS VAL(u64, &STACK[SP_SECOND_TOP + 32])
+
+#define RETURN_VOID() PUSH_UNDEFINED()
 
 #define VAL(type, x) *((type*) x)
 
@@ -61,9 +86,15 @@
 
 extern ActionVar* temp_val;
 
-void initTime(SWFAppContext* app_context);
+// Global object
+// Initialized on first use via initActions()
+extern ASObject* _global;
+
+void initActions(SWFAppContext* app_context);
 
 void pushVar(SWFAppContext* app_context, ActionVar* p);
+
+ASProperty* getPropertyInThisScope(u32 string_id, const char* name, u32 name_len);
 
 // Arithmetic Operations
 void actionAdd(SWFAppContext* app_context);
@@ -107,15 +138,14 @@ void actionInitArray(SWFAppContext* app_context);
 
 // Function Operations
 void actionDefineLocal(SWFAppContext* app_context);
-void actionDeclareLocal(SWFAppContext* app_context);
+void actionDefineLocal2(SWFAppContext* app_context);
 void actionCallFunction(SWFAppContext* app_context);
-void actionCallMethod(SWFAppContext* app_context, char* str_buffer);
-void actionReturn(SWFAppContext* app_context);
+void actionCallMethod(SWFAppContext* app_context);
 
 // Stack/Register Operations
 void actionStoreRegister(SWFAppContext* app_context, u8 register_num);
 
 // Function Definitions
-void actionDefineFunction(SWFAppContext* app_context, const char* name, action_func f, u32 param_count);
+void actionDefineFunction(SWFAppContext* app_context, u32 string_id, action_func func, u32* args, bool anonymous);
 
 typedef ActionVar (*Function2Ptr)(SWFAppContext* app_context, ActionVar* args, u32 arg_count, ActionVar* registers, void* this_obj);

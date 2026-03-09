@@ -3,8 +3,9 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include <actionmodern/object.h>
 #include <heap.h>
+
+#include <objects.h>
 
 /**
  * Object Allocation
@@ -12,42 +13,12 @@
  * Allocates a new ASObject with the specified initial capacity.
  * Returns object with refcount = 1 (caller owns the initial reference).
  */
-ASObject* allocObject(SWFAppContext* app_context, u32 initial_capacity)
+ASObject* allocObject(SWFAppContext* app_context)
 {
-	ASObject* obj = (ASObject*) malloc(sizeof(ASObject));
-	if (obj == NULL)
-	{
-		fprintf(stderr, "ERROR: Failed to allocate ASObject\n");
-		return NULL;
-	}
+	ASObject* obj = (ASObject*) HALLOC(sizeof(ASObject));
 	
+	rbtree_init(&obj->t, sizeof(ASProperty));
 	obj->refcount = 1;  // Initial reference owned by caller
-	obj->num_properties = initial_capacity;
-	obj->num_used = 0;
-	
-	// Allocate property array
-	if (initial_capacity > 0)
-	{
-		obj->properties = (ASProperty*) malloc(sizeof(ASProperty) * initial_capacity);
-		if (obj->properties == NULL)
-		{
-			fprintf(stderr, "ERROR: Failed to allocate property array\n");
-			free(obj);
-			return NULL;
-		}
-		
-		// Initialize properties to zero
-		memset(obj->properties, 0, sizeof(ASProperty) * initial_capacity);
-	}
-	else
-	{
-		obj->properties = NULL;
-	}
-	
-#ifdef DEBUG
-	printf("[DEBUG] allocObject: obj=%p, refcount=%u, capacity=%u\n",
-		(void*)obj, obj->refcount, obj->num_properties);
-#endif
 	
 	return obj;
 }
@@ -64,13 +35,8 @@ void retainObject(ASObject* obj)
 	{
 		return;
 	}
-
+	
 	obj->refcount++;
-
-#ifdef DEBUG
-	printf("[DEBUG] retainObject: obj=%p, refcount=%u -> %u\n",
-		(void*)obj, obj->refcount - 1, obj->refcount);
-#endif
 }
 
 /**
@@ -82,55 +48,12 @@ void retainObject(ASObject* obj)
  */
 void releaseObject(SWFAppContext* app_context, ASObject* obj)
 {
-	if (obj == NULL)
-	{
-		return;
-	}
-
-#ifdef DEBUG
-	printf("[DEBUG] releaseObject: obj=%p, refcount=%u -> %u\n",
-		(void*)obj, obj->refcount, obj->refcount - 1);
-#endif
-
 	obj->refcount--;
-
+	
 	if (obj->refcount == 0)
 	{
-#ifdef DEBUG
-		printf("[DEBUG] releaseObject: obj=%p reached refcount=0, freeing\n", (void*)obj);
-#endif
-
-		// Release all property values
-		for (u32 i = 0; i < obj->num_used; i++)
-		{
-			// Free property name (always heap-allocated)
-			if (obj->properties[i].name != NULL)
-			{
-				FREE(obj->properties[i].name);
-			}
-
-			// If property value is an object, release it recursively
-			if (obj->properties[i].value.type == ACTION_STACK_VALUE_OBJECT)
-			{
-				ASObject* child_obj = (ASObject*) obj->properties[i].value.value;
-				releaseObject(app_context, child_obj);
-			}
-			// If property value is a string that owns memory, free it
-			else if (obj->properties[i].value.type == ACTION_STACK_VALUE_STRING &&
-			         obj->properties[i].value.owns_memory)
-			{
-				free(obj->properties[i].value.heap_ptr);
-			}
-		}
-
-		// Free property array
-		if (obj->properties != NULL)
-		{
-			free(obj->properties);
-		}
-
-		// Free object itself
-		free(obj);
+		// Free object
+		//~ FREE(obj);
 	}
 }
 
@@ -138,27 +61,16 @@ void releaseObject(SWFAppContext* app_context, ASObject* obj)
  * Get Property
  *
  * Retrieves a property value by name.
- * Returns pointer to ActionVar, or NULL if property not found.
+ * Returns pointer to the ASProperty if found, or NULL if not found.
  */
-ActionVar* getProperty(ASObject* obj, const char* name, u32 name_length)
+ASProperty* getProperty(ASObject* this, u32 string_id, const char* name, u32 name_length)
 {
-	if (obj == NULL || name == NULL)
+	if (this == NULL || (string_id == 0 && name == NULL))
 	{
 		return NULL;
 	}
-
-	// Linear search through properties
-	// For production, consider hash table for large objects
-	for (u32 i = 0; i < obj->num_used; i++)
-	{
-		if (obj->properties[i].name_length == name_length &&
-		    strncmp(obj->properties[i].name, name, name_length) == 0)
-		{
-			return &obj->properties[i].value;
-		}
-	}
-
-	return NULL;  // Property not found
+	
+	return (ASProperty*) rbtree_get(&this->t, string_id);
 }
 
 /**
@@ -171,37 +83,37 @@ ActionVar* getProperty(ASObject* obj, const char* name, u32 name_length)
  */
 ActionVar* getPropertyWithPrototype(ASObject* obj, const char* name, u32 name_length)
 {
-	if (obj == NULL || name == NULL)
-	{
-		return NULL;
-	}
+	//~ if (obj == NULL || name == NULL)
+	//~ {
+		//~ return NULL;
+	//~ }
 
-	ASObject* current = obj;
-	int max_depth = 100;  // Prevent infinite loops in circular prototype chains
-	int depth = 0;
+	//~ ASObject* current = obj;
+	//~ int max_depth = 100;  // Prevent infinite loops in circular prototype chains
+	//~ int depth = 0;
 
-	while (current != NULL && depth < max_depth)
-	{
-		depth++;
+	//~ while (current != NULL && depth < max_depth)
+	//~ {
+		//~ depth++;
 
-		// Search own properties first
-		ActionVar* prop = getProperty(current, name, name_length);
-		if (prop != NULL)
-		{
-			return prop;
-		}
+		//~ // Search own properties first
+		//~ ActionVar* prop = getProperty(current, name, name_length);
+		//~ if (prop != NULL)
+		//~ {
+			//~ return prop;
+		//~ }
 
-		// Property not found on this object - walk up to __proto__
-		ActionVar* proto_var = getProperty(current, "__proto__", 9);
-		if (proto_var == NULL || proto_var->type != ACTION_STACK_VALUE_OBJECT)
-		{
-			// No __proto__ property or not an object - end of chain
-			break;
-		}
+		//~ // Property not found on this object - walk up to __proto__
+		//~ ActionVar* proto_var = getProperty(current, "__proto__", 9);
+		//~ if (proto_var == NULL || proto_var->type != ACTION_STACK_VALUE_OBJECT)
+		//~ {
+			//~ // No __proto__ property or not an object - end of chain
+			//~ break;
+		//~ }
 
-		// Move to next object in prototype chain
-		current = (ASObject*) proto_var->value;
-	}
+		//~ // Move to next object in prototype chain
+		//~ current = (ASObject*) proto_var->value;
+	//~ }
 
 	return NULL;  // Property not found in entire prototype chain
 }
@@ -212,109 +124,49 @@ ActionVar* getPropertyWithPrototype(ASObject* obj, const char* name, u32 name_le
  * Sets a property value by name. Creates property if it doesn't exist.
  * Handles reference counting if value is an object.
  */
-void setProperty(SWFAppContext* app_context, ASObject* obj, const char* name, u32 name_length, ActionVar* value)
+void setProperty(SWFAppContext* app_context, ASObject* this, u32 string_id, const char* name, u32 name_length, ActionVar* value)
 {
-	if (obj == NULL || name == NULL || value == NULL)
+	if (this == NULL || (string_id == 0 && name == NULL) || value == NULL)
 	{
 		return;
 	}
-
-	// Check if property already exists
-	for (u32 i = 0; i < obj->num_used; i++)
+	
+	ASProperty* p = getProperty(this, string_id, name, name_length);
+	
+	if (p != NULL)
 	{
-		if (obj->properties[i].name_length == name_length &&
-		    strncmp(obj->properties[i].name, name, name_length) == 0)
+		// Property exists - update value
+		
+		// Release old value if it was an object
+		if (p->value.type == ACTION_STACK_VALUE_OBJECT)
 		{
-			// Property exists - update value
-
-			// Release old value if it was an object
-			if (obj->properties[i].value.type == ACTION_STACK_VALUE_OBJECT)
-			{
-				ASObject* old_obj = (ASObject*) obj->properties[i].value.value;
-				releaseObject(app_context, old_obj);
-			}
-			// Free old string if it owned memory
-			else if (obj->properties[i].value.type == ACTION_STACK_VALUE_STRING &&
-			         obj->properties[i].value.owns_memory)
-			{
-				free(obj->properties[i].value.heap_ptr);
-			}
-
-			// Set new value
-			obj->properties[i].value = *value;
-
-			// Retain new value if it's an object
-			if (value->type == ACTION_STACK_VALUE_OBJECT)
-			{
-				ASObject* new_obj = (ASObject*) value->value;
-				retainObject(new_obj);
-			}
-
-#ifdef DEBUG
-			printf("[DEBUG] setProperty: obj=%p, updated property '%.*s'\n",
-				(void*)obj, name_length, name);
-#endif
-
-			return;
+			ASObject* old_obj = (ASObject*) p->value.value;
+			releaseObject(app_context, old_obj);
 		}
+		
+		// Free old string if it owned memory
+		else if (p->value.type == ACTION_STACK_VALUE_STRING &&
+				 p->value.owns_memory)
+		{
+			FREE(p->value.heap_ptr);
+		}
+		
+		// Set new value
+		p->value = *value;
+		
+		// Retain new value if it's an object
+		if (value->type == ACTION_STACK_VALUE_OBJECT)
+		{
+			ASObject* new_obj = (ASObject*) value->value;
+			retainObject(new_obj);
+		}
+		
+		return;
 	}
-
+	
 	// Property doesn't exist - create new one
-
-	// Check if we need to grow the property array
-	if (obj->num_used >= obj->num_properties)
-	{
-		// Grow by 50% or at least 4 slots
-		u32 new_capacity = obj->num_properties == 0 ? 4 : (obj->num_properties * 3) / 2;
-		ASProperty* new_props = (ASProperty*) realloc(obj->properties,
-		                                               sizeof(ASProperty) * new_capacity);
-		if (new_props == NULL)
-		{
-			fprintf(stderr, "ERROR: Failed to grow property array\n");
-			return;
-		}
-
-		obj->properties = new_props;
-		obj->num_properties = new_capacity;
-
-		// Zero out new slots
-		memset(&obj->properties[obj->num_used], 0,
-		       sizeof(ASProperty) * (new_capacity - obj->num_used));
-	}
-
-	// Add new property
-	u32 index = obj->num_used;
-	obj->num_used++;
-
-	// Allocate and copy property name
-	obj->properties[index].name = (char*) HALLOC(name_length + 1);
-	if (obj->properties[index].name == NULL)
-	{
-		fprintf(stderr, "ERROR: Failed to allocate property name\n");
-		obj->num_used--;
-		return;
-	}
-	memcpy(obj->properties[index].name, name, name_length);
-	obj->properties[index].name[name_length] = '\0';
-	obj->properties[index].name_length = name_length;
-
-	// Set default property flags (enumerable, writable, configurable)
-	obj->properties[index].flags = PROPERTY_FLAGS_DEFAULT;
-
-	// Set value
-	obj->properties[index].value = *value;
-
-	// Retain if value is an object
-	if (value->type == ACTION_STACK_VALUE_OBJECT)
-	{
-		ASObject* new_obj = (ASObject*) value->value;
-		retainObject(new_obj);
-	}
-
-#ifdef DEBUG
-	printf("[DEBUG] setProperty: obj=%p, created property '%.*s', num_used=%u\n",
-		(void*)obj, name_length, name, obj->num_used);
-#endif
+	p = (ASProperty*) RBT_GET_OR_INS(&this->t, string_id);
+	p->value = *value;
 }
 
 /**
@@ -325,70 +177,61 @@ void setProperty(SWFAppContext* app_context, ASObject* obj, const char* name, u3
  */
 bool deleteProperty(SWFAppContext* app_context, ASObject* obj, const char* name, u32 name_length)
 {
-	if (obj == NULL || name == NULL)
-	{
-		return true;  // Flash behavior: delete on null returns true
-	}
-
-	// Find property by name
-	for (u32 i = 0; i < obj->num_used; i++)
-	{
-		if (obj->properties[i].name_length == name_length &&
-		    strncmp(obj->properties[i].name, name, name_length) == 0)
-		{
-			// Property found - delete it
-
-			// 1. Release the property value if it's an object/array
-			if (obj->properties[i].value.type == ACTION_STACK_VALUE_OBJECT)
-			{
-				ASObject* child_obj = (ASObject*) obj->properties[i].value.value;
-				releaseObject(app_context, child_obj);
-			}
-			else if (obj->properties[i].value.type == ACTION_STACK_VALUE_ARRAY)
-			{
-				ASArray* child_arr = (ASArray*) obj->properties[i].value.value;
-				releaseArray(app_context, child_arr);
-			}
-			// Free string if it owns memory
-			else if (obj->properties[i].value.type == ACTION_STACK_VALUE_STRING &&
-			         obj->properties[i].value.owns_memory)
-			{
-				free(obj->properties[i].value.heap_ptr);
-			}
-
-			// 2. Free the property name
-			if (obj->properties[i].name != NULL)
-			{
-				FREE(obj->properties[i].name);
-			}
-
-			// 3. Shift remaining properties down to fill the gap
-			for (u32 j = i; j < obj->num_used - 1; j++)
-			{
-				obj->properties[j] = obj->properties[j + 1];
-			}
-
-			// 4. Decrement the number of used slots
-			obj->num_used--;
-
-			// 5. Zero out the last slot
-			memset(&obj->properties[obj->num_used], 0, sizeof(ASProperty));
-
-#ifdef DEBUG
-			printf("[DEBUG] deleteProperty: obj=%p, deleted property '%.*s', num_used=%u\n",
-				(void*)obj, name_length, name, obj->num_used);
-#endif
-
-			return true;
-		}
-	}
-
-	// Property not found - Flash behavior is to return true anyway
-#ifdef DEBUG
-	printf("[DEBUG] deleteProperty: obj=%p, property '%.*s' not found (returning true)\n",
-		(void*)obj, name_length, name);
-#endif
-
+	//~ if (obj == NULL || name == NULL)
+	//~ {
+		//~ return true;  // Flash behavior: delete on null returns true
+	//~ }
+	
+	//~ // Find property by name
+	//~ for (u32 i = 0; i < obj->num_used; i++)
+	//~ {
+		//~ if (obj->properties[i].name_length == name_length &&
+		    //~ strncmp(obj->properties[i].name, name, name_length) == 0)
+		//~ {
+			//~ // Property found - delete it
+			
+			//~ // 1. Release the property value if it's an object/array
+			//~ if (obj->properties[i].value.type == ACTION_STACK_VALUE_OBJECT)
+			//~ {
+				//~ ASObject* child_obj = (ASObject*) obj->properties[i].value.value;
+				//~ releaseObject(app_context, child_obj);
+			//~ }
+			
+			//~ else if (obj->properties[i].value.type == ACTION_STACK_VALUE_ARRAY)
+			//~ {
+				//~ ASArray* child_arr = (ASArray*) obj->properties[i].value.value;
+				//~ releaseArray(app_context, child_arr);
+			//~ }
+			
+			//~ // Free string if it owns memory
+			//~ else if (obj->properties[i].value.type == ACTION_STACK_VALUE_STRING &&
+			         //~ obj->properties[i].value.owns_memory)
+			//~ {
+				//~ free(obj->properties[i].value.heap_ptr);
+			//~ }
+			
+			//~ // 2. Free the property name
+			//~ if (obj->properties[i].name != NULL)
+			//~ {
+				//~ FREE(obj->properties[i].name);
+			//~ }
+			
+			//~ // 3. Shift remaining properties down to fill the gap
+			//~ for (u32 j = i; j < obj->num_used - 1; j++)
+			//~ {
+				//~ obj->properties[j] = obj->properties[j + 1];
+			//~ }
+			
+			//~ // 4. Decrement the number of used slots
+			//~ obj->num_used--;
+			
+			//~ // 5. Zero out the last slot
+			//~ memset(&obj->properties[obj->num_used], 0, sizeof(ASProperty));
+			
+			//~ return true;
+		//~ }
+	//~ }
+	
 	return true;
 }
 
@@ -404,16 +247,16 @@ ASObject* getConstructor(ASObject* obj)
 	{
 		return NULL;
 	}
-
+	
 	// Look for "constructor" property
 	static const char* constructor_name = "constructor";
-	ActionVar* constructor_var = getProperty(obj, constructor_name, 11);
-
-	if (constructor_var != NULL && constructor_var->type == ACTION_STACK_VALUE_OBJECT)
+	ActionVar* ctor = &getProperty(obj, 0, constructor_name, 11)->value;
+	
+	if (ctor != NULL && ctor->type == ACTION_STACK_VALUE_OBJECT)
 	{
-		return (ASObject*) constructor_var->value;
+		return (ASObject*) ctor->value;
 	}
-
+	
 	return NULL;
 }
 
@@ -429,14 +272,14 @@ void assertRefcount(ASObject* obj, u32 expected)
 		fprintf(stderr, "ERROR: assertRefcount called with NULL object\n");
 		assert(0);
 	}
-
+	
 	if (obj->refcount != expected)
 	{
 		fprintf(stderr, "ERROR: refcount assertion failed: expected %u, got %u\n",
 			expected, obj->refcount);
 		assert(0);
 	}
-
+	
 	printf("[DEBUG] assertRefcount: obj=%p, refcount=%u (OK)\n", (void*)obj, expected);
 }
 
@@ -447,28 +290,28 @@ void printObject(ASObject* obj)
 		printf("Object: NULL\n");
 		return;
 	}
-
+	
 	printf("Object: %p\n", (void*)obj);
 	printf("  refcount: %u\n", obj->refcount);
 	printf("  num_properties: %u\n", obj->num_properties);
 	printf("  num_used: %u\n", obj->num_used);
 	printf("  properties:\n");
-
+	
 	for (u32 i = 0; i < obj->num_used; i++)
 	{
 		printf("    [%u] '%.*s' = ",
 			i, obj->properties[i].name_length, obj->properties[i].name);
-
+		
 		switch (obj->properties[i].value.type)
 		{
 			case ACTION_STACK_VALUE_F32:
 				printf("%.15g (F32)\n", *((float*)&obj->properties[i].value.value));
 				break;
-
+			
 			case ACTION_STACK_VALUE_F64:
 				printf("%.15g (F64)\n", *((double*)&obj->properties[i].value.value));
 				break;
-
+			
 			case ACTION_STACK_VALUE_STRING:
 			{
 				const char* str = obj->properties[i].value.owns_memory ?
@@ -477,11 +320,11 @@ void printObject(ASObject* obj)
 				printf("'%.*s' (STRING)\n", obj->properties[i].value.str_size, str);
 				break;
 			}
-
+			
 			case ACTION_STACK_VALUE_OBJECT:
 				printf("%p (OBJECT)\n", (void*)obj->properties[i].value.value);
 				break;
-
+			
 			default:
 				printf("(unknown type %d)\n", obj->properties[i].value.type);
 				break;
@@ -496,27 +339,27 @@ void printArray(ASArray* arr)
 		printf("Array: NULL\n");
 		return;
 	}
-
+	
 	printf("Array: %p\n", (void*)arr);
 	printf("  refcount: %u\n", arr->refcount);
 	printf("  length: %u\n", arr->length);
 	printf("  capacity: %u\n", arr->capacity);
 	printf("  elements:\n");
-
+	
 	for (u32 i = 0; i < arr->length; i++)
 	{
 		printf("    [%u] = ", i);
-
+		
 		switch (arr->elements[i].type)
 		{
 			case ACTION_STACK_VALUE_F32:
 				printf("%.15g (F32)\n", *((float*)&arr->elements[i].value));
 				break;
-
+			
 			case ACTION_STACK_VALUE_F64:
 				printf("%.15g (F64)\n", *((double*)&arr->elements[i].value));
 				break;
-
+			
 			case ACTION_STACK_VALUE_STRING:
 			{
 				const char* str = arr->elements[i].owns_memory ?
@@ -525,15 +368,15 @@ void printArray(ASArray* arr)
 				printf("'%.*s' (STRING)\n", arr->elements[i].str_size, str);
 				break;
 			}
-
+			
 			case ACTION_STACK_VALUE_OBJECT:
 				printf("%p (OBJECT)\n", (void*)arr->elements[i].value);
 				break;
-
+			
 			case ACTION_STACK_VALUE_ARRAY:
 				printf("%p (ARRAY)\n", (void*)arr->elements[i].value);
 				break;
-
+			
 			default:
 				printf("(unknown type %d)\n", arr->elements[i].type);
 				break;
@@ -554,11 +397,11 @@ ASArray* allocArray(SWFAppContext* app_context, u32 initial_capacity)
 		fprintf(stderr, "ERROR: Failed to allocate ASArray\n");
 		return NULL;
 	}
-
+	
 	arr->refcount = 1;  // Initial reference owned by caller
 	arr->length = 0;
 	arr->capacity = initial_capacity > 0 ? initial_capacity : 4;
-
+	
 	// Allocate element array
 	arr->elements = (ActionVar*) malloc(sizeof(ActionVar) * arr->capacity);
 	if (arr->elements == NULL)
@@ -567,15 +410,10 @@ ASArray* allocArray(SWFAppContext* app_context, u32 initial_capacity)
 		free(arr);
 		return NULL;
 	}
-
+	
 	// Initialize elements to zero
 	memset(arr->elements, 0, sizeof(ActionVar) * arr->capacity);
-
-#ifdef DEBUG
-	printf("[DEBUG] allocArray: arr=%p, refcount=%u, capacity=%u\n",
-		(void*)arr, arr->refcount, arr->capacity);
-#endif
-
+	
 	return arr;
 }
 
@@ -585,13 +423,8 @@ void retainArray(ASArray* arr)
 	{
 		return;
 	}
-
+	
 	arr->refcount++;
-
-#ifdef DEBUG
-	printf("[DEBUG] retainArray: arr=%p, refcount=%u -> %u\n",
-		(void*)arr, arr->refcount - 1, arr->refcount);
-#endif
 }
 
 void releaseArray(SWFAppContext* app_context, ASArray* arr)
@@ -600,20 +433,11 @@ void releaseArray(SWFAppContext* app_context, ASArray* arr)
 	{
 		return;
 	}
-
-#ifdef DEBUG
-	printf("[DEBUG] releaseArray: arr=%p, refcount=%u -> %u\n",
-		(void*)arr, arr->refcount, arr->refcount - 1);
-#endif
-
+	
 	arr->refcount--;
-
+	
 	if (arr->refcount == 0)
 	{
-#ifdef DEBUG
-		printf("[DEBUG] releaseArray: arr=%p reached refcount=0, freeing\n", (void*)arr);
-#endif
-
 		// Release all element values
 		for (u32 i = 0; i < arr->length; i++)
 		{
@@ -636,13 +460,13 @@ void releaseArray(SWFAppContext* app_context, ASArray* arr)
 				free(arr->elements[i].heap_ptr);
 			}
 		}
-
+		
 		// Free element array
 		if (arr->elements != NULL)
 		{
 			free(arr->elements);
 		}
-
+		
 		// Free array itself
 		free(arr);
 	}

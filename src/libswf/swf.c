@@ -19,7 +19,7 @@ size_t max_depth = 0;
 
 FlashbangContext* context;
 
-void tagInit();
+void tagInit(app_context);
 
 void tagMain(SWFAppContext* app_context)
 {
@@ -94,7 +94,7 @@ void swfStart(SWFAppContext* app_context)
 	
 	initVarArray(app_context, app_context->max_string_id);
 	
-	initTime(app_context);
+	initActions(app_context);
 	initMap();
 	
 	tagInit(app_context);

@@ -10,6 +10,8 @@ typedef struct
 	u32 str_size;
 	u32 string_id;
 	bool owns_memory;
+	action_func func;
+	u32* args;
 	union
 	{
 		u64 value;

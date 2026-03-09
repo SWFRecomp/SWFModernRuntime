@@ -909,7 +909,7 @@ void flashbang_upload_cxform(FlashbangContext* context, float* cxform)
 	SDL_PushGPUFragmentUniformData(context->command_buffer, 1, cxform, 20*sizeof(float));
 }
 
-void flashbang_draw_shape(FlashbangContext* context, size_t offset, size_t num_verts, u32 transform_id)
+void flashbang_draw_shape(FlashbangContext* context, u32 offset, u32 num_verts, u32 transform_id)
 {
 	// bind the vertex buffer
 	SDL_GPUBufferBinding buffer_bindings[1];

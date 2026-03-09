@@ -1,7 +1,9 @@
 #pragma once
 
 #include <common.h>
-#include <actionmodern/variables.h>
+#include <variables.h>
+
+#include <rbtree.h>
 
 // Forward declaration
 typedef struct SWFAppContext SWFAppContext;
@@ -34,14 +36,13 @@ typedef struct ASProperty ASProperty;
 
 typedef struct
 {
+	rbtree t;
 	u32 refcount;           // Reference count (starts at 1 on allocation)
-	u32 num_properties;     // Number of properties allocated
-	u32 num_used;           // Number of properties actually used
-	ASProperty* properties; // Dynamic array of properties
 } ASObject;
 
 struct ASProperty
 {
+	rbnode n;
 	char* name;             // Property name (heap-allocated)
 	u32 name_length;        // Length of property name
 	u8 flags;               // Property attribute flags (PROPERTY_FLAG_*)
@@ -49,24 +50,14 @@ struct ASProperty
 };
 
 /**
- * Global Objects
- *
- * Global singleton objects available in ActionScript.
- */
-
-// Global object (_global in ActionScript)
-// Initialized on first use via initTime()
-extern ASObject* global_object;
-
-/**
  * Object Lifecycle Primitives
  *
  * These functions are called by generated code to manage object lifetimes.
  */
 
-// Allocate new object with initial capacity
+// Allocate new object
 // Returns object with refcount = 1
-ASObject* allocObject(SWFAppContext* app_context, u32 initial_capacity);
+ASObject* allocObject(SWFAppContext* app_context);
 
 // Increment reference count
 // Should be called when:
@@ -91,7 +82,7 @@ void releaseObject(SWFAppContext* app_context, ASObject* obj);
  */
 
 // Get property by name (returns NULL if not found)
-ActionVar* getProperty(ASObject* obj, const char* name, u32 name_length);
+ASProperty* getProperty(ASObject* obj, u32 string_id, const char* name, u32 name_length);
 
 // Get property by name with prototype chain traversal (returns NULL if not found)
 // Walks up the __proto__ chain to find inherited properties
@@ -99,7 +90,7 @@ ActionVar* getPropertyWithPrototype(ASObject* obj, const char* name, u32 name_le
 
 // Set property by name (creates if not exists)
 // Handles refcount management if value is an object
-void setProperty(SWFAppContext* app_context, ASObject* obj, const char* name, u32 name_length, ActionVar* value);
+void setProperty(SWFAppContext* app_context, ASObject* obj, u32 string_id, const char* name, u32 name_length, ActionVar* value);
 
 // Delete property by name (returns true if deleted or not found, false if protected)
 // Handles refcount management if value is an object

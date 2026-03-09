@@ -13,3 +13,6 @@
 [submodule "lib/o1heap"]
 	path = lib/o1heap
 	url = https://github.com/pavel-kirienko/o1heap.git
+[submodule "lib/rbtree"]
+	path = lib/rbtree
+	url = https://github.com/SWFRecomp/rb-tree.git

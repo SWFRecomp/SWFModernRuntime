@@ -80,6 +80,6 @@ void flashbang_upload_extra_transform_id(FlashbangContext* context, u32 transfor
 void flashbang_upload_extra_transform(FlashbangContext* context, float* transform);
 void flashbang_upload_cxform_id(FlashbangContext* context, u32 cxform_id);
 void flashbang_upload_cxform(FlashbangContext* context, float* cxform);
-void flashbang_draw_shape(FlashbangContext* context, size_t offset, size_t num_verts, u32 transform_id);
+void flashbang_draw_shape(FlashbangContext* context, u32 offset, u32 num_verts, u32 transform_id);
 void flashbang_close_pass(FlashbangContext* context);
 void flashbang_release(FlashbangContext* context, SWFAppContext* app_context);
