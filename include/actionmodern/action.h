@@ -14,7 +14,7 @@
 	SP &= ~7; \
 	STACK[SP] = t; \
 	VAL(u32, &STACK[SP + 4]) = OLDSP; \
-	VAL(u64, &STACK[SP + 16]) = v; \
+	VAL(u64, &STACK[SP + 16]) = v;
 
 // Push string with ID (for constant strings from compiler)
 #define PUSH_STR_ID(v, id, n) \
@@ -25,7 +25,7 @@
 	VAL(u32, &STACK[SP + 4]) = OLDSP; \
 	VAL(u32, &STACK[SP + 8]) = n; \
 	VAL(u32, &STACK[SP + 12]) = id; \
-	VAL(char*, &STACK[SP + 16]) = v; \
+	VAL(char*, &STACK[SP + 16]) = v;
 
 // Push string without ID (for dynamic strings, ID = 0)
 #define PUSH_STR(v, n) PUSH_STR_ID(v, 0, n)
@@ -36,7 +36,7 @@
 	SP &= ~7; \
 	STACK[SP] = ACTION_STACK_VALUE_STR_LIST; \
 	VAL(u32, &STACK[SP + 4]) = OLDSP; \
-	VAL(u32, &STACK[SP + 8]) = n; \
+	VAL(u32, &STACK[SP + 8]) = n;
 
 #define PUSH_FUNC(v, id, f, args) \
 	OLDSP = SP; \
@@ -47,20 +47,34 @@
 	VAL(u32, &STACK[SP + 12]) = id; \
 	VAL(u64, &STACK[SP + 16]) = (u64) v; \
 	VAL(u64, &STACK[SP + 24]) = (u64) f; \
-	VAL(u64, &STACK[SP + 32]) = (u64) args; \
+	VAL(u64, &STACK[SP + 32]) = (u64) args;
 
+#define PUSH_NULL() PUSH(ACTION_STACK_VALUE_NULL, 0)
 #define PUSH_UNDEFINED() PUSH(ACTION_STACK_VALUE_UNDEFINED, 0)
 
-#define PUSH_OBJ(o) PUSH(ACTION_STACK_VALUE_OBJECT, (u64) o)
+#define PUSH_OBJ(o) \
+	PUSH(ACTION_STACK_VALUE_OBJECT, (u64) o) \
+	OBJ_LOCK_WRITE(o, \
+	{ \
+		retainObject(o); \
+	});
 
 #define PUSH_VAR(p) pushVar(app_context, p)
 
 #define POP() \
-	SP = VAL(u32, &STACK[SP + 4]); \
+	if (STACK_TOP_TYPE == ACTION_STACK_VALUE_OBJECT) \
+	{ \
+		ASObject* o = (ASObject*) STACK_TOP_VALUE; \
+		OBJ_LOCK_WRITE(o, \
+		{ \
+			releaseObject(app_context, o); \
+		}); \
+	} \
+	SP = VAL(u32, &STACK[SP + 4]);
 
 #define POP_2() \
 	POP(); \
-	POP(); \
+	POP();
 
 #define STACK_TOP_TYPE STACK[SP]
 #define STACK_TOP_N VAL(u32, &STACK[SP + 8])
@@ -91,6 +105,7 @@ extern ActionVar* temp_val;
 extern ASObject* _global;
 
 void initActions(SWFAppContext* app_context);
+void freeActions(SWFAppContext* app_context);
 
 void pushVar(SWFAppContext* app_context, ActionVar* p);
 

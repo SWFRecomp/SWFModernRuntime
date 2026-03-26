@@ -23,11 +23,17 @@ void grow_ptr(SWFAppContext* app_context, char** ptr, size_t* capacity_ptr, size
 // Microsoft
 
 #include <windows.h>
+#include <process.h>
 #include <Winbase.h>
 
 u32 get_elapsed_ms()
 {
 	return (u32) GetTickCount();
+}
+
+void recomp_sleep(u32 ms)
+{
+	Sleep(ms);
 }
 
 int getpagesize()
@@ -46,6 +52,47 @@ char* vmem_reserve(size_t size)
 void vmem_release(char* addr, size_t size)
 {
 	VirtualFree(addr, 0, MEM_RELEASE);
+}
+
+uintptr_t thread_start(SWFAppContext* app_context, runtime_thread_func f)
+{
+	return _beginthreadex(NULL, 0, f, app_context, 0, NULL);
+}
+
+void thread_exit()
+{
+	_endthreadex(0);
+}
+
+void thread_join(uintptr_t handle)
+{
+	WaitForSingleObject((HANDLE) handle, INFINITE);
+	CloseHandle((HANDLE) handle);
+}
+
+void mutex_init(recomp_mutex_t* mutex)
+{
+	InitializeSRWLock((PSRWLOCK) mutex);
+}
+
+void mutex_lock_read(recomp_mutex_t* mutex)
+{
+	AcquireSRWLockShared((PSRWLOCK) mutex);
+}
+
+void mutex_unlock_read(recomp_mutex_t* mutex)
+{
+	ReleaseSRWLockShared((PSRWLOCK) mutex);
+}
+
+void mutex_lock_write(recomp_mutex_t* mutex)
+{
+	AcquireSRWLockExclusive((PSRWLOCK) mutex);
+}
+
+void mutex_unlock_write(recomp_mutex_t* mutex)
+{
+	ReleaseSRWLockExclusive((PSRWLOCK) mutex);
 }
 
 #elif defined(__GNUC__)

@@ -43,7 +43,7 @@ void tagMain(SWFAppContext* app_context)
 		return;
 	}
 	
-	while (!flashbang_poll())
+	while (!(bad_poll = flashbang_poll()))
 	{
 		tagShowFrame(app_context);
 	}
@@ -102,6 +102,7 @@ void swfStart(SWFAppContext* app_context)
 	tagMain(app_context);
 	
 	freeMap(app_context);
+	freeActions(app_context);
 	
 	FREE(STACK);
 	

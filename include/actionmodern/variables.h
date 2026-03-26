@@ -7,15 +7,36 @@
 typedef struct
 {
 	ActionStackValueType type;
-	u32 str_size;
-	u32 string_id;
-	bool owns_memory;
-	action_func func;
-	u32* args;
+	
+	union
+	{
+		// function
+		struct
+		{
+			action_func func;
+			u32* args;
+		};
+		
+		// string
+		struct
+		{
+			u32 str_size;
+			u32 string_id;
+			bool owns_memory;
+		};
+	};
+	
+	// value
 	union
 	{
 		u64 value;
+		u64 u64;
+		s64 s64;
+		u32 u32;
+		s32 s32;
 		char* heap_ptr;
+		f32 f32;
+		f64 f64;
 	};
 } ActionVar;
 

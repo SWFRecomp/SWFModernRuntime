@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stackvalue.h>
+#include <utils_lock.h>
 
 #define HEAP_SIZE 1024*1024*1024  // 1 GB
 
@@ -41,7 +42,7 @@ typedef struct Character
 
 typedef struct DisplayObject
 {
-	size_t char_id;
+	u32 char_id;
 	u32 transform_id;
 } DisplayObject;
 
@@ -69,6 +70,7 @@ typedef struct SWFAppContext
 	const float* stage_to_ndc;
 	
 	O1HeapInstance* heap_instance;
+	recomp_mutex_t heap_lock;
 	char* heap;
 	size_t heap_size;
 	
@@ -99,6 +101,7 @@ typedef struct SWFAppContext
 } SWFAppContext;
 
 extern int quit_swf;
+extern int bad_poll;
 extern size_t next_frame;
 extern int manual_next_frame;
 

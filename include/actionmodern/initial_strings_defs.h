@@ -1,4 +1,9 @@
+#pragma once
+
 #include <initial_strings_decls.h>
+
+#include <Object.h>
+#include <Math.h>
 
 RuntimeFunc runtime_funcs[] =
 {

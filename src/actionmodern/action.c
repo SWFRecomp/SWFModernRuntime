@@ -5,6 +5,8 @@
 #include <string.h>
 #include <time.h>
 
+#include <swap_vector.h>
+
 #include <recomp.h>
 #include <initial_strings_defs.h>
 #include <heap.h>
@@ -19,7 +21,7 @@ u32 start_time;
 
 #define MAX_SCOPE_DEPTH 16
 static ASObject* scope_chain[MAX_SCOPE_DEPTH];
-static u32 scope_top_obj = 0;
+static u32 scope_top_obj = 1;
 
 // ==================================================================
 // Function Storage and Management
@@ -40,10 +42,438 @@ typedef struct {
 	u16 flags;
 } ASFunction;
 
+void block(SWFAppContext* app_context, ASObject* o)
+{
+	SVEC_CLEAR(&o->blocked_list);
+	
+	for (size_t i = 0; i < o->neighbors.length; ++i)
+	{
+		ASObject* neighbor = (ASObject*) o->neighbors.data[i];
+		SVEC_PUSH(&o->blocked_list, neighbor);
+	}
+}
+
+void unblock(ASObject* o)
+{
+	o->blocked = false;
+	
+	for (size_t i = 0; i < o->blocked_list.length; ++i)
+	{
+		ASObject* b = (ASObject*) o->blocked_list.data[i];
+		
+		if (b->blocked)
+		{
+			unblock(b);
+		}
+	}
+	
+	SVEC_CLEAR(&o->blocked_list);
+}
+
+bool traverseIteration(SWFAppContext* app_context, ASObject* o, SwapVector* path_stack, SwapVector* cycles);
+
+bool detectCycle(SWFAppContext* app_context, ASObject* o, SwapVector* path_stack, SwapVector* cycles)
+{
+	if (o == (ASObject*) path_stack->data[0])
+	{
+		SwapVector* cycle = HALLOC(sizeof(SwapVector));
+		SVEC_INIT(cycle);
+		
+		for (size_t i = 0; i < path_stack->length; ++i)
+		{
+			SVEC_PUSH(cycle, path_stack->data[i]);
+		}
+		
+		SVEC_PUSH(cycles, cycle);
+		
+		return true;
+	}
+	
+	if (o->blocked)
+	{
+		return false;
+	}
+	
+	return traverseIteration(app_context, o, path_stack, cycles);
+}
+
+bool traverseIteration(SWFAppContext* app_context, ASObject* o, SwapVector* path_stack, SwapVector* cycles)
+{
+	SVEC_PUSH(path_stack, o);
+	
+	o->blocked = true;
+	
+	bool cycle_found = false;
+	
+	for (size_t i = 0; i < o->neighbors.length; ++i)
+	{
+		ASObject* neighbor = (ASObject*) o->neighbors.data[i];
+		
+		if (neighbor->used)
+		{
+			continue;
+		}
+		
+		cycle_found |= detectCycle(app_context, neighbor, path_stack, cycles);
+	}
+	
+	SVEC_POP(path_stack);
+	
+	if (cycle_found)
+	{
+		unblock(o);
+		return true;
+	}
+	
+	block(app_context, o);
+	
+	return false;
+}
+
+void johnson(SWFAppContext* app_context, SwapVector* objs, SwapVector* cycles)
+{
+	SwapVector path_stack;
+	SVEC_INIT(&path_stack);
+	
+	for (size_t i = 0; i < objs->length; ++i)
+	{
+		for (size_t j = 0; j < objs->length; ++j)
+		{
+			ASObject* o = (ASObject*) objs->data[j];
+			
+			o->blocked = false;
+			SVEC_CLEAR(&o->blocked_list);
+		}
+		
+		ASObject* o = (ASObject*) objs->data[i];
+		
+		(void) traverseIteration(app_context, o, &path_stack, cycles);
+		o->used = true;
+	}
+	
+	for (size_t i = 0; i < objs->length; ++i)
+	{
+		ASObject* o = (ASObject*) objs->data[i];
+		o->used = false;
+	}
+	
+	SVEC_RELEASE(&path_stack);
+}
+
+void pushObjReachable(SWFAppContext* app_context, ASObject* this, ASProperty* p, SwapVector* v)
+{
+	ASObject* neighbor = (ASObject*) p->value.value;
+	
+	if (IS_OBJ(p->value))
+	{
+		bool reached = neighbor->reached;
+		neighbor->reached = true;
+		SVEC_PUSH(&this->neighbors, neighbor);
+		if (!reached)
+		{
+			SVEC_PUSH(v, neighbor);
+		}
+	}
+}
+
+void pushObjsReachable(SWFAppContext* app_context, ASObject* this, SwapVector* nodes)
+{
+	rbtree* t = &this->t;
+	
+	if (UNLIKELY(t->length == 0))
+	{
+		return;
+	}
+	
+	SwapVector node_stack;
+	SVEC_INIT(&node_stack);
+	SVEC_PUSH(&node_stack, t->t.root);
+	
+	while (node_stack.length > 0)
+	{
+		struct rb_node* node = (struct rb_node*) SVEC_TOP(&node_stack);
+		
+		SVEC_POP(&node_stack);
+		
+		pushObjReachable(app_context, this, (ASProperty*) node, nodes);
+		
+		if (node->right)
+		{
+			SVEC_PUSH(&node_stack, node->right);
+		}
+		
+		if (node->left)
+		{
+			SVEC_PUSH(&node_stack, node->left);
+		}
+	}
+	
+	SVEC_RELEASE(&node_stack);
+}
+
+void getReachable(SWFAppContext* app_context, ASObject* o, SwapVector* reachable)
+{
+	SVEC_PUSH(reachable, o);
+	o->reached = true;
+	
+	size_t obj_i = 0;
+	
+	while (obj_i < reachable->length)
+	{
+		ASObject* this = (ASObject*) reachable->data[obj_i];
+		
+		OBJ_LOCK_READ(this,
+		{
+			SVEC_CLEAR(&this->neighbors);
+			pushObjsReachable(app_context, this, reachable);
+			this->temp_rc = this->refcount;
+			
+			obj_i += 1;
+		});
+	}
+	
+	for (size_t i = 0; i < reachable->length; ++i)
+	{
+		ASObject* this = (ASObject*) reachable->data[i];
+		this->reached = false;
+	}
+}
+
+bool containsObj(SwapVector* v, ASObject* o)
+{
+	for (size_t i = 0; i < v->length; ++i)
+	{
+		ASObject* this = (ASObject*) v->data[i];
+		
+		if (o == this)
+		{
+			return true;
+		}
+	}
+	
+	return false;
+}
+
+recomp_mutex_t object_queue_lock;
+rbtree object_free_queue;
+
+void attemptFree(SWFAppContext* app_context, ASObject* o);
+
+void freeObject(SWFAppContext* app_context, ASObject* o, SwapVector* reachable)
+{
+	o->freed = true;
+	
+	for (size_t i = 0; i < o->neighbors.length; ++i)
+	{
+		ASObject* neighbor = (ASObject*) o->neighbors.data[i];
+		
+		if (!neighbor->freed)
+		{
+			OBJ_LOCK_WRITE(neighbor,
+			{
+				neighbor->refcount -= 1;
+			});
+		}
+	}
+	
+	for (size_t i = 0; i < reachable->length; ++i)
+	{
+		ASObject* r = (ASObject*) reachable->data[i];
+		
+		if (!r->freed)
+		{
+			attemptFree(app_context, r);
+		}
+	}
+	
+	FREE(o);
+	
+	LOCK_WRITE(object_queue_lock,
+	{
+		rbtree_remove_u64(app_context, &object_free_queue, (u64) o);
+	});
+}
+
+bool subRCTest(SWFAppContext* app_context, ASObject* o, SwapVector* reachable)
+{
+	SwapVector objects_to_test;
+	SwapVector cycles;
+	
+	SVEC_INIT(&objects_to_test);
+	SVEC_INIT(&cycles);
+	
+	johnson(app_context, reachable, &cycles);
+	
+	SVEC_PUSH(&objects_to_test, o);
+	
+	for (size_t i = 0; i < cycles.length; ++i)
+	{
+		SwapVector* cycle = (SwapVector*) cycles.data[i];
+		
+		for (size_t j = 0; j < cycle->length; ++j)
+		{
+			ASObject* this = (ASObject*) cycle->data[j];
+			
+			if (!containsObj(&objects_to_test, this))
+			{
+				SVEC_PUSH(&objects_to_test, this);
+			}
+		}
+	}
+	
+	bool pass_test = true;
+	
+	for (size_t i = 0; i < objects_to_test.length; ++i)
+	{
+		ASObject* test = (ASObject*) objects_to_test.data[i];
+		
+		for (size_t j = 0; j < cycles.length; ++j)
+		{
+			SwapVector* cycle = (SwapVector*) cycles.data[j];
+			
+			if (containsObj(cycle, test))
+			{
+				test->temp_rc -= 1;
+			}
+		}
+		
+		if (test->temp_rc != 0)
+		{
+			pass_test = false;
+			break;
+		}
+	}
+	
+	for (size_t i = 0; i < cycles.length; ++i)
+	{
+		SwapVector* cycle = (SwapVector*) cycles.data[i];
+		
+		SVEC_RELEASE(cycle);
+	}
+	
+	SVEC_RELEASE(&cycles);
+	
+	return pass_test;
+}
+
+void freeObjectIfSubRC(SWFAppContext* app_context, ASObject* o, SwapVector* reachable)
+{
+	o->freed = true;
+	
+	for (size_t i = 0; i < o->neighbors.length; ++i)
+	{
+		ASObject* neighbor = (ASObject*) o->neighbors.data[i];
+		
+		OBJ_LOCK_WRITE(neighbor,
+		{
+			if (!neighbor->freed)
+			{
+				neighbor->refcount -= 1;
+			}
+		});
+	}
+	
+	for (size_t i = 0; i < reachable->length; ++i)
+	{
+		ASObject* r = (ASObject*) reachable->data[i];
+		
+		if (!r->freed)
+		{
+			attemptFree(app_context, r);
+		}
+	}
+	
+	FREE(o);
+	
+	LOCK_WRITE(object_queue_lock,
+	{
+		rbtree_remove_u64(app_context, &object_free_queue, (u64) o);
+	});
+}
+
+void attemptFree(SWFAppContext* app_context, ASObject* o)
+{
+	u32 rc;
+	
+	OBJ_LOCK_READ(o,
+	{
+		rc = o->refcount;
+	});
+	
+	SwapVector reachable;
+	SVEC_INIT(&reachable);
+	getReachable(app_context, o, &reachable);
+	
+	if (rc == 0)
+	{
+		freeObject(app_context, o, &reachable);
+	}
+	
+	else
+	{
+		if (subRCTest(app_context, o, &reachable))
+		{
+			freeObjectIfSubRC(app_context, o, &reachable);
+		}
+	}
+	
+	SVEC_RELEASE(&reachable);
+}
+
 // ==================================================================
 // Global object for ActionScript
 // This is initialized from initActions and persists for the lifetime of the runtime
 ASObject* _global;
+
+uintptr_t free_thread_handle;
+
+DECLARE_RUNTIME_THREAD_FUNC(freeThread)
+{
+	while (true)
+	{
+		if (bad_poll)
+		{
+			break;
+		}
+		
+		for (int i = 0; i < 100; ++i)
+		{
+			size_t length = 0;
+			
+			LOCK_READ(object_queue_lock,
+			{
+				length = object_free_queue.length;
+			});
+			
+			if (length > 0)
+			{
+				objnode* n;
+				
+				LOCK_WRITE(object_queue_lock,
+				{
+					n = (objnode*) rbtree_pop_root(&object_free_queue);
+				});
+				
+				ASObject* o = (ASObject*) n->key;
+				
+				attemptFree(app_context, o);
+				
+				FREE(n);
+			}
+			
+			else
+			{
+				break;
+			}
+		}
+		
+		recomp_sleep(16);
+	}
+	
+	thread_exit();
+	
+	return 0;
+}
 
 void initActions(SWFAppContext* app_context)
 {
@@ -52,6 +482,7 @@ void initActions(SWFAppContext* app_context)
 	for (u32 i = 0; i < MAX_SCOPE_DEPTH; ++i)
 	{
 		scope_chain[i] = allocObject(app_context);
+		retainObject(scope_chain[i]);
 	}
 	
 	_global = scope_chain[0];
@@ -91,6 +522,16 @@ void initActions(SWFAppContext* app_context)
 		v.value = (u64) allocObject(app_context);
 		setProperty(app_context, obj, runtime_funcs[i].func_string_id, NULL, 0, &v);
 	}
+	
+	mutex_init(&object_queue_lock);
+	rbtree_init(&object_free_queue, sizeof(objnode));
+	
+	free_thread_handle = thread_start(app_context, freeThread);
+}
+
+void freeActions(SWFAppContext* app_context)
+{
+	thread_join(free_thread_handle);
 }
 
 ASProperty* searchScopesForProperty(u32 string_id, const char* name, u32 name_len)
@@ -99,7 +540,10 @@ ASProperty* searchScopesForProperty(u32 string_id, const char* name, u32 name_le
 	
 	for (u32 i = scope_top_obj; i < MAX_SCOPE_DEPTH; --i)
 	{
-		p = getProperty(scope_chain[i], string_id, name, name_len);
+		OBJ_LOCK_READ(scope_chain[i],
+		{
+			p = getProperty(scope_chain[i], string_id, name, name_len);
+		});
 		
 		if (p != NULL)
 		{
@@ -112,7 +556,14 @@ ASProperty* searchScopesForProperty(u32 string_id, const char* name, u32 name_le
 
 ASProperty* getPropertyInThisScope(u32 string_id, const char* name, u32 name_len)
 {
-	return getProperty(scope_chain[scope_top_obj], string_id, name, name_len);
+	ASProperty* p;
+	
+	OBJ_LOCK_READ(scope_chain[scope_top_obj],
+	{
+		p = getProperty(scope_chain[scope_top_obj], string_id, name, name_len);
+	});
+	
+	return p;
 }
 
 void setPropertyInThisScope(SWFAppContext* app_context, u32 string_id, const char* name, u32 name_len, ActionVar* value)
@@ -906,7 +1357,10 @@ void actionGetVariable(SWFAppContext* app_context)
 			// Constant string - use scope object (O(lg(n)))
 			for (u32 i = scope_top_obj; i < MAX_SCOPE_DEPTH; --i)
 			{
-				p = getProperty(scope_chain[i], string_id, var_name, var_name_len);
+				OBJ_LOCK_READ(scope_chain[i],
+				{
+					p = getProperty(scope_chain[i], string_id, var_name, var_name_len);
+				});
 				
 				if (p != NULL)
 				{
@@ -922,6 +1376,17 @@ void actionGetVariable(SWFAppContext* app_context)
 	{
 		// Push variable value to stack
 		PUSH_VAR(&p->value);
+		
+		if (IS_OBJ(p->value))
+		{
+			ASObject* po = (ASObject*) p->value.value;
+			
+			OBJ_LOCK_WRITE(po,
+			{
+				// the stack now has a reference to this object
+				retainObject(po);
+			});
+		}
 	}
 	
 	else
@@ -936,7 +1401,20 @@ void actionSetVariable(SWFAppContext* app_context)
 	// We need value at top, name at second
 	
 	ActionVar value;
-	popVar(app_context, &value);
+	peekVar(app_context, &value);
+	
+	if (IS_OBJ(value))
+	{
+		ASObject* o = (ASObject*) value.value;
+		
+		OBJ_LOCK_WRITE(o,
+		{
+			// we now have a reference to this object
+			retainObject((ASObject*) value.value);
+		});
+	}
+	
+	POP();
 	
 	// Read variable name info
 	u32 string_id = STACK_TOP_ID;
@@ -946,6 +1424,8 @@ void actionSetVariable(SWFAppContext* app_context)
 	POP();
 	
 	ASProperty* p = NULL;
+	
+	ASObject* scope_obj;
 	
 	switch (string_id)
 	{
@@ -961,15 +1441,21 @@ void actionSetVariable(SWFAppContext* app_context)
 		{
 			setProperty(app_context, _global, string_id, var_name, var_name_len, &value);
 			
-			return;
+			// sue me
+			goto release_value;
 		}
 		
 		default:
 		{
 			// Constant string - use scope object (O(lg(n)))
-			for (u32 i = scope_top_obj; i > 0; --i)
+			for (u32 i = scope_top_obj; i < MAX_SCOPE_DEPTH; --i)
 			{
-				p = getProperty(scope_chain[i], string_id, var_name, var_name_len);
+				scope_obj = scope_chain[i];
+				
+				OBJ_LOCK_READ(scope_obj,
+				{
+					p = getProperty(scope_obj, string_id, var_name, var_name_len);
+				});
 				
 				if (p != NULL)
 				{
@@ -983,12 +1469,45 @@ void actionSetVariable(SWFAppContext* app_context)
 	
 	if (p != NULL)
 	{
-		p->value = value;
+		bool should_release = false;
+		ASObject* old_obj;
+		
+		if (IS_OBJ(p->value))
+		{
+			should_release = true;
+			old_obj = (ASObject*) p->value.value;
+		}
+		
+		OBJ_LOCK_WRITE(scope_obj,
+		{
+			p->value = value;
+		});
+		
+		if (should_release)
+		{
+			OBJ_LOCK_WRITE(old_obj,
+			{
+				releaseObject(app_context, old_obj);
+			});
+		}
 	}
 	
 	else
 	{
-		setProperty(app_context, _global, string_id, var_name, var_name_len, &value);
+		setProperty(app_context, scope_chain[1], string_id, var_name, var_name_len, &value);
+	}
+	
+	release_value:
+	
+	if (IS_OBJ(value))
+	{
+		ASObject* o = (ASObject*) value.value;
+		
+		OBJ_LOCK_WRITE(o,
+		{
+			// we no longer have a reference to this object
+			releaseObject(app_context, o);
+		});
 	}
 }
 
@@ -1647,9 +2166,22 @@ void actionSetMember(SWFAppContext* app_context)
 	// 2. property_name (the name of the property)
 	// 3. object (the object to set the property on)
 	
-	// Pop the value to assign
+	// Fetch the value to assign
 	ActionVar value_var;
-	popVar(app_context, &value_var);
+	peekVar(app_context, &value_var);
+	
+	if (IS_OBJ(value_var))
+	{
+		ASObject* o = (ASObject*) value_var.value;
+		
+		OBJ_LOCK_WRITE(o,
+		{
+			// we now have a reference to this object
+			retainObject(o);
+		});
+	}
+	
+	POP();
 	
 	// Pop the property name
 	// The property name should be a string on the stack
@@ -1698,22 +2230,42 @@ void actionSetMember(SWFAppContext* app_context)
 		return;
 	}
 	
-	// Pop the object
+	// Fetch the object
 	ActionVar obj_var;
-	popVar(app_context, &obj_var);
-	
-	assert(obj_var.type == ACTION_STACK_VALUE_OBJECT);
+	peekVar(app_context, &obj_var);
 	
 	// Check if the object is actually an object type
-	if (obj_var.type == ACTION_STACK_VALUE_OBJECT)
+	if (IS_OBJ(obj_var))
 	{
 		ASObject* obj = (ASObject*) obj_var.value;
 		
-		if (obj != NULL)
+		OBJ_LOCK_WRITE(obj,
 		{
-			// Set the property on the object
-			setProperty(app_context, obj, string_id, prop_name, prop_name_len, &value_var);
-		}
+			// we now have a reference to this object
+			retainObject(obj);
+		});
+		
+		// Set the property on the object
+		setProperty(app_context, obj, string_id, prop_name, prop_name_len, &value_var);
+		
+		OBJ_LOCK_WRITE(obj,
+		{
+			// we no longer have a reference to this object
+			releaseObject(app_context, obj);
+		});
+	}
+	
+	POP();
+	
+	if (IS_OBJ(value_var))
+	{
+		ASObject* o = (ASObject*) value_var.value;
+		
+		OBJ_LOCK_WRITE(o,
+		{
+			// we no longer have a reference to this object
+			releaseObject(app_context, o);
+		});
 	}
 	
 	// If it's not an object type, we silently ignore the operation
@@ -1867,21 +2419,48 @@ void actionGetMember(SWFAppContext* app_context)
 	
 	// 2. Pop object (second on stack)
 	ActionVar obj_var;
-	popVar(app_context, &obj_var);
+	peekVar(app_context, &obj_var);
+	
+	ASObject* obj = (ASObject*) obj_var.value;
+	
+	// Check if the object is actually an object type
+	if (IS_OBJ(obj_var))
+	{
+		OBJ_LOCK_WRITE(obj,
+		{
+			// we now have a reference to this object
+			retainObject(obj);
+		});
+	}
+	
+	POP();
 	
 	// 3. Handle different object types
 	if (obj_var.type == ACTION_STACK_VALUE_OBJECT)
 	{
-		// Handle AS object
-		ASObject* obj = (ASObject*) obj_var.value;
+		ASProperty* prop;
 		
-		// Look up property
-		ASProperty* prop = getProperty(obj, string_id, prop_name, prop_name_len);
+		OBJ_LOCK_READ(obj,
+		{
+			// Look up property
+			prop = getProperty(obj, string_id, prop_name, prop_name_len);
+		});
 		
 		if (prop != NULL)
 		{
 			// Property found - push its value
 			pushVar(app_context, &prop->value);
+			
+			if (IS_OBJ(prop->value))
+			{
+				ASObject* po = (ASObject*) prop->value.value;
+				
+				OBJ_LOCK_WRITE(po,
+				{
+					// the stack now has a reference to this object
+					retainObject(po);
+				});
+			}
 		}
 		
 		else
@@ -1961,6 +2540,15 @@ void actionGetMember(SWFAppContext* app_context)
 		// Other primitive types (number, undefined, etc.) - push undefined
 		PUSH_UNDEFINED();
 	}
+	
+	if (IS_OBJ(obj_var))
+	{
+		OBJ_LOCK_WRITE(obj,
+		{
+			// we no longer have a reference to this object
+			releaseObject(app_context, obj);
+		});
+	}
 }
 
 void actionNewObject(SWFAppContext* app_context)
@@ -1974,7 +2562,7 @@ void actionNewObject(SWFAppContext* app_context)
 	popVar(app_context, &num_args_var);
 	u32 num_args = (u32) num_args_var.value;
 	
-	// Try to find user-defined constructor function
+	// Try to find existing constructor function
 	ASProperty* func_p = searchScopesForProperty(ctor_name_var.string_id, NULL, 0);
 	
 	if (func_p != NULL)
@@ -1997,8 +2585,9 @@ void actionNewObject(SWFAppContext* app_context)
 			for (u32 i = 0; i < num_args; ++i)
 			{
 				ActionVar v;
-				popVar(app_context, &v);
+				peekVar(app_context, &v);
 				setPropertyInThisScope(app_context, args[i], NULL, 0, &v);
+				POP();
 			}
 		}
 		
@@ -2010,9 +2599,13 @@ void actionNewObject(SWFAppContext* app_context)
 		
 		POP();
 		
-		scope_top_obj -= 1;
-		
 		PUSH_OBJ(this);
+		
+		ActionVar null_v;
+		null_v.type = ACTION_STACK_VALUE_NULL;
+		
+		setPropertyInThisScope(app_context, STR_ID_THIS, NULL, 0, &null_v);
+		scope_top_obj -= 1;
 	}
 	
 	else

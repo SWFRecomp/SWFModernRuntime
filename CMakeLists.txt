@@ -18,6 +18,7 @@ set(CORE_SOURCES
     ${PROJECT_SOURCE_DIR}/src/actionmodern/variables.c
     ${PROJECT_SOURCE_DIR}/src/memory/heap.c
     ${PROJECT_SOURCE_DIR}/src/apis/rbtree/rbtree.c
+    ${PROJECT_SOURCE_DIR}/src/apis/swap-vector/swap_vector.c
     ${PROJECT_SOURCE_DIR}/src/utils.c
     
     # Compile libs directly to avoid undefined symbols on Linux
@@ -55,9 +56,9 @@ set(SOURCES ${CORE_SOURCES} ${SWF_SOURCES} ${RUNTIME_API_SOURCES})
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
 
 if (WIN32)
-target_compile_options(${PROJECT_NAME} PRIVATE)
+    target_compile_options(${PROJECT_NAME} PRIVATE)
 else()
-target_compile_options(${PROJECT_NAME} PRIVATE -Wno-format-truncation)
+    target_compile_options(${PROJECT_NAME} PRIVATE -Wno-format-truncation)
 endif()
 
 set(RENAME_ZCONF OFF)

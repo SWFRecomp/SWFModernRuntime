@@ -1,6 +1,5 @@
 #include <o1heap.h>
 #include <string.h>
-#include <assert.h>
 
 #include <heap.h>
 #include <utils.h>
@@ -11,18 +10,27 @@ void heap_init(SWFAppContext* app_context, size_t size)
 	app_context->heap = h;
 	app_context->heap_size = size;
 	app_context->heap_instance = o1heapInit(h, size);
+	mutex_init(&app_context->heap_lock);
 }
 
 void* heap_alloc(SWFAppContext* app_context, size_t size)
 {
-	void* ret = o1heapAllocate(app_context->heap_instance, size);
-	assert(ret != NULL);
+	void* ret;
+	
+	LOCK_WRITE(app_context->heap_lock,
+	{
+		ret = o1heapAllocate(app_context->heap_instance, size);
+	});
+	
 	return ret;
 }
 
 void heap_free(SWFAppContext* app_context, void* ptr)
 {
-	o1heapFree(app_context->heap_instance, ptr);
+	LOCK_WRITE(app_context->heap_lock,
+	{
+		o1heapFree(app_context->heap_instance, ptr);
+	});
 }
 
 void heap_shutdown(SWFAppContext* app_context)

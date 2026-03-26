@@ -4,21 +4,29 @@
 #include <assert.h>
 
 #include <heap.h>
+#include <utils.h>
+#include <swap_vector.h>
 
 #include <objects.h>
 
 /**
  * Object Allocation
  *
- * Allocates a new ASObject with the specified initial capacity.
- * Returns object with refcount = 1 (caller owns the initial reference).
+ * Allocates a new ASObject and returns it.
  */
 ASObject* allocObject(SWFAppContext* app_context)
 {
 	ASObject* obj = (ASObject*) HALLOC(sizeof(ASObject));
 	
 	rbtree_init(&obj->t, sizeof(ASProperty));
-	obj->refcount = 1;  // Initial reference owned by caller
+	mutex_init(&obj->lock);
+	obj->reached = false;
+	obj->used = false;
+	obj->blocked = false;
+	obj->freed = false;
+	SVEC_INIT(&obj->neighbors);
+	SVEC_INIT(&obj->blocked_list);
+	obj->refcount = 0;
 	
 	return obj;
 }
@@ -31,13 +39,21 @@ ASObject* allocObject(SWFAppContext* app_context)
  */
 void retainObject(ASObject* obj)
 {
-	if (obj == NULL)
-	{
-		return;
-	}
-	
 	obj->refcount++;
 }
+
+extern rbtree object_free_queue;
+extern recomp_mutex_t object_queue_lock;
+
+void queueObjectFreeCheck(SWFAppContext* app_context, ASObject* obj)
+{
+	LOCK_WRITE(object_queue_lock,
+	{
+		rbtree_insert_u64(app_context, &object_free_queue, (u64) obj);
+	});
+}
+
+extern ASObject* _global;
 
 /**
  * Release Object
@@ -50,10 +66,10 @@ void releaseObject(SWFAppContext* app_context, ASObject* obj)
 {
 	obj->refcount--;
 	
-	if (obj->refcount == 0)
+	if (obj != _global)
 	{
-		// Free object
-		//~ FREE(obj);
+		// queue object for free check
+		queueObjectFreeCheck(app_context, obj);
 	}
 }
 
@@ -131,42 +147,75 @@ void setProperty(SWFAppContext* app_context, ASObject* this, u32 string_id, cons
 		return;
 	}
 	
-	ASProperty* p = getProperty(this, string_id, name, name_length);
+	ASProperty* p;
+	
+	OBJ_LOCK_READ(this,
+	{
+		p = getProperty(this, string_id, name, name_length);
+	});
+	
+	// Retain new value if it's an object
+	if (IS_OBJ_P(value))
+	{
+		ASObject* new_obj = (ASObject*) value->value;
+		
+		OBJ_LOCK_WRITE(new_obj,
+		{
+			retainObject(new_obj);
+		});
+	}
 	
 	if (p != NULL)
 	{
 		// Property exists - update value
 		
-		// Release old value if it was an object
-		if (p->value.type == ACTION_STACK_VALUE_OBJECT)
-		{
-			ASObject* old_obj = (ASObject*) p->value.value;
-			releaseObject(app_context, old_obj);
-		}
+		bool release_old = false;
+		ASObject* old_obj;
 		
-		// Free old string if it owned memory
-		else if (p->value.type == ACTION_STACK_VALUE_STRING &&
-				 p->value.owns_memory)
+		OBJ_LOCK_READ(this,
 		{
-			FREE(p->value.heap_ptr);
-		}
+			// Release old value if it was an object
+			if (IS_OBJ(p->value))
+			{
+				release_old = true;
+				old_obj = (ASObject*) p->value.value;
+			}
+			
+			// Free old string if it owned memory
+			else if (p->value.type == ACTION_STACK_VALUE_STRING &&
+					 p->value.owns_memory)
+			{
+				FREE(p->value.heap_ptr);
+			}
+		});
 		
-		// Set new value
-		p->value = *value;
-		
-		// Retain new value if it's an object
-		if (value->type == ACTION_STACK_VALUE_OBJECT)
+		OBJ_LOCK_WRITE(this,
 		{
-			ASObject* new_obj = (ASObject*) value->value;
-			retainObject(new_obj);
+			// Set new value
+			p->value = *value;
+		});
+		
+		if (release_old)
+		{
+			OBJ_LOCK_WRITE(old_obj,
+			{
+				releaseObject(app_context, old_obj);
+			});
 		}
 		
 		return;
 	}
 	
-	// Property doesn't exist - create new one
-	p = (ASProperty*) RBT_GET_OR_INS(&this->t, string_id);
-	p->value = *value;
+	OBJ_LOCK_READ(this,
+	{
+		// Property doesn't exist - create new one
+		p = (ASProperty*) RBT_GET_OR_INS(&this->t, string_id);
+	});
+	
+	OBJ_LOCK_WRITE(this,
+	{
+		p->value = *value;
+	});
 }
 
 /**

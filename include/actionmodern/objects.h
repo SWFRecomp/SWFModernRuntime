@@ -1,12 +1,25 @@
 #pragma once
 
 #include <common.h>
+#include <swf.h>
 #include <variables.h>
+#include <utils.h>
 
 #include <rbtree.h>
+#include <swap_vector.h>
 
-// Forward declaration
-typedef struct SWFAppContext SWFAppContext;
+#define IS_OBJ(v) ((v.type & 0xF0) == 0x10)
+#define IS_OBJ_P(v) ((v->type & 0xF0) == 0x10)
+
+#define OBJ_LOCK_READ(obj, code) \
+	mutex_lock_read(&obj->lock); \
+	code \
+	mutex_unlock_read(&obj->lock);
+
+#define OBJ_LOCK_WRITE(obj, code) \
+	mutex_lock_write(&obj->lock); \
+	code \
+	mutex_unlock_write(&obj->lock);
 
 /**
  * ASObject - ActionScript Object with Reference Counting
@@ -15,9 +28,6 @@ typedef struct SWFAppContext SWFAppContext;
  * The recompiler (SWFRecomp) emits inline refcount increment/decrement operations,
  * providing deterministic memory management without runtime GC.
  */
-
-// Forward declaration for property structure
-typedef struct ASProperty ASProperty;
 
 /**
  * Property Attribute Flags (ECMA-262 compliant)
@@ -37,17 +47,28 @@ typedef struct ASProperty ASProperty;
 typedef struct
 {
 	rbtree t;
-	u32 refcount;           // Reference count (starts at 1 on allocation)
+	recomp_mutex_t lock;
+	bool reached;
+	bool used;
+	bool blocked;
+	bool freed;
+	SwapVector neighbors;
+	SwapVector blocked_list;
+	u32 temp_rc;
+	u32 refcount;
 } ASObject;
 
-struct ASProperty
+typedef struct
 {
 	rbnode n;
-	char* name;             // Property name (heap-allocated)
-	u32 name_length;        // Length of property name
-	u8 flags;               // Property attribute flags (PROPERTY_FLAG_*)
 	ActionVar value;        // Property value (can be any type)
-};
+} ASProperty;
+
+typedef struct
+{
+	struct rb_node n;
+	u64 key;
+} objnode;
 
 /**
  * Object Lifecycle Primitives
