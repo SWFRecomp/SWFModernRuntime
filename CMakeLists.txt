@@ -15,6 +15,7 @@ option(NO_GRAPHICS "Build without graphics support (console-only)" OFF)
 set(CORE_SOURCES
     ${PROJECT_SOURCE_DIR}/src/actionmodern/action.c
     ${PROJECT_SOURCE_DIR}/src/actionmodern/objects.c
+    ${PROJECT_SOURCE_DIR}/src/actionmodern/free_thread.c
     ${PROJECT_SOURCE_DIR}/src/actionmodern/variables.c
     ${PROJECT_SOURCE_DIR}/src/memory/heap.c
     ${PROJECT_SOURCE_DIR}/src/apis/rbtree/rbtree.c

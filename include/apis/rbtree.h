@@ -4,6 +4,9 @@
 
 #include <rb_tree.h>
 
+#include <common.h>
+#include <swf.h>
+
 #define RBT_GET_OR_INS(t, s) rbtree_get_or_insert(app_context, t, s)
 #define RBT_GET_OR_INS_U64(t, s) rbtree_get_or_insert_u64(app_context, t, s)
 #define RBT_INS_U64(t, s) rbtree_insert_u64(app_context, t, s)
