@@ -111,8 +111,9 @@ ASProperty* searchScopesForProperty(u32 string_id, const char* name, u32 name_le
 {
 	ASProperty* p = NULL;
 	
-	for (u32 i = scope_top_obj; i < MAX_SCOPE_DEPTH; --i)
+	for (u32 j = 0; j <= scope_top_obj; ++j)
 	{
+		u32 i = scope_top_obj - j;
 		OBJ_LOCK_READ(scope_chain[i],
 		{
 			p = getProperty(scope_chain[i], string_id, name, name_len);
@@ -301,7 +302,7 @@ void actionAdd(SWFAppContext* app_context)
 		double b_val = b.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &b.value) : VAL(double, &b.value);
 		
 		double c = b_val + a_val;
-		PUSH(ACTION_STACK_VALUE_F64, VAL(u64, &c));
+		PUSH_F64(c);
 	}
 	
 	else if (b.type == ACTION_STACK_VALUE_F64)
@@ -310,13 +311,13 @@ void actionAdd(SWFAppContext* app_context)
 		double b_val = VAL(double, &b.value);
 		
 		double c = b_val + a_val;
-		PUSH(ACTION_STACK_VALUE_F64, VAL(u64, &c));
+		PUSH_F64(c);
 	}
 	
 	else
 	{
 		float c = VAL(float, &b.value) + VAL(float, &a.value);
-		PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &c));
+		PUSH_F32(c);
 	}
 }
 
@@ -336,7 +337,7 @@ void actionSubtract(SWFAppContext* app_context)
 		double b_val = b.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &b.value) : VAL(double, &b.value);
 		
 		double c = b_val - a_val;
-		PUSH(ACTION_STACK_VALUE_F64, VAL(u64, &c));
+		PUSH_F64(c);
 	}
 	
 	else if (b.type == ACTION_STACK_VALUE_F64)
@@ -345,13 +346,13 @@ void actionSubtract(SWFAppContext* app_context)
 		double b_val = VAL(double, &b.value);
 		
 		double c = b_val - a_val;
-		PUSH(ACTION_STACK_VALUE_F64, VAL(u64, &c));
+		PUSH_F64(c);
 	}
 	
 	else
 	{
 		float c = VAL(float, &b.value) - VAL(float, &a.value);
-		PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &c));
+		PUSH_F32(c);
 	}
 }
 
@@ -371,7 +372,7 @@ void actionMultiply(SWFAppContext* app_context)
 		double b_val = b.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &b.value) : VAL(double, &b.value);
 		
 		double c = b_val*a_val;
-		PUSH(ACTION_STACK_VALUE_F64, VAL(u64, &c));
+		PUSH_F64(c);
 	}
 	
 	else if (b.type == ACTION_STACK_VALUE_F64)
@@ -380,13 +381,13 @@ void actionMultiply(SWFAppContext* app_context)
 		double b_val = VAL(double, &b.value);
 		
 		double c = b_val*a_val;
-		PUSH(ACTION_STACK_VALUE_F64, VAL(u64, &c));
+		PUSH_F64(c);
 	}
 	
 	else
 	{
 		float c = VAL(float, &b.value)*VAL(float, &a.value);
-		PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &c));
+		PUSH_F32(c);
 	}
 }
 
@@ -430,7 +431,7 @@ void actionDivide(SWFAppContext* app_context)
 			double b_val = b.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &b.value) : VAL(double, &b.value);
 			
 			double c = b_val/a_val;
-			PUSH(ACTION_STACK_VALUE_F64, VAL(u64, &c));
+			PUSH_F64(c);
 		}
 		
 		else if (b.type == ACTION_STACK_VALUE_F64)
@@ -439,13 +440,13 @@ void actionDivide(SWFAppContext* app_context)
 			double b_val = VAL(double, &b.value);
 			
 			double c = b_val/a_val;
-			PUSH(ACTION_STACK_VALUE_F64, VAL(u64, &c));
+			PUSH_F64(c);
 		}
 		
 		else
 		{
 			float c = VAL(float, &b.value)/VAL(float, &a.value);
-			PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &c));
+			PUSH_F32(c);
 		}
 	}
 }
@@ -470,7 +471,7 @@ void actionEquals(SWFAppContext* app_context)
 		double b_val = b.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &b.value) : VAL(double, &b.value);
 		
 		float c = b_val == a_val ? 1.0f : 0.0f;
-		PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &c));
+		PUSH_F32(c);
 	}
 	
 	else if (b.type == ACTION_STACK_VALUE_F64)
@@ -479,13 +480,13 @@ void actionEquals(SWFAppContext* app_context)
 		double b_val = VAL(double, &b.value);
 		
 		float c = b_val == a_val ? 1.0f : 0.0f;
-		PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &c));
+		PUSH_F32(c);
 	}
 	
 	else
 	{
 		float c = VAL(float, &b.value) == VAL(float, &a.value) ? 1.0f : 0.0f;
-		PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &c));
+		PUSH_F32(c);
 	}
 }
 
@@ -505,7 +506,7 @@ void actionLess(SWFAppContext* app_context)
 		double b_val = b.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &b.value) : VAL(double, &b.value);
 		
 		float c = b_val < a_val ? 1.0f : 0.0f;
-		PUSH(ACTION_STACK_VALUE_F64, VAL(u64, &c));
+		PUSH_F64(c);
 	}
 	
 	else if (b.type == ACTION_STACK_VALUE_F64)
@@ -514,13 +515,13 @@ void actionLess(SWFAppContext* app_context)
 		double b_val = VAL(double, &b.value);
 		
 		float c = b_val < a_val ? 1.0f : 0.0f;
-		PUSH(ACTION_STACK_VALUE_F64, VAL(u64, &c));
+		PUSH_F64(c);
 	}
 	
 	else
 	{
 		float c = VAL(float, &b.value) < VAL(float, &a.value) ? 1.0f : 0.0f;
-		PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &c));
+		PUSH_F32(c);
 	}
 }
 
@@ -540,7 +541,7 @@ void actionAnd(SWFAppContext* app_context)
 		double b_val = b.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &b.value) : VAL(double, &b.value);
 		
 		float c = b_val != 0.0 && a_val != 0.0 ? 1.0f : 0.0f;
-		PUSH(ACTION_STACK_VALUE_F64, VAL(u64, &c));
+		PUSH_F64(c);
 	}
 	
 	else if (b.type == ACTION_STACK_VALUE_F64)
@@ -549,13 +550,13 @@ void actionAnd(SWFAppContext* app_context)
 		double b_val = VAL(double, &b.value);
 		
 		float c = b_val != 0.0 && a_val != 0.0 ? 1.0f : 0.0f;
-		PUSH(ACTION_STACK_VALUE_F64, VAL(u64, &c));
+		PUSH_F64(c);
 	}
 	
 	else
 	{
 		float c = VAL(float, &b.value) != 0.0f && VAL(float, &a.value) != 0.0f ? 1.0f : 0.0f;
-		PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &c));
+		PUSH_F32(c);
 	}
 }
 
@@ -575,7 +576,7 @@ void actionOr(SWFAppContext* app_context)
 		double b_val = b.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &b.value) : VAL(double, &b.value);
 		
 		float c = b_val != 0.0 || a_val != 0.0 ? 1.0f : 0.0f;
-		PUSH(ACTION_STACK_VALUE_F64, VAL(u64, &c));
+		PUSH_F64(c);
 	}
 	
 	else if (b.type == ACTION_STACK_VALUE_F64)
@@ -584,13 +585,13 @@ void actionOr(SWFAppContext* app_context)
 		double b_val = VAL(double, &b.value);
 		
 		float c = b_val != 0.0 || a_val != 0.0 ? 1.0f : 0.0f;
-		PUSH(ACTION_STACK_VALUE_F64, VAL(u64, &c));
+		PUSH_F64(c);
 	}
 	
 	else
 	{
 		float c = VAL(float, &b.value) != 0.0f || VAL(float, &a.value) != 0.0f ? 1.0f : 0.0f;
-		PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &c));
+		PUSH_F32(c);
 	}
 }
 
@@ -601,7 +602,7 @@ void actionNot(SWFAppContext* app_context)
 	popVar(app_context, &v);
 	
 	float result = v.value == 0.0f ? 1.0f : 0.0f;
-	PUSH(ACTION_STACK_VALUE_F32, VAL(u64, &result));
+	PUSH_F32(result);
 }
 
 // ==================================================================
@@ -798,7 +799,7 @@ void actionStringEquals(SWFAppContext* app_context, char* a_str, char* b_str)
 	}
 	
 	float result = cmp_result == 0 ? 1.0f : 0.0f;
-	PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &result));
+	PUSH_F32(result);
 }
 
 void actionStringLength(SWFAppContext* app_context, char* v_str)
@@ -808,7 +809,7 @@ void actionStringLength(SWFAppContext* app_context, char* v_str)
 	popVar(app_context, &v);
 	
 	float str_size = (float) v.str_size;
-	PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &str_size));
+	PUSH_F32(str_size);
 }
 
 void actionStringAdd(SWFAppContext* app_context, char* a_str, char* b_str)
@@ -1155,7 +1156,7 @@ void actionGetTime(SWFAppContext* app_context)
 	u32 delta_ms = get_elapsed_ms() - start_time;
 	float delta_ms_f32 = (float) delta_ms;
 	
-	PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &delta_ms_f32));
+	PUSH_F32(delta_ms_f32);
 }
 
 // ==================================================================
@@ -1542,7 +1543,7 @@ void actionDelete2(SWFAppContext* app_context, char* str_buffer)
 				
 				//~ // Push result and return
 				//~ float result = success ? 1.0f : 0.0f;
-				//~ PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &result));
+				//~ PUSH_F32(result);
 				//~ return;
 			//~ }
 		//~ }
@@ -1564,7 +1565,7 @@ void actionDelete2(SWFAppContext* app_context, char* str_buffer)
 	
 	//~ // Push result
 	//~ float result = success ? 1.0f : 0.0f;
-	//~ PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &result));
+	//~ PUSH_F32(result);
 }
 
 /**
@@ -1707,7 +1708,7 @@ void actionInitArray(SWFAppContext* app_context)
 	ASArray* arr = allocArray(app_context, num_elements);
 	if (!arr) {
 		// Handle allocation failure - push empty array or null
-		PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &(float){0.0f}));
+		PUSH_F32((float){0.0f});
 		return;
 	}
 	arr->length = num_elements;
@@ -1917,7 +1918,7 @@ void actionDelete(SWFAppContext* app_context)
 		// Property name must be a string
 		// Return true (AS2 spec: returns true for invalid operations)
 		float result = 1.0f;
-		PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &result));
+		PUSH_F32(result);
 		return;
 	}
 	
@@ -1940,7 +1941,7 @@ void actionDelete(SWFAppContext* app_context)
 		// Object name must be a string
 		// Return true (AS2 spec: returns true for invalid operations)
 		float result = 1.0f;
-		PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &result));
+		PUSH_F32(result);
 		return;
 	}
 	
@@ -1951,7 +1952,7 @@ void actionDelete(SWFAppContext* app_context)
 	if (obj_var == NULL)
 	{
 		float result = 1.0f;
-		PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &result));
+		PUSH_F32(result);
 		return;
 	}
 	
@@ -1959,7 +1960,7 @@ void actionDelete(SWFAppContext* app_context)
 	if (obj_var->type != ACTION_STACK_VALUE_OBJECT)
 	{
 		float result = 1.0f;
-		PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &result));
+		PUSH_F32(result);
 		return;
 	}
 	
@@ -1970,7 +1971,7 @@ void actionDelete(SWFAppContext* app_context)
 	if (obj == NULL)
 	{
 		float result = 1.0f;
-		PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &result));
+		PUSH_F32(result);
 		return;
 	}
 	
@@ -1979,7 +1980,7 @@ void actionDelete(SWFAppContext* app_context)
 	
 	// Push result (1.0 for success, 0.0 for failure)
 	float result = success ? 1.0f : 0.0f;
-	PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &result));
+	PUSH_F32(result);
 }
 
 void actionGetMember(SWFAppContext* app_context)
@@ -2048,7 +2049,7 @@ void actionGetMember(SWFAppContext* app_context)
 		// Handle string properties
 		if (string_id == STR_ID_LENGTH)
 		{
-			PUSH(ACTION_STACK_VALUE_F32, obj_var.str_size);
+			PUSH_F32((f32) obj_var.str_size);
 		}
 		
 		else
@@ -2075,7 +2076,7 @@ void actionGetMember(SWFAppContext* app_context)
 		{
 			// Push array length as float
 			float len = (float) arr->length;
-			PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &len));
+			PUSH_F32(len);
 		}
 		
 		else
@@ -2570,7 +2571,7 @@ static int callStringPrimitiveMethod(SWFAppContext* app_context, char* str_buffe
 		//~ }
 		
 		//~ float result = (float)found_index;
-		//~ PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &result));
+		//~ PUSH_F32(result);
 		//~ return 1;
 	//~ }
 	

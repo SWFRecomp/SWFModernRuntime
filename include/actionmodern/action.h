@@ -52,6 +52,9 @@
 #define PUSH_NULL() PUSH(ACTION_STACK_VALUE_NULL, 0)
 #define PUSH_UNDEFINED() PUSH(ACTION_STACK_VALUE_UNDEFINED, 0)
 
+#define PUSH_F32(f) PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &f));
+#define PUSH_F64(f) PUSH(ACTION_STACK_VALUE_F64, VAL(u64, &f));
+
 #define PUSH_OBJ(o) \
 	PUSH(ACTION_STACK_VALUE_OBJECT, (u64) o) \
 	OBJ_LOCK_WRITE(o, \
@@ -91,6 +94,10 @@
 #define STACK_SECOND_TOP_FUNC VAL(u64, &STACK[SP_SECOND_TOP + 24])
 #define STACK_SECOND_TOP_FUNC_ARGS VAL(u64, &STACK[SP_SECOND_TOP + 32])
 
+#define IS_NULL(v) (v.type == ACTION_STACK_VALUE_NULL)
+#define IS_UNDEFINED(v) (v.type == ACTION_STACK_VALUE_UNDEFINED)
+#define IS_NULL_UNDEFINED(v) (IS_NULL(v) || IS_UNDEFINED(v))
+
 #define RETURN_VOID() PUSH_UNDEFINED()
 
 #define VAL(type, x) *((type*) x)
@@ -99,10 +106,6 @@
 #define INITIAL_SP INITIAL_STACK_SIZE
 
 extern ActionVar* temp_val;
-
-// Global object
-// Initialized on first use via initActions()
-extern ASObject* _global;
 
 void initActions(SWFAppContext* app_context);
 void freeActions(SWFAppContext* app_context);
