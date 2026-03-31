@@ -21,7 +21,6 @@ ASObject* allocObject(SWFAppContext* app_context)
 	rbtree_init(&obj->t, sizeof(ASProperty));
 	obj->refcount = 0;
 	mutex_init(&obj->lock);
-	rbtree_init(&obj->forward_refs, sizeof(ForwardRef));
 	obj->reached = false;
 	obj->used = false;
 	obj->blocked = false;
