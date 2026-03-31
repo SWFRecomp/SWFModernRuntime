@@ -47,6 +47,7 @@
 typedef struct
 {
 	rbtree t;
+	u32 refcount;
 	recomp_mutex_t lock;
 	bool reached;
 	bool used;
@@ -55,7 +56,6 @@ typedef struct
 	SwapVector neighbors;
 	SwapVector blocked_list;
 	u32 temp_rc;
-	u32 refcount;
 } ASObject;
 
 typedef struct

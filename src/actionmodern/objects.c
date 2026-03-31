@@ -19,14 +19,16 @@ ASObject* allocObject(SWFAppContext* app_context)
 	ASObject* obj = (ASObject*) HALLOC(sizeof(ASObject));
 	
 	rbtree_init(&obj->t, sizeof(ASProperty));
+	obj->refcount = 0;
 	mutex_init(&obj->lock);
+	rbtree_init(&obj->forward_refs, sizeof(ForwardRef));
 	obj->reached = false;
 	obj->used = false;
 	obj->blocked = false;
 	obj->freed = false;
 	SVEC_INIT(&obj->neighbors);
 	SVEC_INIT(&obj->blocked_list);
-	obj->refcount = 0;
+	obj->temp_rc = 0;
 	
 	return obj;
 }

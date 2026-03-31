@@ -218,6 +218,23 @@ bool containsObj(SwapVector* v, ASObject* o)
 	return false;
 }
 
+u32 countObjs(SwapVector* v, ASObject* o)
+{
+	u32 num_objs = 0;
+	
+	for (size_t i = 0; i < v->length; ++i)
+	{
+		ASObject* this = (ASObject*) v->data[i];
+		
+		if (o == this)
+		{
+			num_objs += 1;
+		}
+	}
+	
+	return num_objs;
+}
+
 recomp_mutex_t object_queue_lock;
 rbtree object_free_queue;
 
@@ -227,6 +244,18 @@ void freeObject(SWFAppContext* app_context, ASObject* o, SwapVector* reachable)
 {
 	o->freed = true;
 	
+	for (size_t i = 0; i < reachable->length; ++i)
+	{
+		ASObject* r = (ASObject*) reachable->data[i];
+		
+		if (!r->freed)
+		{
+			attemptFree(app_context, r);
+		}
+	}
+	
+	// TODO: maybe this can be moved above the call to attemptFree,
+	//		 and then don't consider objects with freed set to be reachable?
 	for (size_t i = 0; i < o->neighbors.length; ++i)
 	{
 		ASObject* neighbor = (ASObject*) o->neighbors.data[i];
@@ -240,22 +269,32 @@ void freeObject(SWFAppContext* app_context, ASObject* o, SwapVector* reachable)
 		}
 	}
 	
-	for (size_t i = 0; i < reachable->length; ++i)
-	{
-		ASObject* r = (ASObject*) reachable->data[i];
-		
-		if (!r->freed)
-		{
-			attemptFree(app_context, r);
-		}
-	}
-	
 	FREE(o);
 	
 	LOCK_WRITE(object_queue_lock,
 	{
 		rbtree_remove_u64(app_context, &object_free_queue, (u64) o);
 	});
+}
+
+ASObject* findBackRef(SwapVector* v, ASObject* ref)
+{
+	for (size_t i = 0; i < v->length; ++i)
+	{
+		ASObject* this = (ASObject*) v->data[i];
+		
+		if (this == ref)
+		{
+			if (UNLIKELY(i == 0))
+			{
+				return (ASObject*) v->data[v->length - 1];
+			}
+			
+			return (ASObject*) v->data[i - 1];
+		}
+	}
+	
+	return NULL;
 }
 
 bool subRCTest(SWFAppContext* app_context, ASObject* o, SwapVector* reachable)
@@ -287,17 +326,31 @@ bool subRCTest(SWFAppContext* app_context, ASObject* o, SwapVector* reachable)
 	
 	bool pass_test = true;
 	
+	SwapVector objects_subbed;
+	SVEC_INIT(&objects_subbed);
+	
 	for (size_t i = 0; i < objects_to_test.length; ++i)
 	{
 		ASObject* test = (ASObject*) objects_to_test.data[i];
+		
+		// TODO: should find backrefs from cycles here (see below TODO)
 		
 		for (size_t j = 0; j < cycles.length; ++j)
 		{
 			SwapVector* cycle = (SwapVector*) cycles.data[j];
 			
-			if (containsObj(cycle, test))
+			// TODO: preprocess to find all backrefs to remove objects_subbed
+			ASObject* backref = findBackRef(cycle, test);
+			
+			if (backref != NULL)
 			{
-				test->temp_rc -= 1;
+				u32 num_refs = countObjs(&backref->neighbors, test);
+				
+				if (!containsObj(&objects_subbed, backref) && num_refs > 0)
+				{
+					SVEC_PUSH(&objects_subbed, backref);
+					test->temp_rc -= num_refs;
+				}
 			}
 		}
 		
@@ -306,7 +359,11 @@ bool subRCTest(SWFAppContext* app_context, ASObject* o, SwapVector* reachable)
 			pass_test = false;
 			break;
 		}
+		
+		SVEC_CLEAR(&objects_subbed);
 	}
+	
+	SVEC_RELEASE(&objects_subbed);
 	
 	for (size_t i = 0; i < cycles.length; ++i)
 	{
