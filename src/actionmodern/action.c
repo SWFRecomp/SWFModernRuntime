@@ -52,7 +52,7 @@ void initActions(SWFAppContext* app_context)
 {
 	start_time = get_elapsed_ms();
 	
-	for (u32 i = 0; i < MAX_SCOPE_DEPTH; ++i)
+	for (u32 i = 0; i < 2; ++i)
 	{
 		scope_chain[i] = allocObject(app_context);
 		retainObject(scope_chain[i]);
@@ -149,7 +149,7 @@ ActionStackValueType convertString(SWFAppContext* app_context, char* var_str)
 {
 	if (STACK_TOP_TYPE == ACTION_STACK_VALUE_F32)
 	{
-		float temp_val = VAL(float, &STACK_TOP_VALUE);
+		f32 temp_val = VAL(f32, &STACK_TOP_VALUE);
 		STACK_TOP_TYPE = ACTION_STACK_VALUE_STRING;
 		VAL(u64, &STACK_TOP_VALUE) = (u64) var_str;
 		snprintf(var_str, 17, "%.15g", temp_val);
@@ -162,7 +162,7 @@ ActionStackValueType convertFloat(SWFAppContext* app_context)
 {
 	if (STACK_TOP_TYPE == ACTION_STACK_VALUE_STRING)
 	{
-		double temp = atof((char*) VAL(u64, &STACK_TOP_VALUE));
+		f64 temp = atof((char*) VAL(u64, &STACK_TOP_VALUE));
 		STACK_TOP_TYPE = ACTION_STACK_VALUE_F64;
 		VAL(u64, &STACK_TOP_VALUE) = VAL(u64, &temp);
 		
@@ -174,14 +174,75 @@ ActionStackValueType convertFloat(SWFAppContext* app_context)
 
 ActionStackValueType convertDouble(SWFAppContext* app_context)
 {
-	if (STACK_TOP_TYPE == ACTION_STACK_VALUE_F32)
+	f64 d;
+	
+	switch (STACK_TOP_TYPE)
 	{
-		double temp = VAL(double, &STACK_TOP_VALUE);
-		STACK_TOP_TYPE = ACTION_STACK_VALUE_F64;
-		VAL(u64, &STACK_TOP_VALUE) = VAL(u64, &temp);
+		case ACTION_STACK_VALUE_F32:
+			f32 f = VAL(f32, &STACK_TOP_VALUE);
+			STACK_TOP_TYPE = ACTION_STACK_VALUE_F64;
+			d = (f64) f;
+			VAL(u64, &STACK_TOP_VALUE) = VAL(u64, &d);
+			break;
+		case ACTION_STACK_VALUE_INT:
+			s32 i = (s32) STACK_TOP_VALUE;
+			STACK_TOP_TYPE = ACTION_STACK_VALUE_F64;
+			d = (f64) i;
+			VAL(u64, &STACK_TOP_VALUE) = VAL(u64, &d);
+			break;
 	}
 	
 	return ACTION_STACK_VALUE_F64;
+}
+
+ActionStackValueType convertVarDouble(ActionVar* v)
+{
+	f64 d;
+	
+	switch (v->type)
+	{
+		case ACTION_STACK_VALUE_F32:
+			f32 f = VAL(f32, &v->value);
+			v->type = ACTION_STACK_VALUE_F64;
+			d = (f64) f;
+			VAL(u64, &v->value) = VAL(u64, &d);
+			break;
+		case ACTION_STACK_VALUE_INT:
+			s32 i = (s32) v->value;
+			v->type = ACTION_STACK_VALUE_F64;
+			d = (f64) i;
+			VAL(u64, &v->value) = VAL(u64, &d);
+			break;
+	}
+	
+	return ACTION_STACK_VALUE_F64;
+}
+
+ActionStackValueType convertInt(SWFAppContext* app_context)
+{
+	s32 i;
+	
+	switch(STACK_TOP_TYPE)
+	{
+		case ACTION_STACK_VALUE_STRING:
+			i = atoi((char*) VAL(u64, &STACK_TOP_VALUE));
+			VAL(u32, &STACK_TOP_VALUE) = i;
+			break;
+		case ACTION_STACK_VALUE_F32:
+			f32 f = VAL(f32, &STACK_TOP_VALUE);
+			i = (s32) f;
+			VAL(u32, &STACK_TOP_VALUE) = i;
+			break;
+		case ACTION_STACK_VALUE_F64:
+			f64 d = VAL(f64, &STACK_TOP_VALUE);
+			i = (s32) d;
+			VAL(u32, &STACK_TOP_VALUE) = i;
+			break;
+	}
+	
+	STACK_TOP_TYPE = ACTION_STACK_VALUE_INT;
+	
+	return ACTION_STACK_VALUE_INT;
 }
 
 void pushVar(SWFAppContext* app_context, ActionVar* var)
@@ -1098,6 +1159,12 @@ void actionTrace(SWFAppContext* app_context)
 		case ACTION_STACK_VALUE_STRING:
 		{
 			printf("%s\n", (char*) STACK_TOP_VALUE);
+			break;
+		}
+		
+		case ACTION_STACK_VALUE_NULL:
+		{
+			printf("null\n");
 			break;
 		}
 		
@@ -2125,6 +2192,39 @@ void actionGetMember(SWFAppContext* app_context)
 	}
 }
 
+void callFunction(SWFAppContext* app_context, ASObject* this, ASProperty* func_p, u32 num_args)
+{
+	u32* args = func_p->value.args;
+	
+	scope_chain[scope_top_obj] = allocObject(app_context);
+	retainObject(scope_chain[scope_top_obj]);
+	
+	if (this != NULL)
+	{
+		ActionVar this_v;
+		this_v.type = ACTION_STACK_VALUE_OBJECT;
+		this_v.object = this;
+		
+		setPropertyInThisScope(app_context, STR_ID_THIS, NULL, 0, &this_v);
+	}
+	
+	// Pop arguments from stack (in reverse order)
+	if (num_args > 0)
+	{
+		for (u32 i = 0; i < num_args; ++i)
+		{
+			ActionVar v;
+			peekVar(app_context, &v);
+			setPropertyInThisScope(app_context, args[i], NULL, 0, &v);
+			POP();
+		}
+	}
+	
+	func_p->value.func(app_context);
+	
+	releaseObject(app_context, scope_chain[scope_top_obj]);
+}
+
 void actionNewObject(SWFAppContext* app_context)
 {
 	// 1. Pop constructor name (string)
@@ -2141,44 +2241,16 @@ void actionNewObject(SWFAppContext* app_context)
 	
 	if (func_p != NULL)
 	{
-		// User-defined constructor found
+		scope_top_obj += 1;
+		
 		// Create new object to serve as 'this'
 		ASObject* this = allocObject(app_context);
-		ActionVar this_v;
-		this_v.type = ACTION_STACK_VALUE_OBJECT;
-		this_v.value = (u64) this;
 		
-		scope_top_obj += 1;
-		setPropertyInThisScope(app_context, STR_ID_THIS, NULL, 0, &this_v);
-		
-		u32* args = func_p->value.args;
-		
-		// Pop arguments from stack (in reverse order)
-		if (num_args > 0)
-		{
-			for (u32 i = 0; i < num_args; ++i)
-			{
-				ActionVar v;
-				peekVar(app_context, &v);
-				setPropertyInThisScope(app_context, args[i], NULL, 0, &v);
-				POP();
-			}
-		}
-		
-		// Call the constructor with 'this' binding
-		// Put 'this' and arguments in scope, call function
-		// Note: Constructor return value is discarded per spec
-		
-		func_p->value.func(app_context);
-		
+		callFunction(app_context, this, func_p, num_args);
 		POP();
 		
 		PUSH_OBJ(this);
 		
-		ActionVar null_v;
-		null_v.type = ACTION_STACK_VALUE_NULL;
-		
-		setPropertyInThisScope(app_context, STR_ID_THIS, NULL, 0, &null_v);
 		scope_top_obj -= 1;
 	}
 	
@@ -2238,32 +2310,8 @@ void actionNewMethod(SWFAppContext* app_context)
 		// Constructor found
 		// Create new object to serve as 'this'
 		ASObject* this = allocObject(app_context);
-		ActionVar this_v;
-		this_v.type = ACTION_STACK_VALUE_OBJECT;
-		this_v.value = (u64) this;
 		
-		scope_top_obj += 1;
-		setPropertyInThisScope(app_context, STR_ID_THIS, NULL, 0, &this_v);
-		
-		u32* args = func_p->value.args;
-		
-		// Pop arguments from stack (in reverse order)
-		if (num_args > 0)
-		{
-			for (u32 i = 0; i < num_args; ++i)
-			{
-				ActionVar v;
-				popVar(app_context, &v);
-				setPropertyInThisScope(app_context, args[i], NULL, 0, &v);
-			}
-		}
-		
-		// Call the constructor with 'this' binding
-		// Put 'this' and arguments in scope, call function
-		// Note: Constructor return value is discarded per spec
-		
-		func_p->value.func(app_context);
-		
+		callFunction(app_context, this, func_p, num_args);
 		POP();
 		
 		scope_top_obj -= 1;
@@ -2282,13 +2330,14 @@ void actionDefineFunction(SWFAppContext* app_context, u32 string_id, action_func
 	assert(string_id != 0);
 	
 	// Create function object
-	ASObject* this = HALLOC(sizeof(ASObject));
+	ASObject* func_obj = allocObject(app_context);
 	
 	// If named, store in variable
 	if (!anonymous)
 	{
 		ActionVar func_var;
 		func_var.type = ACTION_STACK_VALUE_FUNCTION;
+		func_var.object = func_obj;
 		func_var.func = func;
 		func_var.args = args;
 		
@@ -2298,7 +2347,7 @@ void actionDefineFunction(SWFAppContext* app_context, u32 string_id, action_func
 	else
 	{
 		// Anonymous function: push to stack
-		PUSH_FUNC(this, string_id, func, args);
+		PUSH_FUNC(func_obj, string_id, func, args);
 	}
 }
 
@@ -2318,29 +2367,9 @@ void actionCallFunction(SWFAppContext* app_context)
 	
 	if (func_p != NULL)
 	{
-		// Simple DefineFunction (type 1)
-		// Simple functions expect arguments on the stack, not in an array
-		// We need to push arguments back onto stack in correct order
-		
-		ActionVar* func_v = &func_p->value;
-		u32* args = func_p->value.args;
-		
 		scope_top_obj += 1;
 		
-		// Pop arguments from stack (in reverse order)
-		if (num_args > 0)
-		{
-			for (u32 i = 0; i < num_args; ++i)
-			{
-				ActionVar v;
-				popVar(app_context, &v);
-				setPropertyInThisScope(app_context, args[i], NULL, 0, &v);
-			}
-		}
-		
-		// Call the simple function
-		// It will execute body and push a return value
-		func_v->func(app_context);
+		callFunction(app_context, NULL, func_p, num_args);
 		
 		// TODO: DESTROY OBJECT'S PROPERTIES
 		scope_top_obj -= 1;
@@ -2595,14 +2624,13 @@ void actionCallMethod(SWFAppContext* app_context)
 	popVar(app_context, &num_args_var);
 	u32 num_args = (u32) num_args_var.value;
 	
-	ActionVar* func_v = NULL;
+	ASProperty* meth_p = NULL;
 	
 	if (string_id != STR_ID_EMPTY)
 	{
 		ASObject* this = (ASObject*) this_v.value;
 		
-		ASProperty* meth_p = getProperty(this, string_id, NULL, 0);
-		func_v = &meth_p->value;
+		meth_p = getProperty(this, string_id, NULL, 0);
 	}
 	
 	else
@@ -2610,30 +2638,11 @@ void actionCallMethod(SWFAppContext* app_context)
 		EXC("Callable objects not implemented (ActionCallMethod).");
 	}
 	
-	if (func_v != NULL)
+	if (meth_p != NULL)
 	{
-		// Simple DefineFunction (type 1)
-		// Simple functions expect arguments on the stack, not in an array
-		// We need to push arguments back onto stack in correct order
-		
-		u32* args = func_v->args;
-		
 		scope_top_obj += 1;
 		
-		// Pop arguments from stack (in reverse order)
-		if (num_args > 0)
-		{
-			for (u32 i = 0; i < num_args; ++i)
-			{
-				ActionVar v;
-				popVar(app_context, &v);
-				setPropertyInThisScope(app_context, args[i], NULL, 0, &v);
-			}
-		}
-		
-		// Call the simple function
-		// It will execute body and push a return value
-		func_v->func(app_context);
+		callFunction(app_context, NULL, meth_p, num_args);
 		
 		// TODO: DESTROY OBJECT'S PROPERTIES
 		scope_top_obj -= 1;

@@ -52,8 +52,8 @@
 #define PUSH_NULL() PUSH(ACTION_STACK_VALUE_NULL, 0)
 #define PUSH_UNDEFINED() PUSH(ACTION_STACK_VALUE_UNDEFINED, 0)
 
-#define PUSH_F32(f) PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &f));
-#define PUSH_F64(f) PUSH(ACTION_STACK_VALUE_F64, VAL(u64, &f));
+#define PUSH_F32(f) PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &(f)));
+#define PUSH_F64(f) PUSH(ACTION_STACK_VALUE_F64, VAL(u64, &(f)));
 
 #define PUSH_OBJ(o) \
 	PUSH(ACTION_STACK_VALUE_OBJECT, (u64) o) \
@@ -113,6 +113,8 @@ void freeActions(SWFAppContext* app_context);
 void pushVar(SWFAppContext* app_context, ActionVar* p);
 
 ASProperty* getPropertyInThisScope(u32 string_id, const char* name, u32 name_len);
+
+ActionStackValueType convertVarDouble(ActionVar* v);
 
 // Arithmetic Operations
 void actionAdd(SWFAppContext* app_context);

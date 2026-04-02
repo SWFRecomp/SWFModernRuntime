@@ -37,6 +37,7 @@ typedef struct
 		char* heap_ptr;
 		f32 f32;
 		f64 f64;
+		void* object;
 	};
 } ActionVar;
 
