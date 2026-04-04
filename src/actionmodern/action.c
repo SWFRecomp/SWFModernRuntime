@@ -90,9 +90,18 @@ void initActions(SWFAppContext* app_context)
 		
 		ActionVar v;
 		v.type = ACTION_STACK_VALUE_FUNCTION;
+		v.object = allocObject(app_context);
 		v.func = runtime_funcs[i].func;
 		v.args = runtime_funcs[i].args;
-		v.value = (u64) allocObject(app_context);
+		
+		if (runtime_funcs[i].constructor)
+		{
+			ActionVar proto_var;
+			proto_var.type = ACTION_STACK_VALUE_OBJECT;
+			proto_var.object = allocObject(app_context);
+			setProperty(app_context, v.object, STR_ID_PROTOTYPE, NULL, 0, &proto_var);
+		}
+		
 		setProperty(app_context, obj, runtime_funcs[i].func_string_id, NULL, 0, &v);
 	}
 	
@@ -1206,6 +1215,12 @@ void actionTrace(SWFAppContext* app_context)
 			break;
 		}
 		
+		case ACTION_STACK_VALUE_OBJECT:
+		{
+			printf("%p\n", (void*) STACK_TOP_VALUE);
+			break;
+		}
+		
 		default:
 		{
 			fprintf(stderr, "Bad print type: %d\n", type);
@@ -1834,14 +1849,6 @@ void actionSetMember(SWFAppContext* app_context)
 	const char* prop_name = (const char*) prop_name_var.value;
 	u32 prop_name_len = prop_name_var.str_size;
 	
-	if (prop_name_var.type == ACTION_STACK_VALUE_STRING)
-	{
-		// If it's a string, use it directly
-		string_id = prop_name_var.string_id;
-		prop_name = (const char*) prop_name_var.value;
-		prop_name_len = prop_name_var.str_size;
-	}
-	
 	//~ else if (prop_name_var.type == ACTION_STACK_VALUE_F32 || prop_name_var.type == ACTION_STACK_VALUE_F64)
 	//~ {
 		//~ // If it's a number, convert it to string (for array indices)
@@ -1861,14 +1868,9 @@ void actionSetMember(SWFAppContext* app_context)
 		//~ prop_name_len = strlen(index_buffer);
 	//~ }
 	
-	else
+	if (prop_name_var.type != ACTION_STACK_VALUE_STRING)
 	{
 		EXC("Bad SetMember property\n");
-		
-		// Unknown type for property name - error case
-		// Just pop the object and return
-		POP();
-		return;
 	}
 	
 	// Fetch the object
@@ -2077,14 +2079,14 @@ void actionGetMember(SWFAppContext* app_context)
 	POP();
 	
 	// 3. Handle different object types
-	if (obj_var.type == ACTION_STACK_VALUE_OBJECT)
+	if (obj_var.type == ACTION_STACK_VALUE_OBJECT || obj_var.type == ACTION_STACK_VALUE_FUNCTION)
 	{
 		ASProperty* prop;
 		
 		OBJ_LOCK_READ(obj,
 		{
 			// Look up property
-			prop = getProperty(obj, string_id, prop_name, prop_name_len);
+			prop = getPropertyWithPrototype(obj, string_id, prop_name, prop_name_len);
 		});
 		
 		if (prop != NULL)
@@ -2196,6 +2198,8 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ASProperty* func_p
 {
 	u32* args = func_p->value.args;
 	
+	scope_top_obj += 1;
+	
 	scope_chain[scope_top_obj] = allocObject(app_context);
 	retainObject(scope_chain[scope_top_obj]);
 	
@@ -2223,6 +2227,8 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ASProperty* func_p
 	func_p->value.func(app_context);
 	
 	releaseObject(app_context, scope_chain[scope_top_obj]);
+	
+	scope_top_obj -= 1;
 }
 
 void actionNewObject(SWFAppContext* app_context)
@@ -2241,17 +2247,21 @@ void actionNewObject(SWFAppContext* app_context)
 	
 	if (func_p != NULL)
 	{
-		scope_top_obj += 1;
-		
 		// Create new object to serve as 'this'
 		ASObject* this = allocObject(app_context);
+		
+		ASObject* prototype = getProperty(func_p->value.object, STR_ID_PROTOTYPE, NULL, 0)->value.object;
+		
+		ActionVar proto_ref_var;
+		proto_ref_var.type = ACTION_STACK_VALUE_OBJECT;
+		proto_ref_var.object = prototype;
+		
+		setProperty(app_context, this, STR_ID_PROTO, NULL, 0, &proto_ref_var);
 		
 		callFunction(app_context, this, func_p, num_args);
 		POP();
 		
 		PUSH_OBJ(this);
-		
-		scope_top_obj -= 1;
 	}
 	
 	else
@@ -2311,10 +2321,16 @@ void actionNewMethod(SWFAppContext* app_context)
 		// Create new object to serve as 'this'
 		ASObject* this = allocObject(app_context);
 		
+		ASObject* prototype = getProperty(func_p->value.object, STR_ID_PROTOTYPE, NULL, 0)->value.object;
+		
+		ActionVar proto_ref_var;
+		proto_ref_var.type = ACTION_STACK_VALUE_OBJECT;
+		proto_ref_var.object = prototype;
+		
+		setProperty(app_context, this, STR_ID_PROTO, NULL, 0, &proto_ref_var);
+		
 		callFunction(app_context, this, func_p, num_args);
 		POP();
-		
-		scope_top_obj -= 1;
 		
 		PUSH_OBJ(this);
 	}
@@ -2340,6 +2356,12 @@ void actionDefineFunction(SWFAppContext* app_context, u32 string_id, action_func
 		func_var.object = func_obj;
 		func_var.func = func;
 		func_var.args = args;
+		
+		ASObject* prototype = allocObject(app_context);
+		ActionVar proto_var;
+		proto_var.type = ACTION_STACK_VALUE_OBJECT;
+		proto_var.object = prototype;
+		setProperty(app_context, func_obj, STR_ID_PROTOTYPE, NULL, 0, &proto_var);
 		
 		setPropertyInThisScope(app_context, string_id, NULL, 0, &func_var);
 	}
@@ -2367,12 +2389,7 @@ void actionCallFunction(SWFAppContext* app_context)
 	
 	if (func_p != NULL)
 	{
-		scope_top_obj += 1;
-		
 		callFunction(app_context, NULL, func_p, num_args);
-		
-		// TODO: DESTROY OBJECT'S PROPERTIES
-		scope_top_obj -= 1;
 	}
 	
 	else
@@ -2380,232 +2397,6 @@ void actionCallFunction(SWFAppContext* app_context)
 		// Function not found - throw
 		EXC_ARG("Function not found: %s\n", func_name);
 	}
-}
-
-// Helper function to call built-in string methods
-// Returns 1 if method was handled, 0 if not found
-static int callStringPrimitiveMethod(SWFAppContext* app_context, char* str_buffer,
-                                      const char* str_value, u32 str_len,
-                                      const char* method_name, u32 method_name_len,
-                                      ActionVar* args, u32 num_args)
-{
-	//~ // toUpperCase() - no arguments
-	//~ if (method_name_len == 11 && strncmp(method_name, "toUpperCase", 11) == 0)
-	//~ {
-		//~ // Convert string to uppercase
-		//~ int i;
-		//~ for (i = 0; i < str_len && i < 16; i++)
-		//~ {
-			//~ char c = str_value[i];
-			//~ if (c >= 'a' && c <= 'z')
-			//~ {
-				//~ str_buffer[i] = c - ('a' - 'A');
-			//~ }
-			//~ else
-			//~ {
-				//~ str_buffer[i] = c;
-			//~ }
-		//~ }
-		//~ str_buffer[i] = '\0';
-		//~ PUSH_STR(str_buffer, i);
-		//~ return 1;
-	//~ }
-	
-	//~ // toLowerCase() - no arguments
-	//~ if (method_name_len == 11 && strncmp(method_name, "toLowerCase", 11) == 0)
-	//~ {
-		//~ // Convert string to lowercase
-		//~ int i;
-		//~ for (i = 0; i < str_len && i < 16; i++)
-		//~ {
-			//~ char c = str_value[i];
-			//~ if (c >= 'A' && c <= 'Z')
-			//~ {
-				//~ str_buffer[i] = c + ('a' - 'A');
-			//~ }
-			//~ else
-			//~ {
-				//~ str_buffer[i] = c;
-			//~ }
-		//~ }
-		//~ str_buffer[i] = '\0';
-		//~ PUSH_STR(str_buffer, i);
-		//~ return 1;
-	//~ }
-	
-	//~ // charAt(index) - 1 argument
-	//~ if (method_name_len == 6 && strncmp(method_name, "charAt", 6) == 0)
-	//~ {
-		//~ int index = 0;
-		//~ if (num_args > 0 && args[0].type == ACTION_STACK_VALUE_F32)
-		//~ {
-			//~ index = (int)VAL(float, &args[0].value);
-		//~ }
-		
-		//~ // Bounds check
-		//~ if (index < 0 || index >= str_len)
-		//~ {
-			//~ str_buffer[0] = '\0';
-			//~ PUSH_STR(str_buffer, 0);
-		//~ }
-		//~ else
-		//~ {
-			//~ str_buffer[0] = str_value[index];
-			//~ str_buffer[1] = '\0';
-			//~ PUSH_STR(str_buffer, 1);
-		//~ }
-		//~ return 1;
-	//~ }
-	
-	//~ // substr(start, length) - 2 arguments
-	//~ if (method_name_len == 6 && strncmp(method_name, "substr", 6) == 0)
-	//~ {
-		//~ int start = 0;
-		//~ int length = str_len;
-		
-		//~ if (num_args > 0 && args[0].type == ACTION_STACK_VALUE_F32)
-		//~ {
-			//~ start = (int)VAL(float, &args[0].value);
-		//~ }
-		//~ if (num_args > 1 && args[1].type == ACTION_STACK_VALUE_F32)
-		//~ {
-			//~ length = (int)VAL(float, &args[1].value);
-		//~ }
-		
-		//~ // Handle negative start (count from end)
-		//~ if (start < 0)
-		//~ {
-			//~ start = str_len + start;
-			//~ if (start < 0) start = 0;
-		//~ }
-		
-		//~ // Bounds check
-		//~ if (start >= str_len || length <= 0)
-		//~ {
-			//~ str_buffer[0] = '\0';
-			//~ PUSH_STR(str_buffer, 0);
-		//~ }
-		//~ else
-		//~ {
-			//~ if (start + length > str_len)
-			//~ {
-				//~ length = str_len - start;
-			//~ }
-			
-			//~ int i;
-			//~ for (i = 0; i < length && i < 16; i++)
-			//~ {
-				//~ str_buffer[i] = str_value[start + i];
-			//~ }
-			//~ str_buffer[i] = '\0';
-			//~ PUSH_STR(str_buffer, i);
-		//~ }
-		//~ return 1;
-	//~ }
-	
-	//~ // substring(start, end) - 2 arguments (different from substr!)
-	//~ if (method_name_len == 9 && strncmp(method_name, "substring", 9) == 0)
-	//~ {
-		//~ int start = 0;
-		//~ int end = str_len;
-		
-		//~ if (num_args > 0 && args[0].type == ACTION_STACK_VALUE_F32)
-		//~ {
-			//~ start = (int)VAL(float, &args[0].value);
-		//~ }
-		//~ if (num_args > 1 && args[1].type == ACTION_STACK_VALUE_F32)
-		//~ {
-			//~ end = (int)VAL(float, &args[1].value);
-		//~ }
-		
-		//~ // Clamp to valid range
-		//~ if (start < 0) start = 0;
-		//~ if (end < 0) end = 0;
-		//~ if (start > str_len) start = str_len;
-		//~ if (end > str_len) end = str_len;
-		
-		//~ // Swap if start > end
-		//~ if (start > end)
-		//~ {
-			//~ int temp = start;
-			//~ start = end;
-			//~ end = temp;
-		//~ }
-		
-		//~ int length = end - start;
-		//~ if (length <= 0)
-		//~ {
-			//~ str_buffer[0] = '\0';
-			//~ PUSH_STR(str_buffer, 0);
-		//~ }
-		//~ else
-		//~ {
-			//~ int i;
-			//~ for (i = 0; i < length && i < 16; i++)
-			//~ {
-				//~ str_buffer[i] = str_value[start + i];
-			//~ }
-			//~ str_buffer[i] = '\0';
-			//~ PUSH_STR(str_buffer, i);
-		//~ }
-		//~ return 1;
-	//~ }
-	
-	//~ // indexOf(searchString, startIndex) - 1-2 arguments
-	//~ if (method_name_len == 7 && strncmp(method_name, "indexOf", 7) == 0)
-	//~ {
-		//~ const char* search_str = "";
-		//~ int search_len = 0;
-		//~ int start_index = 0;
-		
-		//~ if (num_args > 0)
-		//~ {
-			//~ if (args[0].type == ACTION_STACK_VALUE_STRING)
-			//~ {
-				//~ search_str = (const char*)args[0].value;
-				//~ search_len = args[0].str_size;
-			//~ }
-		//~ }
-		//~ if (num_args > 1 && args[1].type == ACTION_STACK_VALUE_F32)
-		//~ {
-			//~ start_index = (int)VAL(float, &args[1].value);
-			//~ if (start_index < 0) start_index = 0;
-		//~ }
-		
-		//~ // Search for substring
-		//~ int found_index = -1;
-		//~ if (search_len == 0)
-		//~ {
-			//~ found_index = start_index <= str_len ? start_index : -1;
-		//~ }
-		//~ else
-		//~ {
-			//~ for (int i = start_index; i <= str_len - search_len; i++)
-			//~ {
-				//~ int match = 1;
-				//~ for (int j = 0; j < search_len; j++)
-				//~ {
-					//~ if (str_value[i + j] != search_str[j])
-					//~ {
-						//~ match = 0;
-						//~ break;
-					//~ }
-				//~ }
-				//~ if (match)
-				//~ {
-					//~ found_index = i;
-					//~ break;
-				//~ }
-			//~ }
-		//~ }
-		
-		//~ float result = (float)found_index;
-		//~ PUSH_F32(result);
-		//~ return 1;
-	//~ }
-	
-	// Method not found
-	return 0;
 }
 
 void actionCallMethod(SWFAppContext* app_context)
@@ -2619,6 +2410,8 @@ void actionCallMethod(SWFAppContext* app_context)
 	ActionVar this_v;
 	popVar(app_context, &this_v);
 	
+	ASObject* this = this_v.object;
+	
 	// Pop number of arguments
 	ActionVar num_args_var;
 	popVar(app_context, &num_args_var);
@@ -2628,9 +2421,7 @@ void actionCallMethod(SWFAppContext* app_context)
 	
 	if (string_id != STR_ID_EMPTY)
 	{
-		ASObject* this = (ASObject*) this_v.value;
-		
-		meth_p = getProperty(this, string_id, NULL, 0);
+		meth_p = getPropertyWithPrototype(this, string_id, NULL, 0);
 	}
 	
 	else
@@ -2640,12 +2431,7 @@ void actionCallMethod(SWFAppContext* app_context)
 	
 	if (meth_p != NULL)
 	{
-		scope_top_obj += 1;
-		
-		callFunction(app_context, NULL, meth_p, num_args);
-		
-		// TODO: DESTROY OBJECT'S PROPERTIES
-		scope_top_obj -= 1;
+		callFunction(app_context, this, meth_p, num_args);
 	}
 	
 	else

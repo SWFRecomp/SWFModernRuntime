@@ -107,7 +107,7 @@ ASProperty* getProperty(ASObject* obj, u32 string_id, const char* name, u32 name
 
 // Get property by name with prototype chain traversal (returns NULL if not found)
 // Walks up the __proto__ chain to find inherited properties
-ActionVar* getPropertyWithPrototype(ASObject* obj, const char* name, u32 name_length);
+ASProperty* getPropertyWithPrototype(ASObject* obj, u32 string_id, const char* name, u32 name_length);
 
 // Set property by name (creates if not exists)
 // Handles refcount management if value is an object

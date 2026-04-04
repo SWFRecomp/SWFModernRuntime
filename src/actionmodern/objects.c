@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <assert.h>
 
+#include <initial_strings_decls.h>
 #include <heap.h>
 #include <utils.h>
 #include <swap_vector.h>
@@ -98,40 +99,36 @@ ASProperty* getProperty(ASObject* this, u32 string_id, const char* name, u32 nam
  *
  * This implements proper prototype-based inheritance for ActionScript.
  */
-ActionVar* getPropertyWithPrototype(ASObject* obj, const char* name, u32 name_length)
+ASProperty* getPropertyWithPrototype(ASObject* this, u32 string_id, const char* name, u32 name_length)
 {
-	//~ if (obj == NULL || name == NULL)
-	//~ {
-		//~ return NULL;
-	//~ }
-
-	//~ ASObject* current = obj;
-	//~ int max_depth = 100;  // Prevent infinite loops in circular prototype chains
-	//~ int depth = 0;
-
-	//~ while (current != NULL && depth < max_depth)
-	//~ {
-		//~ depth++;
-
-		//~ // Search own properties first
-		//~ ActionVar* prop = getProperty(current, name, name_length);
-		//~ if (prop != NULL)
-		//~ {
-			//~ return prop;
-		//~ }
-
-		//~ // Property not found on this object - walk up to __proto__
-		//~ ActionVar* proto_var = getProperty(current, "__proto__", 9);
-		//~ if (proto_var == NULL || proto_var->type != ACTION_STACK_VALUE_OBJECT)
-		//~ {
-			//~ // No __proto__ property or not an object - end of chain
-			//~ break;
-		//~ }
-
-		//~ // Move to next object in prototype chain
-		//~ current = (ASObject*) proto_var->value;
-	//~ }
-
+	if (this == NULL || (string_id == 0 && name == NULL))
+	{
+		return NULL;
+	}
+	
+	ASObject* current = this;
+	
+	while (current != NULL)
+	{
+		// Search own properties first
+		ASProperty* prop = getProperty(current, string_id, name, name_length);
+		if (prop != NULL)
+		{
+			return prop;
+		}
+		
+		// Property not found on this object - walk up to __proto__
+		ASProperty* proto_prop = getProperty(current, STR_ID_PROTO, NULL, 0);
+		if (proto_prop == NULL)
+		{
+			// No __proto__ property - end of chain
+			break;
+		}
+		
+		// Move to next object in prototype chain
+		current = (ASObject*) proto_prop->value.object;
+	}
+	
 	return NULL;  // Property not found in entire prototype chain
 }
 
