@@ -2089,14 +2089,27 @@ void actionGetMember(SWFAppContext* app_context)
 			prop = getPropertyWithPrototype(obj, string_id, prop_name, prop_name_len);
 		});
 		
-		if (prop != NULL)
+		if (prop != NULL || string_id == STR_ID_PROTOTYPE)
 		{
+			if (prop == NULL)
+			{
+				bool created;
+				prop = getOrCreateProperty(app_context, obj, STR_ID_PROTOTYPE, NULL, 0, &created);
+				
+				if (created)
+				{
+					prop->value.type = ACTION_STACK_VALUE_OBJECT;
+					prop->value.object = allocObject(app_context);
+					retainObject(prop->value.object);
+				}
+			}
+			
 			// Property found - push its value
 			pushVar(app_context, &prop->value);
 			
 			if (IS_OBJ(prop->value))
 			{
-				ASObject* po = (ASObject*) prop->value.value;
+				ASObject* po = prop->value.object;
 				
 				OBJ_LOCK_WRITE(po,
 				{
@@ -2250,7 +2263,17 @@ void actionNewObject(SWFAppContext* app_context)
 		// Create new object to serve as 'this'
 		ASObject* this = allocObject(app_context);
 		
-		ASObject* prototype = getProperty(func_p->value.object, STR_ID_PROTOTYPE, NULL, 0)->value.object;
+		bool created;
+		ASProperty* prototype_prop = getOrCreateProperty(app_context, func_p->value.object, STR_ID_PROTOTYPE, NULL, 0, &created);
+		
+		if (created)
+		{
+			prototype_prop->value.type = ACTION_STACK_VALUE_OBJECT;
+			prototype_prop->value.object = allocObject(app_context);
+			retainObject(prototype_prop->value.object);
+		}
+		
+		ASObject* prototype = prototype_prop->value.object;
 		
 		ActionVar proto_ref_var;
 		proto_ref_var.type = ACTION_STACK_VALUE_OBJECT;
@@ -2321,7 +2344,17 @@ void actionNewMethod(SWFAppContext* app_context)
 		// Create new object to serve as 'this'
 		ASObject* this = allocObject(app_context);
 		
-		ASObject* prototype = getProperty(func_p->value.object, STR_ID_PROTOTYPE, NULL, 0)->value.object;
+		bool created;
+		ASProperty* prototype_prop = getOrCreateProperty(app_context, func_p->value.object, STR_ID_PROTOTYPE, NULL, 0, &created);
+		
+		if (created)
+		{
+			prototype_prop->value.type = ACTION_STACK_VALUE_OBJECT;
+			prototype_prop->value.object = allocObject(app_context);
+			retainObject(prototype_prop->value.object);
+		}
+		
+		ASObject* prototype = prototype_prop->value.object;
 		
 		ActionVar proto_ref_var;
 		proto_ref_var.type = ACTION_STACK_VALUE_OBJECT;
@@ -2356,12 +2389,6 @@ void actionDefineFunction(SWFAppContext* app_context, u32 string_id, action_func
 		func_var.object = func_obj;
 		func_var.func = func;
 		func_var.args = args;
-		
-		ASObject* prototype = allocObject(app_context);
-		ActionVar proto_var;
-		proto_var.type = ACTION_STACK_VALUE_OBJECT;
-		proto_var.object = prototype;
-		setProperty(app_context, func_obj, STR_ID_PROTOTYPE, NULL, 0, &proto_var);
 		
 		setPropertyInThisScope(app_context, string_id, NULL, 0, &func_var);
 	}

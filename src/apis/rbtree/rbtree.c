@@ -21,12 +21,13 @@ static s64 node_cmp_u64(const struct rb_node* n, const void* v)
  * \param   cmp     A comparison function to use to order the nodes.
  */
 static inline rbnode* rb_tree_get_or_insert(SWFAppContext* app_context,
-						rbtree* T, const u32* string_id,
+						rbtree* T, const u32* string_id, bool* created,
 						s32 (*cmp)(const struct rb_node*, const void*))
 {
 	/* This function is declared inline in the hopes that the compiler can
 	 * optimize away the comparison function pointer call.
 	 */
+	*created = false;
 	struct rb_node* y = NULL;
 	struct rb_node* x = T->t.root;
 	s32 c = 0;
@@ -48,6 +49,7 @@ static inline rbnode* rb_tree_get_or_insert(SWFAppContext* app_context,
 	node->string_id = *string_id;
 	rb_tree_insert_at(&T->t, y, (struct rb_node*) node, c < 0);
 	T->length += 1;
+	*created = true;
 	return node;
 }
 
@@ -176,9 +178,9 @@ rbnode* rbtree_get(rbtree* t, u32 string_id)
 	return (rbnode*) rb_tree_search((struct rb_tree*) t, &string_id, node_cmp_string_id);
 }
 
-rbnode* rbtree_get_or_insert(SWFAppContext* app_context, rbtree* t, u32 string_id)
+rbnode* rbtree_get_or_insert(SWFAppContext* app_context, rbtree* t, u32 string_id, bool* created)
 {
-	return rb_tree_get_or_insert(app_context, t, &string_id, node_cmp_string_id);
+	return rb_tree_get_or_insert(app_context, t, &string_id, created, node_cmp_string_id);
 }
 
 void* rbtree_get_u64(rbtree* t, u64 key)

@@ -92,6 +92,22 @@ ASProperty* getProperty(ASObject* this, u32 string_id, const char* name, u32 nam
 }
 
 /**
+ * Get Property
+ *
+ * Retrieves a property value by name, or creates a new one.
+ * Returns pointer to the ASProperty.
+ */
+ASProperty* getOrCreateProperty(SWFAppContext* app_context, ASObject* this, u32 string_id, const char* name, u32 name_length, bool* created)
+{
+	if (this == NULL || (string_id == 0 && name == NULL))
+	{
+		return NULL;
+	}
+	
+	return (ASProperty*) RBT_GET_OR_INS(&this->t, string_id, created);
+}
+
+/**
  * Get Property With Prototype Chain
  *
  * Retrieves a property value by name, searching up the prototype chain via __proto__.
@@ -204,10 +220,12 @@ void setProperty(SWFAppContext* app_context, ASObject* this, u32 string_id, cons
 		return;
 	}
 	
+	bool created;
+	
 	OBJ_LOCK_READ(this,
 	{
 		// Property doesn't exist - create new one
-		p = (ASProperty*) RBT_GET_OR_INS(&this->t, string_id);
+		p = (ASProperty*) RBT_GET_OR_INS(&this->t, string_id, &created);
 	});
 	
 	OBJ_LOCK_WRITE(this,

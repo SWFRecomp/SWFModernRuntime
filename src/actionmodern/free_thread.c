@@ -143,7 +143,7 @@ void pushObjsReachable(SWFAppContext* app_context, ASObject* this, SwapVector* n
 {
 	rbtree* t = &this->t;
 	
-	if (UNLIKELY(t->length == 0))
+	if (UNLIKELY(t->length == 0 || t->t.root == NULL))
 	{
 		return;
 	}

@@ -77,7 +77,6 @@ typedef struct
  */
 
 // Allocate new object
-// Returns object with refcount = 1
 ASObject* allocObject(SWFAppContext* app_context);
 
 // Increment reference count
@@ -104,6 +103,11 @@ void releaseObject(SWFAppContext* app_context, ASObject* obj);
 
 // Get property by name (returns NULL if not found)
 ASProperty* getProperty(ASObject* obj, u32 string_id, const char* name, u32 name_length);
+
+// Get or create property by name
+// IMPORTANT: IF YOU CREATE A PROPERTY THAT HOLDS AN OBJECT
+//            RETAIN IT RIGHT AFTER
+ASProperty* getOrCreateProperty(SWFAppContext* app_context, ASObject* this, u32 string_id, const char* name, u32 name_length, bool* created);
 
 // Get property by name with prototype chain traversal (returns NULL if not found)
 // Walks up the __proto__ chain to find inherited properties
