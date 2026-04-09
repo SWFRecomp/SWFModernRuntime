@@ -6,15 +6,22 @@
 #include <stackvalue.h>
 
 #define STACK_VAR_SIZE (4 + 4 + 8 + 8)
-#define STACK_FUNC_SIZE (4 + 4 + 8 + 8 + 8 + 8)
+#define STACK_FUNC_SIZE (4 + 4 + 8 + 8 + 8 + 8 + (4 + 4))
 
 #define PUSH(t, v) \
 	OLDSP = SP; \
-	SP -= STACK_VAR_SIZE; \
-	SP &= ~7; \
-	STACK[SP] = t; \
 	VAL(u32, &STACK[SP + 4]) = OLDSP; \
-	VAL(u64, &STACK[SP + 16]) = v;
+	if (t == ACTION_STACK_VALUE_REGISTER) \
+	{ \
+		pushReg(app_context, (u8) v); \
+	} \
+	else \
+	{ \
+		SP -= STACK_VAR_SIZE; \
+		SP &= ~7; \
+		STACK[SP] = t; \
+		VAL(u64, &STACK[SP + 16]) = v; \
+	}
 
 // Push string with ID (for constant strings from compiler)
 #define PUSH_STR_ID(v, id, n) \
@@ -48,6 +55,19 @@
 	VAL(u64, &STACK[SP + 16]) = (u64) v; \
 	VAL(u64, &STACK[SP + 24]) = (u64) f; \
 	VAL(u64, &STACK[SP + 32]) = (u64) args;
+
+#define PUSH_FUNC_2(v, id, f, args, reg_count, flags) \
+	OLDSP = SP; \
+	SP -= STACK_FUNC_SIZE; \
+	SP &= ~7; \
+	STACK[SP] = ACTION_STACK_VALUE_FUNCTION; \
+	VAL(u32, &STACK[SP + 4]) = OLDSP; \
+	VAL(u32, &STACK[SP + 12]) = id; \
+	VAL(u64, &STACK[SP + 16]) = (u64) v; \
+	VAL(u64, &STACK[SP + 24]) = (u64) f; \
+	VAL(u64, &STACK[SP + 32]) = (u64) args; \
+	VAL(u8, &STACK[SP + 40]) = reg_count; \
+	VAL(u16, &STACK[SP + 42]) = flags;
 
 #define PUSH_NULL() PUSH(ACTION_STACK_VALUE_NULL, 0)
 #define PUSH_UNDEFINED() PUSH(ACTION_STACK_VALUE_UNDEFINED, 0)
@@ -85,6 +105,8 @@
 #define STACK_TOP_VALUE VAL(u64, &STACK[SP + 16])
 #define STACK_TOP_FUNC VAL(u64, &STACK[SP + 24])
 #define STACK_TOP_FUNC_ARGS VAL(u64, &STACK[SP + 32])
+#define STACK_TOP_FUNC_REG_COUNT VAL(u64, &STACK[SP + 40])
+#define STACK_TOP_FUNC_FLAGS VAL(u64, &STACK[SP + 42])
 
 #define SP_SECOND_TOP VAL(u32, &STACK[SP + 4])
 #define STACK_SECOND_TOP_TYPE STACK[SP_SECOND_TOP]
@@ -93,6 +115,18 @@
 #define STACK_SECOND_TOP_VALUE VAL(u64, &STACK[SP_SECOND_TOP + 16])
 #define STACK_SECOND_TOP_FUNC VAL(u64, &STACK[SP_SECOND_TOP + 24])
 #define STACK_SECOND_TOP_FUNC_ARGS VAL(u64, &STACK[SP_SECOND_TOP + 32])
+#define STACK_SECOND_TOP_FUNC_REG_COUNT VAL(u64, &STACK[SP_SECOND_TOP + 40])
+#define STACK_SECOND_TOP_FUNC_FLAGS VAL(u64, &STACK[SP_SECOND_TOP + 42])
+
+#define FUNC_FLAG_PRELOAD_PARENT        0b0000000010000000
+#define FUNC_FLAG_PRELOAD_ROOT          0b0000000001000000
+#define FUNC_FLAG_SUPPRESS_SUPER        0b0000000000100000
+#define FUNC_FLAG_PRELOAD_SUPER         0b0000000000010000
+#define FUNC_FLAG_SUPPRESS_ARGUMENTS    0b0000000000001000
+#define FUNC_FLAG_PRELOAD_ARGUMENTS     0b0000000000000100
+#define FUNC_FLAG_SUPPRESS_THIS         0b0000000000000010
+#define FUNC_FLAG_PRELOAD_THIS          0b0000000000000001
+#define FUNC_FLAG_PRELOAD_GLOBAL        0b0000000100000000
 
 #define IS_NULL(v) (v.type == ACTION_STACK_VALUE_NULL)
 #define IS_UNDEFINED(v) (v.type == ACTION_STACK_VALUE_UNDEFINED)
@@ -107,10 +141,17 @@
 
 extern ActionVar* temp_val;
 
+typedef struct
+{
+	u8 reg;
+	u32 string_id;
+} Function2Param;
+
 void initActions(SWFAppContext* app_context);
 void freeActions(SWFAppContext* app_context);
 
 void pushVar(SWFAppContext* app_context, ActionVar* p);
+void pushReg(SWFAppContext* app_context, u8 reg);
 
 ASProperty* getPropertyInThisScope(u32 string_id, const char* name, u32 name_len);
 
@@ -167,5 +208,4 @@ void actionStoreRegister(SWFAppContext* app_context, u8 register_num);
 
 // Function Definitions
 void actionDefineFunction(SWFAppContext* app_context, u32 string_id, action_func func, u32* args, bool anonymous);
-
-typedef ActionVar (*Function2Ptr)(SWFAppContext* app_context, ActionVar* args, u32 arg_count, ActionVar* registers, void* this_obj);
+void actionDefineFunction2(SWFAppContext* app_context, u32 string_id, action_func func, Function2Param* args, u8 reg_count, u16 flags, bool anonymous);

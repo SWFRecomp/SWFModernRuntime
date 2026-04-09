@@ -4,6 +4,12 @@
 #include <swf.h>
 #include <stackvalue.h>
 
+typedef enum
+{
+	FUNC_TYPE_1,
+	FUNC_TYPE_2,
+} FunctionType;
+
 typedef struct
 {
 	ActionStackValueType type;
@@ -13,8 +19,13 @@ typedef struct
 		// function
 		struct
 		{
+			FunctionType func_type;
+			
 			action_func func;
-			u32* args;
+			void* args;
+			u8 reg_count;
+			u16 flags;
+			u32 func_name_string_id;
 		};
 		
 		// string

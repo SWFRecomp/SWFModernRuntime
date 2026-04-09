@@ -22,26 +22,8 @@ u32 start_time;
 
 #define MAX_SCOPE_DEPTH 16
 static ASObject* scope_chain[MAX_SCOPE_DEPTH];
+static ActionVar* scope_registers[MAX_SCOPE_DEPTH];
 static u32 scope_top_obj = 1;
-
-// ==================================================================
-// Function Storage and Management
-// ==================================================================
-
-// Function object structure
-typedef struct {
-	char* name;           // Function name (can be NULL for anonymous)
-	u8 function_type;         // 1 = simple (DefineFunction), 2 = advanced (DefineFunction2)
-	u32 param_count;          // Number of parameters
-	
-	// For DefineFunction (type 1)
-	action_func simple_func;
-	
-	// For DefineFunction2 (type 2)
-	Function2Ptr advanced_func;
-	u8 register_count;
-	u16 flags;
-} ASFunction;
 
 // ==================================================================
 // Global object for ActionScript
@@ -90,6 +72,7 @@ void initActions(SWFAppContext* app_context)
 		
 		ActionVar v;
 		v.type = ACTION_STACK_VALUE_FUNCTION;
+		v.func_type = FUNC_TYPE_1;
 		v.object = allocObject(app_context);
 		v.func = runtime_funcs[i].func;
 		v.args = runtime_funcs[i].args;
@@ -272,7 +255,7 @@ void pushVar(SWFAppContext* app_context, ActionVar* var)
 		
 		case ACTION_STACK_VALUE_FUNCTION:
 		{
-			PUSH_FUNC(var->value, var->string_id, var->func, var->args);
+			PUSH_FUNC_2(var->value, var->string_id, var->func, var->args, var->reg_count, var->flags);
 			
 			break;
 		}
@@ -284,6 +267,11 @@ void pushVar(SWFAppContext* app_context, ActionVar* var)
 			break;
 		}
 	}
+}
+
+void pushReg(SWFAppContext* app_context, u8 reg)
+{
+	pushVar(app_context, &scope_registers[scope_top_obj][reg]);
 }
 
 void peekVar(SWFAppContext* app_context, ActionVar* var)
@@ -314,6 +302,8 @@ void peekVar(SWFAppContext* app_context, ActionVar* var)
 			var->value = STACK_TOP_VALUE;
 			var->func = (action_func) STACK_TOP_FUNC;
 			var->args = (u32*) STACK_TOP_FUNC_ARGS;
+			var->reg_count = (u8) STACK_TOP_FUNC_REG_COUNT;
+			var->flags = (u16) STACK_TOP_FUNC_FLAGS;
 			
 			break;
 		}
@@ -1161,13 +1151,14 @@ void actionSetVariable(SWFAppContext* app_context)
 
 void actionTrace(SWFAppContext* app_context)
 {
-	ActionStackValueType type = STACK_TOP_TYPE;
+	ActionVar v;
+	popVar(app_context, &v);
 	
-	switch (type)
+	switch (v.type)
 	{
 		case ACTION_STACK_VALUE_STRING:
 		{
-			printf("%s\n", (char*) STACK_TOP_VALUE);
+			printf("%s\n", (char*) v.value);
 			break;
 		}
 		
@@ -1185,7 +1176,7 @@ void actionTrace(SWFAppContext* app_context)
 		
 		case ACTION_STACK_VALUE_STR_LIST:
 		{
-			u64* str_list = (u64*) &STACK_TOP_VALUE;
+			u64* str_list = (u64*) &v.value;
 			
 			for (u64 i = 0; i < 2*str_list[0]; i += 2)
 			{
@@ -1199,38 +1190,36 @@ void actionTrace(SWFAppContext* app_context)
 		
 		case ACTION_STACK_VALUE_F32:
 		{
-			printf("%.15g\n", VAL(float, &STACK_TOP_VALUE));
+			printf("%.15g\n", v.f32);
 			break;
 		}
 		
 		case ACTION_STACK_VALUE_F64:
 		{
-			printf("%.15g\n", VAL(double, &STACK_TOP_VALUE));
+			printf("%.15g\n", v.f64);
 			break;
 		}
 		
 		case ACTION_STACK_VALUE_INT:
 		{
-			printf("%d\n", (s32) STACK_TOP_VALUE);
+			printf("%d\n", v.s32);
 			break;
 		}
 		
 		case ACTION_STACK_VALUE_OBJECT:
 		{
-			printf("%p\n", (void*) STACK_TOP_VALUE);
+			printf("%p\n", v.object);
 			break;
 		}
 		
 		default:
 		{
-			fprintf(stderr, "Bad print type: %d\n", type);
+			fprintf(stderr, "Bad print type: %d\n", v.type);
 			break;
 		}
 	}
 	
 	fflush(stdout);
-	
-	POP();
 }
 
 void actionGetTime(SWFAppContext* app_context)
@@ -2216,28 +2205,118 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ASProperty* func_p
 	scope_chain[scope_top_obj] = allocObject(app_context);
 	retainObject(scope_chain[scope_top_obj]);
 	
-	if (this != NULL)
+	switch (func_p->value.func_type)
 	{
-		ActionVar this_v;
-		this_v.type = ACTION_STACK_VALUE_OBJECT;
-		this_v.object = this;
-		
-		setPropertyInThisScope(app_context, STR_ID_THIS, NULL, 0, &this_v);
-	}
-	
-	// Pop arguments from stack (in reverse order)
-	if (num_args > 0)
-	{
-		for (u32 i = 0; i < num_args; ++i)
+		case FUNC_TYPE_1:
 		{
-			ActionVar v;
-			peekVar(app_context, &v);
-			setPropertyInThisScope(app_context, args[i], NULL, 0, &v);
-			POP();
+			if (this != NULL)
+			{
+				ActionVar this_v;
+				this_v.type = ACTION_STACK_VALUE_OBJECT;
+				this_v.object = this;
+				
+				setPropertyInThisScope(app_context, STR_ID_THIS, NULL, 0, &this_v);
+			}
+			
+			// Pop arguments from stack (in reverse order)
+			if (num_args > 0)
+			{
+				for (u32 i = 0; i < num_args; ++i)
+				{
+					ActionVar v;
+					peekVar(app_context, &v);
+					setPropertyInThisScope(app_context, args[i], NULL, 0, &v);
+					POP();
+				}
+			}
+			
+			func_p->value.func(app_context);
+			break;
+		}
+		
+		case FUNC_TYPE_2:
+		{
+			u8 reg_count = func_p->value.reg_count;
+			u16 flags = func_p->value.flags;
+			
+			scope_registers[scope_top_obj] = HALLOC(reg_count*sizeof(ActionVar));
+			
+			ActionVar* regs = scope_registers[scope_top_obj];
+			
+			// Pop arguments from stack (in reverse order)
+			if (num_args > 0)
+			{
+				for (u32 i = 0; i < num_args; ++i)
+				{
+					Function2Param* arg = &((Function2Param*) func_p->value.args)[i];
+					
+					if (arg->reg == 0)
+					{
+						ActionVar v;
+						peekVar(app_context, &v);
+						setPropertyInThisScope(app_context, arg->string_id, NULL, 0, &v);
+						POP();
+					}
+					
+					else
+					{
+						popVar(app_context, &regs[arg->reg]);
+					}
+				}
+			}
+			
+			u8 next_preload = 1;
+			
+			if (flags & FUNC_FLAG_PRELOAD_PARENT)
+			{
+				EXC("_parent not implemented\n");
+			}
+			
+			if (flags & FUNC_FLAG_PRELOAD_ROOT)
+			{
+				EXC("_root not implemented\n");
+			}
+			
+			if ((flags & FUNC_FLAG_SUPPRESS_SUPER) == 0)
+			{
+				EXC("super not implemented\n");
+			}
+			
+			if ((flags & FUNC_FLAG_SUPPRESS_ARGUMENTS) == 0)
+			{
+				EXC("arguments not implemented\n");
+			}
+			
+			if ((flags & FUNC_FLAG_SUPPRESS_THIS) == 0)
+			{
+				assert(this != NULL);
+				
+				ActionVar this_v;
+				this_v.type = ACTION_STACK_VALUE_OBJECT;
+				this_v.object = this;
+				
+				setPropertyInThisScope(app_context, STR_ID_THIS, NULL, 0, &this_v);
+				
+				if (flags & FUNC_FLAG_PRELOAD_THIS)
+				{
+					regs[next_preload] = this_v;
+					next_preload += 1;
+				}
+			}
+			
+			if (flags & FUNC_FLAG_PRELOAD_GLOBAL)
+			{
+				regs[next_preload].type = ACTION_STACK_VALUE_OBJECT;
+				regs[next_preload].object = _global;
+				next_preload += 1;
+			}
+			
+			func_p->value.func(app_context);
+			
+			FREE(regs);
+			break;
 		}
 	}
-	
-	func_p->value.func(app_context);
 	
 	releaseObject(app_context, scope_chain[scope_top_obj]);
 	
@@ -2386,6 +2465,7 @@ void actionDefineFunction(SWFAppContext* app_context, u32 string_id, action_func
 	{
 		ActionVar func_var;
 		func_var.type = ACTION_STACK_VALUE_FUNCTION;
+		func_var.func_type = FUNC_TYPE_1;
 		func_var.object = func_obj;
 		func_var.func = func;
 		func_var.args = args;
@@ -2397,6 +2477,35 @@ void actionDefineFunction(SWFAppContext* app_context, u32 string_id, action_func
 	{
 		// Anonymous function: push to stack
 		PUSH_FUNC(func_obj, string_id, func, args);
+	}
+}
+
+void actionDefineFunction2(SWFAppContext* app_context, u32 string_id, action_func func, Function2Param* args, u8 reg_count, u16 flags, bool anonymous)
+{
+	assert(string_id != 0);
+	
+	// Create function object
+	ASObject* func_obj = allocObject(app_context);
+	
+	// If named, store in variable
+	if (!anonymous)
+	{
+		ActionVar func_var;
+		func_var.type = ACTION_STACK_VALUE_FUNCTION;
+		func_var.func_type = FUNC_TYPE_2;
+		func_var.object = func_obj;
+		func_var.func = func;
+		func_var.args = args;
+		func_var.reg_count = reg_count;
+		func_var.flags = flags;
+		
+		setPropertyInThisScope(app_context, string_id, NULL, 0, &func_var);
+	}
+	
+	else
+	{
+		// Anonymous function: push to stack
+		PUSH_FUNC_2(func_obj, string_id, func, args, reg_count, flags);
 	}
 }
 
@@ -2414,16 +2523,14 @@ void actionCallFunction(SWFAppContext* app_context)
 	
 	ASProperty* func_p = searchScopesForProperty(string_id, NULL, 0);
 	
-	if (func_p != NULL)
-	{
-		callFunction(app_context, NULL, func_p, num_args);
-	}
-	
-	else
+	if (func_p == NULL)
 	{
 		// Function not found - throw
 		EXC_ARG("Function not found: %s\n", func_name);
+		return;
 	}
+	
+	callFunction(app_context, NULL, func_p, num_args);
 }
 
 void actionCallMethod(SWFAppContext* app_context)

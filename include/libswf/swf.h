@@ -49,7 +49,7 @@ typedef struct DisplayObject
 typedef struct SWFAppContext SWFAppContext;
 
 typedef void (*frame_func)(SWFAppContext* app_context);
-typedef void (*action_func)(SWFAppContext*);
+typedef void (*action_func)(SWFAppContext* app_context);
 
 extern frame_func frame_funcs[];
 
