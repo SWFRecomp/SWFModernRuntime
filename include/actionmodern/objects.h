@@ -12,14 +12,14 @@
 #define IS_OBJ_P(v) ((v->type & 0xF0) == 0x10)
 
 #define OBJ_LOCK_READ(obj, code) \
-	mutex_lock_read(&obj->lock); \
+	mutex_lock_read(&(obj)->lock); \
 	code \
-	mutex_unlock_read(&obj->lock);
+	mutex_unlock_read(&(obj)->lock);
 
 #define OBJ_LOCK_WRITE(obj, code) \
-	mutex_lock_write(&obj->lock); \
+	mutex_lock_write(&(obj)->lock); \
 	code \
-	mutex_unlock_write(&obj->lock);
+	mutex_unlock_write(&(obj)->lock);
 
 /**
  * ASObject - ActionScript Object with Reference Counting

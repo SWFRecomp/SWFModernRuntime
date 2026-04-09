@@ -255,7 +255,7 @@ void pushVar(SWFAppContext* app_context, ActionVar* var)
 		
 		case ACTION_STACK_VALUE_FUNCTION:
 		{
-			PUSH_FUNC_2(var->value, var->string_id, var->func, var->args, var->reg_count, var->flags);
+			PUSH_FUNC_UNKNOWN(var->value, var->string_id, var->func, var->func_type, var->args, var->reg_count, var->flags);
 			
 			break;
 		}
@@ -2239,7 +2239,7 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ASProperty* func_p
 			u8 reg_count = func_p->value.reg_count;
 			u16 flags = func_p->value.flags;
 			
-			scope_registers[scope_top_obj] = HALLOC(reg_count*sizeof(ActionVar));
+			scope_registers[scope_top_obj] = HALLOC((reg_count + 1)*sizeof(ActionVar));
 			
 			ActionVar* regs = scope_registers[scope_top_obj];
 			
@@ -2476,7 +2476,7 @@ void actionDefineFunction(SWFAppContext* app_context, u32 string_id, action_func
 	else
 	{
 		// Anonymous function: push to stack
-		PUSH_FUNC(func_obj, string_id, func, args);
+		PUSH_FUNC_1(func_obj, string_id, func, args);
 	}
 }
 

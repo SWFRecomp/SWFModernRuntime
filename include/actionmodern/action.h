@@ -9,17 +9,17 @@
 #define STACK_FUNC_SIZE (4 + 4 + 8 + 8 + 8 + 8 + (4 + 4))
 
 #define PUSH(t, v) \
-	OLDSP = SP; \
-	VAL(u32, &STACK[SP + 4]) = OLDSP; \
 	if (t == ACTION_STACK_VALUE_REGISTER) \
 	{ \
 		pushReg(app_context, (u8) v); \
 	} \
 	else \
 	{ \
+		OLDSP = SP; \
 		SP -= STACK_VAR_SIZE; \
 		SP &= ~7; \
 		STACK[SP] = t; \
+		VAL(u32, &STACK[SP + 4]) = OLDSP; \
 		VAL(u64, &STACK[SP + 16]) = v; \
 	}
 
@@ -45,18 +45,7 @@
 	VAL(u32, &STACK[SP + 4]) = OLDSP; \
 	VAL(u32, &STACK[SP + 8]) = n;
 
-#define PUSH_FUNC(v, id, f, args) \
-	OLDSP = SP; \
-	SP -= STACK_FUNC_SIZE; \
-	SP &= ~7; \
-	STACK[SP] = ACTION_STACK_VALUE_FUNCTION; \
-	VAL(u32, &STACK[SP + 4]) = OLDSP; \
-	VAL(u32, &STACK[SP + 12]) = id; \
-	VAL(u64, &STACK[SP + 16]) = (u64) v; \
-	VAL(u64, &STACK[SP + 24]) = (u64) f; \
-	VAL(u64, &STACK[SP + 32]) = (u64) args;
-
-#define PUSH_FUNC_2(v, id, f, args, reg_count, flags) \
+#define PUSH_FUNC(v, id, f, func_type, args) \
 	OLDSP = SP; \
 	SP -= STACK_FUNC_SIZE; \
 	SP &= ~7; \
@@ -66,6 +55,22 @@
 	VAL(u64, &STACK[SP + 16]) = (u64) v; \
 	VAL(u64, &STACK[SP + 24]) = (u64) f; \
 	VAL(u64, &STACK[SP + 32]) = (u64) args; \
+	VAL(u64, &STACK[SP + 41]) = (u8) func_type; \
+	OBJ_LOCK_WRITE((ASObject*) v, \
+	{ \
+		retainObject((ASObject*) v); \
+	});
+
+#define PUSH_FUNC_UNKNOWN(v, id, f, func_type, args, reg_count, flags) \
+	PUSH_FUNC(v, id, f, func_type, args); \
+	VAL(u8, &STACK[SP + 40]) = reg_count; \
+	VAL(u16, &STACK[SP + 42]) = flags;
+
+#define PUSH_FUNC_1(v, id, f, args) \
+	PUSH_FUNC(v, id, f, FUNC_TYPE_1, args);
+
+#define PUSH_FUNC_2(v, id, f, args, reg_count, flags) \
+	PUSH_FUNC(v, id, f, FUNC_TYPE_2, args); \
 	VAL(u8, &STACK[SP + 40]) = reg_count; \
 	VAL(u16, &STACK[SP + 42]) = flags;
 
