@@ -18,18 +18,18 @@ void tagSetBackgroundColor(u8 red, u8 green, u8 blue)
 void tagShowFrame(SWFAppContext* app_context)
 {
 	flashbang_open_pass(context);
-
+	
 	for (size_t i = 1; i <= max_depth; ++i)
 	{
 		DisplayObject* obj = &display_list[i];
-
+		
 		if (obj->char_id == 0)
 		{
 			continue;
 		}
-
+		
 		Character* ch = &dictionary[obj->char_id];
-
+		
 		switch (ch->type)
 		{
 			case CHAR_TYPE_SHAPE:
@@ -46,14 +46,14 @@ void tagShowFrame(SWFAppContext* app_context)
 				break;
 		}
 	}
-
+	
 	flashbang_close_pass(context);
 }
 
 void tagDefineShape(SWFAppContext* app_context, CharacterType type, u32 char_id, u32 shape_offset, u32 shape_size)
 {
 	ENSURE_SIZE(dictionary, char_id, dictionary_capacity, sizeof(Character));
-
+	
 	dictionary[char_id].type = type;
 	dictionary[char_id].shape_offset = shape_offset;
 	dictionary[char_id].size = shape_size;
@@ -62,7 +62,7 @@ void tagDefineShape(SWFAppContext* app_context, CharacterType type, u32 char_id,
 void tagDefineText(SWFAppContext* app_context, u32 char_id, u32 text_start, u32 text_size, u32 transform_start, u32 cxform_id)
 {
 	ENSURE_SIZE(dictionary, char_id, dictionary_capacity, sizeof(Character));
-
+	
 	dictionary[char_id].type = CHAR_TYPE_TEXT;
 	dictionary[char_id].text_start = text_start;
 	dictionary[char_id].text_size = text_size;
@@ -73,10 +73,10 @@ void tagDefineText(SWFAppContext* app_context, u32 char_id, u32 text_start, u32 
 void tagPlaceObject2(SWFAppContext* app_context, u32 depth, u32 char_id, u32 transform_id)
 {
 	ENSURE_SIZE(display_list, depth, display_list_capacity, sizeof(DisplayObject));
-
+	
 	display_list[depth].char_id = char_id;
 	display_list[depth].transform_id = transform_id;
-
+	
 	if (depth > max_depth)
 	{
 		max_depth = depth;
