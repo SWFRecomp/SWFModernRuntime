@@ -38,11 +38,6 @@ void tagMain(SWFAppContext* app_context)
 		quit_swf |= bad_poll;
 	}
 	
-	if (bad_poll)
-	{
-		return;
-	}
-	
 	while (!(bad_poll = flashbang_poll()))
 	{
 		tagShowFrame(app_context);
