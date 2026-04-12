@@ -2161,7 +2161,7 @@ void actionGetMember(SWFAppContext* app_context)
 	
 	else if (obj_var.type == ACTION_STACK_VALUE_ARRAY)
 	{
-		EXC("ARRAY GETMEMBER UNIMPLEMENTED\n");
+		UNIMPLEMENTED("ARRAY GETMEMBER\n");
 		
 		// Handle array properties
 		ASArray* arr = (ASArray*) obj_var.value;
