@@ -162,6 +162,8 @@ ASProperty* getPropertyInThisScope(u32 string_id, const char* name, u32 name_len
 
 ActionStackValueType convertVarDouble(ActionVar* v);
 
+int evaluateCondition(SWFAppContext* app_context);
+
 // Arithmetic Operations
 void actionAdd(SWFAppContext* app_context);
 void actionSubtract(SWFAppContext* app_context);

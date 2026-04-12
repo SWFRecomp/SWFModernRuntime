@@ -38,6 +38,8 @@ void initActions(SWFAppContext* app_context)
 	{
 		scope_chain[i] = allocObject(app_context);
 		retainObject(scope_chain[i]);
+		
+		scope_registers[i] = HALLOC(4*sizeof(ActionVar));
 	}
 	
 	_global = scope_chain[0];
@@ -214,7 +216,7 @@ ActionStackValueType convertInt(SWFAppContext* app_context)
 {
 	s32 i;
 	
-	switch(STACK_TOP_TYPE)
+	switch (STACK_TOP_TYPE)
 	{
 		case ACTION_STACK_VALUE_STRING:
 			i = atoi((char*) VAL(u64, &STACK_TOP_VALUE));
@@ -237,6 +239,38 @@ ActionStackValueType convertInt(SWFAppContext* app_context)
 	return ACTION_STACK_VALUE_INT;
 }
 
+ActionStackValueType convertBool(SWFAppContext* app_context)
+{
+	bool b;
+	
+	switch (STACK_TOP_TYPE)
+	{
+		case ACTION_STACK_VALUE_STRING:
+			b = STACK_TOP_N != 0;
+			VAL(bool, &STACK_TOP_VALUE) = b;
+			break;
+		case ACTION_STACK_VALUE_F32:
+			f32 f = VAL(f32, &STACK_TOP_VALUE);
+			b = f != 0.0f;
+			VAL(bool, &STACK_TOP_VALUE) = b;
+			break;
+		case ACTION_STACK_VALUE_F64:
+			f64 d = VAL(f64, &STACK_TOP_VALUE);
+			b = d != 0.0;
+			VAL(bool, &STACK_TOP_VALUE) = b;
+			break;
+		case ACTION_STACK_VALUE_INT:
+			int i = VAL(s32, &STACK_TOP_VALUE);
+			b = i != 0;
+			VAL(bool, &STACK_TOP_VALUE) = b;
+			break;
+	}
+	
+	STACK_TOP_TYPE = ACTION_STACK_VALUE_BOOLEAN;
+	
+	return ACTION_STACK_VALUE_BOOLEAN;
+}
+
 void pushVar(SWFAppContext* app_context, ActionVar* var)
 {
 	switch (var->type)
@@ -245,7 +279,7 @@ void pushVar(SWFAppContext* app_context, ActionVar* var)
 		{
 			// Use heap pointer if variable owns memory, otherwise use numeric_value as pointer
 			char* str_ptr = var->owns_memory ?
-				var->heap_ptr :
+				var->str :
 				(char*) var->value;
 				
 			PUSH_STR_ID(str_ptr, var->string_id, var->str_size);
@@ -658,11 +692,24 @@ void actionOr(SWFAppContext* app_context)
 void actionNot(SWFAppContext* app_context)
 {
 	ActionVar v;
-	convertFloat(app_context);
-	popVar(app_context, &v);
 	
-	float result = v.value == 0.0f ? 1.0f : 0.0f;
-	PUSH_F32(result);
+	// TODO: emit different Not calls from the recompiler based on version
+	switch (app_context->version)
+	{
+		case 4:
+			convertFloat(app_context);
+			popVar(app_context, &v);
+			float f = v.value == 0.0f ? 1.0f : 0.0f;
+			PUSH_F32(f);
+			break;
+		
+		case 5:
+			convertBool(app_context);
+			popVar(app_context, &v);
+			bool b = v.b;
+			PUSH(ACTION_STACK_VALUE_BOOLEAN, (u64) b);
+			break;
+	}
 }
 
 // ==================================================================
@@ -1461,7 +1508,7 @@ int evaluateCondition(SWFAppContext* app_context)
 	convertFloat(app_context);
 	popVar(app_context, &v);
 	
-	return v.value != 0.0f;
+	return v.f32 != 0.0f;
 }
 
 void actionDefineLocal(SWFAppContext* app_context)
@@ -1745,26 +1792,14 @@ static int checkInstanceOf(ActionVar* obj_var, ActionVar* ctor_var)
 	return 0;
 }
 
-// ==================================================================
-// Register Storage (up to 256 registers for SWF 5+)
-// ==================================================================
-
-#define MAX_REGISTERS 256
-static ActionVar g_registers[MAX_REGISTERS];
-
-void actionStoreRegister(SWFAppContext* app_context, u8 register_num)
+void actionStoreRegister(SWFAppContext* app_context, u8 reg)
 {
-	// Validate register number
-	if (register_num >= MAX_REGISTERS) {
-		return;
-	}
-	
 	// Peek the top of stack (don't pop!)
 	ActionVar value;
 	peekVar(app_context, &value);
 	
 	// Store value in register
-	g_registers[register_num] = value;
+	scope_registers[scope_top_obj][reg] = value;
 }
 
 void actionInitArray(SWFAppContext* app_context)
@@ -1838,24 +1873,17 @@ void actionSetMember(SWFAppContext* app_context)
 	const char* prop_name = (const char*) prop_name_var.value;
 	u32 prop_name_len = prop_name_var.str_size;
 	
-	//~ else if (prop_name_var.type == ACTION_STACK_VALUE_F32 || prop_name_var.type == ACTION_STACK_VALUE_F64)
-	//~ {
-		//~ // If it's a number, convert it to string (for array indices)
-		//~ // Use a static buffer for conversion
-		//~ static char index_buffer[32];
-		//~ if (prop_name_var.type == ACTION_STACK_VALUE_F32)
-		//~ {
-			//~ float f = VAL(float, &prop_name_var.value);
-			//~ snprintf(index_buffer, sizeof(index_buffer), "%.15g", f);
-		//~ }
-		//~ else
-		//~ {
-			//~ double d = VAL(double, &prop_name_var.value);
-			//~ snprintf(index_buffer, sizeof(index_buffer), "%.15g", d);
-		//~ }
-		//~ prop_name = index_buffer;
-		//~ prop_name_len = strlen(index_buffer);
-	//~ }
+	switch (string_id)
+	{
+		case STR_ID_PROTO:
+		case STR_ID_PROTOTYPE:
+		{
+			fprintf(stderr, "who is changing prototypes LMFAO\n");
+			
+			// sue me
+			goto skip_property;
+		}
+	}
 	
 	if (prop_name_var.type != ACTION_STACK_VALUE_STRING)
 	{
@@ -1886,6 +1914,8 @@ void actionSetMember(SWFAppContext* app_context)
 			releaseObject(app_context, obj);
 		});
 	}
+	
+	skip_property:
 	
 	POP();
 	
@@ -1937,7 +1967,7 @@ void actionInitObject(SWFAppContext* app_context)
 		// Handle string name
 		string_id = name_var.string_id;
 		name = name_var.owns_memory ?
-			name_var.heap_ptr :
+			name_var.str :
 			(const char*) name_var.value;
 		name_length = name_var.str_size;
 		
@@ -1967,7 +1997,7 @@ void actionDelete(SWFAppContext* app_context)
 	if (prop_name_var.type == ACTION_STACK_VALUE_STRING)
 	{
 		prop_name = prop_name_var.owns_memory ?
-			prop_name_var.heap_ptr :
+			prop_name_var.str :
 			(const char*) prop_name_var.value;
 		prop_name_len = prop_name_var.str_size;
 	}
@@ -1990,7 +2020,7 @@ void actionDelete(SWFAppContext* app_context)
 	if (obj_name_var.type == ACTION_STACK_VALUE_STRING)
 	{
 		obj_name = obj_name_var.owns_memory ?
-			obj_name_var.heap_ptr :
+			obj_name_var.str :
 			(const char*) obj_name_var.value;
 		obj_name_len = obj_name_var.str_size;
 	}
@@ -2209,6 +2239,10 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ASProperty* func_p
 	{
 		case FUNC_TYPE_1:
 		{
+			scope_registers[scope_top_obj] = HALLOC(4*sizeof(ActionVar));
+			
+			ActionVar* regs = scope_registers[scope_top_obj];
+			
 			if (this != NULL)
 			{
 				ActionVar this_v;
@@ -2231,6 +2265,8 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ASProperty* func_p
 			}
 			
 			func_p->value.func(app_context);
+			
+			FREE(regs);
 			break;
 		}
 		
@@ -2469,6 +2505,7 @@ void actionDefineFunction(SWFAppContext* app_context, u32 string_id, action_func
 		func_var.object = func_obj;
 		func_var.func = func;
 		func_var.args = args;
+		func_var.func_name_string_id = string_id;
 		
 		setPropertyInThisScope(app_context, string_id, NULL, 0, &func_var);
 	}
@@ -2498,6 +2535,7 @@ void actionDefineFunction2(SWFAppContext* app_context, u32 string_id, action_fun
 		func_var.args = args;
 		func_var.reg_count = reg_count;
 		func_var.flags = flags;
+		func_var.func_name_string_id = string_id;
 		
 		setPropertyInThisScope(app_context, string_id, NULL, 0, &func_var);
 	}

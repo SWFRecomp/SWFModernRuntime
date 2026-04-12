@@ -199,7 +199,7 @@ void setProperty(SWFAppContext* app_context, ASObject* this, u32 string_id, cons
 			else if (p->value.type == ACTION_STACK_VALUE_STRING &&
 					 p->value.owns_memory)
 			{
-				FREE(p->value.heap_ptr);
+				FREE(p->value.str);
 			}
 		});
 		
@@ -272,7 +272,7 @@ bool deleteProperty(SWFAppContext* app_context, ASObject* obj, const char* name,
 			//~ else if (obj->properties[i].value.type == ACTION_STACK_VALUE_STRING &&
 			         //~ obj->properties[i].value.owns_memory)
 			//~ {
-				//~ free(obj->properties[i].value.heap_ptr);
+				//~ free(obj->properties[i].value.str);
 			//~ }
 			
 			//~ // 2. Free the property name
@@ -380,7 +380,7 @@ void printObject(ASObject* obj)
 			case ACTION_STACK_VALUE_STRING:
 			{
 				const char* str = obj->properties[i].value.owns_memory ?
-					obj->properties[i].value.heap_ptr :
+					obj->properties[i].value.str :
 					(const char*)obj->properties[i].value.value;
 				printf("'%.*s' (STRING)\n", obj->properties[i].value.str_size, str);
 				break;
@@ -428,7 +428,7 @@ void printArray(ASArray* arr)
 			case ACTION_STACK_VALUE_STRING:
 			{
 				const char* str = arr->elements[i].owns_memory ?
-					arr->elements[i].heap_ptr :
+					arr->elements[i].str :
 					(const char*)arr->elements[i].value;
 				printf("'%.*s' (STRING)\n", arr->elements[i].str_size, str);
 				break;
@@ -522,7 +522,7 @@ void releaseArray(SWFAppContext* app_context, ASArray* arr)
 			else if (arr->elements[i].type == ACTION_STACK_VALUE_STRING &&
 			         arr->elements[i].owns_memory)
 			{
-				free(arr->elements[i].heap_ptr);
+				free(arr->elements[i].str);
 			}
 		}
 		
@@ -591,7 +591,7 @@ void setArrayElement(SWFAppContext* app_context, ASArray* arr, u32 index, Action
 		else if (arr->elements[index].type == ACTION_STACK_VALUE_STRING &&
 		         arr->elements[index].owns_memory)
 		{
-			free(arr->elements[index].heap_ptr);
+			free(arr->elements[index].str);
 		}
 	}
 

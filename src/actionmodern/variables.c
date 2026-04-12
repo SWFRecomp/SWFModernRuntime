@@ -36,7 +36,7 @@ static int free_variable_callback(const void* key, size_t ksize, uintptr_t value
 	// Free heap-allocated strings
 	if (var->type == ACTION_STACK_VALUE_STRING && var->owns_memory)
 	{
-		FREE(var->heap_ptr);
+		FREE(var->str);
 	}
 	
 	FREE(var);
@@ -93,7 +93,7 @@ void setVariableWithValue(SWFAppContext* app_context, ActionVar* var)
 	// Free old string if variable owns memory
 	if (var->type == ACTION_STACK_VALUE_STRING && var->owns_memory)
 	{
-		FREE(var->heap_ptr);
+		FREE(var->str);
 		var->owns_memory = false;
 	}
 	
@@ -107,7 +107,7 @@ void setVariableWithValue(SWFAppContext* app_context, ActionVar* var)
 		
 		var->type = ACTION_STACK_VALUE_STRING;
 		var->str_size = total_size;
-		var->heap_ptr = heap_str;
+		var->str = heap_str;
 		var->owns_memory = true;
 	}
 	
@@ -141,7 +141,7 @@ void freeMap(SWFAppContext* app_context)
 				if (var_array[i]->type == ACTION_STACK_VALUE_STRING &&
 				    var_array[i]->owns_memory)
 				{
-					FREE(var_array[i]->heap_ptr);
+					FREE(var_array[i]->str);
 				}
 				
 				FREE(var_array[i]);

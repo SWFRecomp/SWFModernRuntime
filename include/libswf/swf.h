@@ -61,6 +61,8 @@ typedef struct SWFAppContext
 	u32 sp;
 	u32 oldSP;
 	
+	u8 version;
+	
 	frame_func* frame_funcs;
 	char** str_table;
 	

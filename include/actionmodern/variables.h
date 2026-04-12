@@ -45,9 +45,10 @@ typedef struct
 		s64 s64;
 		u32 u32;
 		s32 s32;
-		char* heap_ptr;
+		char* str;
 		f32 f32;
 		f64 f64;
+		bool b;
 		void* object;
 	};
 } ActionVar;
