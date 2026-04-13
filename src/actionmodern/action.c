@@ -367,6 +367,7 @@ void peekVar(SWFAppContext* app_context, ActionVar* var)
 		
 		case ACTION_STACK_VALUE_FUNCTION:
 		{
+			var->func_type = STACK_TOP_FUNC_FUNC_TYPE;
 			var->value = STACK_TOP_VALUE;
 			var->func = (action_func) STACK_TOP_FUNC;
 			var->args = (u32*) STACK_TOP_FUNC_ARGS;
