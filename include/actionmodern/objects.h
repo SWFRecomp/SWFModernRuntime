@@ -102,7 +102,10 @@ void releaseObject(SWFAppContext* app_context, ASObject* obj);
  */
 
 // Get property by name (returns NULL if not found)
-ASProperty* getProperty(ASObject* obj, u32 string_id, const char* name, u32 name_length);
+ASProperty* getProperty(ASObject* this, u32 string_id, const char* name, u32 name_length);
+
+// Get property value, or give undefined
+void getPropertyVar(ASObject* this, u32 string_id, const char* name, u32 name_length, ActionVar* out_var);
 
 // Get or create property by name
 // IMPORTANT: IF YOU CREATE A PROPERTY THAT HOLDS AN OBJECT
@@ -111,11 +114,11 @@ ASProperty* getOrCreateProperty(SWFAppContext* app_context, ASObject* this, u32 
 
 // Get property by name with prototype chain traversal (returns NULL if not found)
 // Walks up the __proto__ chain to find inherited properties
-ASProperty* getPropertyWithPrototype(ASObject* obj, u32 string_id, const char* name, u32 name_length);
+ASProperty* getPropertyWithPrototype(ASObject* this, u32 string_id, const char* name, u32 name_length);
 
 // Set property by name (creates if not exists)
 // Handles refcount management if value is an object
-void setProperty(SWFAppContext* app_context, ASObject* obj, u32 string_id, const char* name, u32 name_length, ActionVar* value);
+void setProperty(SWFAppContext* app_context, ASObject* this, u32 string_id, const char* name, u32 name_length, ActionVar* value);
 
 // Delete property by name (returns true if deleted or not found, false if protected)
 // Handles refcount management if value is an object

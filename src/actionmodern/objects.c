@@ -92,6 +92,30 @@ ASProperty* getProperty(ASObject* this, u32 string_id, const char* name, u32 nam
 }
 
 /**
+ * Get Property Var
+ * 
+ * Retrieves a property var by name.
+ * Copies var into output parameter. This operation is locked for you.
+ */
+void getPropertyVar(ASObject* this, u32 string_id, const char* name, u32 name_length, ActionVar* out_var)
+{
+	OBJ_LOCK_READ(this,
+	{
+		ASProperty* p = getProperty(this, string_id, name, name_length);
+		
+		if (p != NULL)
+		{
+			*out_var = p->value;
+		}
+		
+		else
+		{
+			out_var->type = ACTION_STACK_VALUE_UNDEFINED;
+		}
+	});
+}
+
+/**
  * Get Property
  *
  * Retrieves a property value by name, or creates a new one.
@@ -127,14 +151,28 @@ ASProperty* getPropertyWithPrototype(ASObject* this, u32 string_id, const char* 
 	while (current != NULL)
 	{
 		// Search own properties first
-		ASProperty* prop = getProperty(current, string_id, name, name_length);
+		
+		ASProperty* prop;
+		
+		OBJ_LOCK_READ(current,
+		{
+			prop = getProperty(current, string_id, name, name_length);
+		});
+		
 		if (prop != NULL)
 		{
 			return prop;
 		}
 		
 		// Property not found on this object - walk up to __proto__
-		ASProperty* proto_prop = getProperty(current, STR_ID_PROTO, NULL, 0);
+		
+		ASProperty* proto_prop;
+		
+		OBJ_LOCK_READ(current,
+		{
+			proto_prop = getProperty(current, STR_ID_PROTO, NULL, 0);
+		});
+		
 		if (proto_prop == NULL)
 		{
 			// No __proto__ property - end of chain

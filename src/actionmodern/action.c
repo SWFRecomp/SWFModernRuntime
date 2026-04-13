@@ -101,13 +101,14 @@ void freeActions(SWFAppContext* app_context)
 	thread_join(free_thread_handle);
 }
 
-ASProperty* searchScopesForProperty(u32 string_id, const char* name, u32 name_len)
+void searchScopesForPropertyVar(u32 string_id, const char* name, u32 name_len, ActionVar* out_var)
 {
 	ASProperty* p = NULL;
 	
 	for (u32 j = 0; j <= scope_top_obj; ++j)
 	{
 		u32 i = scope_top_obj - j;
+		
 		OBJ_LOCK_READ(scope_chain[i],
 		{
 			p = getProperty(scope_chain[i], string_id, name, name_len);
@@ -115,11 +116,12 @@ ASProperty* searchScopesForProperty(u32 string_id, const char* name, u32 name_le
 		
 		if (p != NULL)
 		{
-			break;
+			*out_var = p->value;
+			return;
 		}
 	}
 	
-	return p;
+	out_var->type = ACTION_STACK_VALUE_UNDEFINED;
 }
 
 ASProperty* getPropertyInThisScope(u32 string_id, const char* name, u32 name_len)
@@ -137,6 +139,38 @@ ASProperty* getPropertyInThisScope(u32 string_id, const char* name, u32 name_len
 void setPropertyInThisScope(SWFAppContext* app_context, u32 string_id, const char* name, u32 name_len, ActionVar* value)
 {
 	setProperty(app_context, scope_chain[scope_top_obj], string_id, name, name_len, value);
+}
+
+ASProperty* getOrCreatePrototype(SWFAppContext* app_context, ASObject* this)
+{
+	// TODO: there's gotta be a better way to do this LOL
+	
+	ASProperty* prototype_prop;
+	
+	mutex_lock_read(&this->lock);
+	prototype_prop = getProperty(this, STR_ID_PROTOTYPE, NULL, 0);
+	
+	if (prototype_prop != NULL)
+	{
+		mutex_unlock_read(&this->lock);
+		return prototype_prop;
+	}
+	
+	mutex_unlock_read(&this->lock);
+	
+	ASObject* prototype = allocObject(app_context);
+	ActionVar prototype_var;
+	
+	prototype_var.type = ACTION_STACK_VALUE_OBJECT;
+	prototype_var.object = prototype;
+	setProperty(app_context, this, STR_ID_PROTOTYPE, NULL, 0, &prototype_var);
+	
+	OBJ_LOCK_READ(this,
+	{
+		prototype_prop = getProperty(this, STR_ID_PROTOTYPE, NULL, 0);
+	});
+	
+	return prototype_prop;
 }
 
 ActionStackValueType convertString(SWFAppContext* app_context, char* var_str)
@@ -2102,25 +2136,29 @@ void actionGetMember(SWFAppContext* app_context)
 	{
 		ASProperty* prop;
 		
-		OBJ_LOCK_READ(obj,
+		if (LIKELY(string_id != STR_ID_PROTOTYPE))
 		{
-			// Look up property
-			prop = getPropertyWithPrototype(obj, string_id, prop_name, prop_name_len);
-		});
+			OBJ_LOCK_READ(obj,
+			{
+				// Look up property
+				prop = getPropertyWithPrototype(obj, string_id, prop_name, prop_name_len);
+			});
+		}
 		
-		if (prop != NULL || string_id == STR_ID_PROTOTYPE)
+		else
+		{
+			OBJ_LOCK_READ(obj,
+			{
+				// Look up prototype
+				prop = getProperty(obj, STR_ID_PROTOTYPE, prop_name, prop_name_len);
+			});
+		}
+		
+		if (prop != NULL || (obj_var.type == ACTION_STACK_VALUE_FUNCTION && string_id == STR_ID_PROTOTYPE))
 		{
 			if (prop == NULL)
 			{
-				bool created;
-				prop = getOrCreateProperty(app_context, obj, STR_ID_PROTOTYPE, NULL, 0, &created);
-				
-				if (created)
-				{
-					prop->value.type = ACTION_STACK_VALUE_OBJECT;
-					prop->value.object = allocObject(app_context);
-					retainObject(prop->value.object);
-				}
+				prop = getOrCreatePrototype(app_context, obj);
 			}
 			
 			// Property found - push its value
@@ -2226,16 +2264,16 @@ void actionGetMember(SWFAppContext* app_context)
 	}
 }
 
-void callFunction(SWFAppContext* app_context, ASObject* this, ASProperty* func_p, u32 num_args)
+void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v, u32 num_args)
 {
-	u32* args = func_p->value.args;
+	u32* args = func_v->args;
 	
 	scope_top_obj += 1;
 	
 	scope_chain[scope_top_obj] = allocObject(app_context);
 	retainObject(scope_chain[scope_top_obj]);
 	
-	switch (func_p->value.func_type)
+	switch (func_v->func_type)
 	{
 		case FUNC_TYPE_1:
 		{
@@ -2264,7 +2302,7 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ASProperty* func_p
 				}
 			}
 			
-			func_p->value.func(app_context);
+			func_v->func(app_context);
 			
 			FREE(regs);
 			break;
@@ -2272,8 +2310,8 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ASProperty* func_p
 		
 		case FUNC_TYPE_2:
 		{
-			u8 reg_count = func_p->value.reg_count;
-			u16 flags = func_p->value.flags;
+			u8 reg_count = func_v->reg_count;
+			u16 flags = func_v->flags;
 			
 			scope_registers[scope_top_obj] = HALLOC((reg_count + 1)*sizeof(ActionVar));
 			
@@ -2284,7 +2322,7 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ASProperty* func_p
 			{
 				for (u32 i = 0; i < num_args; ++i)
 				{
-					Function2Param* arg = &((Function2Param*) func_p->value.args)[i];
+					Function2Param* arg = &((Function2Param*) func_v->args)[i];
 					
 					if (arg->reg == 0)
 					{
@@ -2347,7 +2385,7 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ASProperty* func_p
 				next_preload += 1;
 			}
 			
-			func_p->value.func(app_context);
+			func_v->func(app_context);
 			
 			FREE(regs);
 			break;
@@ -2371,32 +2409,23 @@ void actionNewObject(SWFAppContext* app_context)
 	u32 num_args = (u32) num_args_var.value;
 	
 	// Try to find existing constructor function
-	ASProperty* func_p = searchScopesForProperty(ctor_name_var.string_id, NULL, 0);
+	ActionVar func_v;
+	searchScopesForPropertyVar(ctor_name_var.string_id, NULL, 0, &func_v);
 	
-	if (func_p != NULL)
+	if (func_v.type != ACTION_STACK_VALUE_UNDEFINED)
 	{
 		// Create new object to serve as 'this'
 		ASObject* this = allocObject(app_context);
 		
-		bool created;
-		ASProperty* prototype_prop = getOrCreateProperty(app_context, func_p->value.object, STR_ID_PROTOTYPE, NULL, 0, &created);
-		
-		if (created)
-		{
-			prototype_prop->value.type = ACTION_STACK_VALUE_OBJECT;
-			prototype_prop->value.object = allocObject(app_context);
-			retainObject(prototype_prop->value.object);
-		}
-		
-		ASObject* prototype = prototype_prop->value.object;
+		ASProperty* prototype = getOrCreatePrototype(app_context, func_v.object);
 		
 		ActionVar proto_ref_var;
 		proto_ref_var.type = ACTION_STACK_VALUE_OBJECT;
-		proto_ref_var.object = prototype;
+		proto_ref_var.object = prototype->value.object;
 		
 		setProperty(app_context, this, STR_ID_PROTO, NULL, 0, &proto_ref_var);
 		
-		callFunction(app_context, this, func_p, num_args);
+		callFunction(app_context, this, &func_v, num_args);
 		POP();
 		
 		PUSH_OBJ(this);
@@ -2429,10 +2458,6 @@ void actionNewObject(SWFAppContext* app_context)
  * - User-defined constructors: SUPPORTED (method property containing function object)
  * - 'this' binding: SUPPORTED for DefineFunction2, limited for DefineFunction
  * - Constructor return value: Discarded per spec (always returns new object)
- *
- * Remaining limitations:
- * - Prototype chains not implemented (requires __proto__ property support)
- * - DefineFunction (type 1) has limited 'this' context support
  */
 void actionNewMethod(SWFAppContext* app_context)
 {
@@ -2451,33 +2476,24 @@ void actionNewMethod(SWFAppContext* app_context)
 	
 	// Try to find constructor method
 	ASObject* obj = (ASObject*) object_var.value;
-	ASProperty* func_p = getProperty(obj, ctor_name_var.string_id, NULL, 0);
+	ActionVar func_v;
+	getPropertyVar(obj, ctor_name_var.string_id, NULL, 0, &func_v);
 	
-	if (func_p != NULL)
+	if (func_v.type != ACTION_STACK_VALUE_UNDEFINED)
 	{
 		// Constructor found
 		// Create new object to serve as 'this'
 		ASObject* this = allocObject(app_context);
 		
-		bool created;
-		ASProperty* prototype_prop = getOrCreateProperty(app_context, func_p->value.object, STR_ID_PROTOTYPE, NULL, 0, &created);
-		
-		if (created)
-		{
-			prototype_prop->value.type = ACTION_STACK_VALUE_OBJECT;
-			prototype_prop->value.object = allocObject(app_context);
-			retainObject(prototype_prop->value.object);
-		}
-		
-		ASObject* prototype = prototype_prop->value.object;
+		ASProperty* prototype = getOrCreatePrototype(app_context, func_v.object);
 		
 		ActionVar proto_ref_var;
 		proto_ref_var.type = ACTION_STACK_VALUE_OBJECT;
-		proto_ref_var.object = prototype;
+		proto_ref_var.object = prototype->value.object;
 		
 		setProperty(app_context, this, STR_ID_PROTO, NULL, 0, &proto_ref_var);
 		
-		callFunction(app_context, this, func_p, num_args);
+		callFunction(app_context, this, &func_v, num_args);
 		POP();
 		
 		PUSH_OBJ(this);
@@ -2559,16 +2575,17 @@ void actionCallFunction(SWFAppContext* app_context)
 	popVar(app_context, &num_args_var);
 	u32 num_args = (u32) num_args_var.value;
 	
-	ASProperty* func_p = searchScopesForProperty(string_id, NULL, 0);
+	ActionVar func_v;
+	searchScopesForPropertyVar(string_id, NULL, 0, &func_v);
 	
-	if (func_p == NULL)
+	if (func_v.type == ACTION_STACK_VALUE_UNDEFINED)
 	{
 		// Function not found - throw
 		EXC_ARG("Function not found: %s\n", func_name);
 		return;
 	}
 	
-	callFunction(app_context, NULL, func_p, num_args);
+	callFunction(app_context, NULL, &func_v, num_args);
 }
 
 void actionCallMethod(SWFAppContext* app_context)
@@ -2603,7 +2620,7 @@ void actionCallMethod(SWFAppContext* app_context)
 	
 	if (meth_p != NULL)
 	{
-		callFunction(app_context, this, meth_p, num_args);
+		callFunction(app_context, this, &meth_p->value, num_args);
 	}
 	
 	else
