@@ -190,6 +190,7 @@ void actionAdd2(SWFAppContext* app_context);
 void actionSubtract(SWFAppContext* app_context);
 void actionMultiply(SWFAppContext* app_context);
 void actionDivide(SWFAppContext* app_context);
+void actionModulo(SWFAppContext* app_context);
 
 // Comparison Operations
 void actionEquals(SWFAppContext* app_context);

@@ -660,6 +660,28 @@ void actionDivide(SWFAppContext* app_context)
 	}
 }
 
+void actionModulo(SWFAppContext* app_context)
+{
+	convertDouble(app_context);
+	ActionVar a;
+	popVar(app_context, &a);
+	
+	convertDouble(app_context);
+	ActionVar b;
+	popVar(app_context, &b);
+	
+	if (UNLIKELY(a.f64 == 0.0))
+	{
+		f64 nan = NAN;
+		PUSH_F64(nan);
+		return;
+	}
+	
+	f64 mod = fmod(b.f64, a.f64);
+	
+	PUSH_F64(mod);
+}
+
 // ==================================================================
 // Comparison Operations
 // ==================================================================
