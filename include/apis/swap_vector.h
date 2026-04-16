@@ -2,6 +2,8 @@
 
 #include <stdint.h>
 
+#include <swf.h>
+
 #define SVEC_INIT(v) svec_init(app_context, v)
 #define SVEC_PUSH(v, x) svec_push(app_context, v, (uintptr_t) x)
 #define SVEC_REMOVE(v, i) svec_remove(v, i)

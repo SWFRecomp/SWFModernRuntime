@@ -10,6 +10,7 @@
 
 #define IS_OBJ(v) ((v.type & 0xF0) == 0x10)
 #define IS_OBJ_P(v) ((v->type & 0xF0) == 0x10)
+#define IS_OBJ_T(t) ((t & 0xF0) == 0x10)
 
 #define OBJ_LOCK_READ(obj, code) \
 	mutex_lock_read(&(obj)->lock); \
@@ -94,6 +95,8 @@ void retainObject(ASObject* obj);
 // - Removing object from array
 // - Function/scope cleanup
 void releaseObject(SWFAppContext* app_context, ASObject* obj);
+
+void destroyObject(SWFAppContext* app_context, ASObject* obj);
 
 /**
  * Property Management

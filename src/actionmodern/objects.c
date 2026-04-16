@@ -75,6 +75,18 @@ void releaseObject(SWFAppContext* app_context, ASObject* obj)
 	}
 }
 
+void destroyObject(SWFAppContext* app_context, ASObject* obj)
+{
+	while (obj->t.length > 0)
+	{
+		ASProperty* p = rbtree_pop_root(&obj->t);
+		FREE(p);
+	}
+	
+	SVEC_RELEASE(&obj->neighbors);
+	SVEC_RELEASE(&obj->blocked_list);
+}
+
 /**
  * Get Property
  *
@@ -88,7 +100,8 @@ ASProperty* getProperty(ASObject* this, u32 string_id, const char* name, u32 nam
 		return NULL;
 	}
 	
-	return (ASProperty*) rbtree_get(&this->t, string_id);
+	ASProperty* p = (ASProperty*) rbtree_get(&this->t, string_id);
+	return p;
 }
 
 /**

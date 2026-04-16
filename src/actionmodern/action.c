@@ -141,172 +141,19 @@ void setPropertyInThisScope(SWFAppContext* app_context, u32 string_id, const cha
 	setProperty(app_context, scope_chain[scope_top_obj], string_id, name, name_len, value);
 }
 
-ASProperty* getOrCreatePrototype(SWFAppContext* app_context, ASObject* this)
-{
-	// TODO: there's gotta be a better way to do this LOL
-	
-	ASProperty* prototype_prop;
-	
-	mutex_lock_read(&this->lock);
-	prototype_prop = getProperty(this, STR_ID_PROTOTYPE, NULL, 0);
-	
-	if (prototype_prop != NULL)
-	{
-		mutex_unlock_read(&this->lock);
-		return prototype_prop;
-	}
-	
-	mutex_unlock_read(&this->lock);
-	
-	ASObject* prototype = allocObject(app_context);
-	ActionVar prototype_var;
-	
-	prototype_var.type = ACTION_STACK_VALUE_OBJECT;
-	prototype_var.object = prototype;
-	setProperty(app_context, this, STR_ID_PROTOTYPE, NULL, 0, &prototype_var);
-	
-	OBJ_LOCK_READ(this,
-	{
-		prototype_prop = getProperty(this, STR_ID_PROTOTYPE, NULL, 0);
-	});
-	
-	return prototype_prop;
-}
-
-ActionStackValueType convertString(SWFAppContext* app_context, char* var_str)
-{
-	if (STACK_TOP_TYPE == ACTION_STACK_VALUE_F32)
-	{
-		f32 temp_val = VAL(f32, &STACK_TOP_VALUE);
-		STACK_TOP_TYPE = ACTION_STACK_VALUE_STRING;
-		VAL(u64, &STACK_TOP_VALUE) = (u64) var_str;
-		snprintf(var_str, 17, "%.15g", temp_val);
-	}
-	
-	return ACTION_STACK_VALUE_STRING;
-}
-
-ActionStackValueType convertFloat(SWFAppContext* app_context)
-{
-	if (STACK_TOP_TYPE == ACTION_STACK_VALUE_STRING)
-	{
-		f64 temp = atof((char*) VAL(u64, &STACK_TOP_VALUE));
-		STACK_TOP_TYPE = ACTION_STACK_VALUE_F64;
-		VAL(u64, &STACK_TOP_VALUE) = VAL(u64, &temp);
-		
-		return ACTION_STACK_VALUE_F64;
-	}
-	
-	return ACTION_STACK_VALUE_F32;
-}
-
-ActionStackValueType convertDouble(SWFAppContext* app_context)
-{
-	f64 d;
-	
-	switch (STACK_TOP_TYPE)
-	{
-		case ACTION_STACK_VALUE_F32:
-			f32 f = VAL(f32, &STACK_TOP_VALUE);
-			STACK_TOP_TYPE = ACTION_STACK_VALUE_F64;
-			d = (f64) f;
-			VAL(u64, &STACK_TOP_VALUE) = VAL(u64, &d);
-			break;
-		case ACTION_STACK_VALUE_INT:
-			s32 i = (s32) STACK_TOP_VALUE;
-			STACK_TOP_TYPE = ACTION_STACK_VALUE_F64;
-			d = (f64) i;
-			VAL(u64, &STACK_TOP_VALUE) = VAL(u64, &d);
-			break;
-	}
-	
-	return ACTION_STACK_VALUE_F64;
-}
-
-ActionStackValueType convertVarDouble(ActionVar* v)
-{
-	f64 d;
-	
-	switch (v->type)
-	{
-		case ACTION_STACK_VALUE_F32:
-			f32 f = VAL(f32, &v->value);
-			v->type = ACTION_STACK_VALUE_F64;
-			d = (f64) f;
-			VAL(u64, &v->value) = VAL(u64, &d);
-			break;
-		case ACTION_STACK_VALUE_INT:
-			s32 i = (s32) v->value;
-			v->type = ACTION_STACK_VALUE_F64;
-			d = (f64) i;
-			VAL(u64, &v->value) = VAL(u64, &d);
-			break;
-	}
-	
-	return ACTION_STACK_VALUE_F64;
-}
-
-ActionStackValueType convertInt(SWFAppContext* app_context)
-{
-	s32 i;
-	
-	switch (STACK_TOP_TYPE)
-	{
-		case ACTION_STACK_VALUE_STRING:
-			i = atoi((char*) VAL(u64, &STACK_TOP_VALUE));
-			VAL(u32, &STACK_TOP_VALUE) = i;
-			break;
-		case ACTION_STACK_VALUE_F32:
-			f32 f = VAL(f32, &STACK_TOP_VALUE);
-			i = (s32) f;
-			VAL(u32, &STACK_TOP_VALUE) = i;
-			break;
-		case ACTION_STACK_VALUE_F64:
-			f64 d = VAL(f64, &STACK_TOP_VALUE);
-			i = (s32) d;
-			VAL(u32, &STACK_TOP_VALUE) = i;
-			break;
-	}
-	
-	STACK_TOP_TYPE = ACTION_STACK_VALUE_INT;
-	
-	return ACTION_STACK_VALUE_INT;
-}
-
-ActionStackValueType convertBool(SWFAppContext* app_context)
-{
-	bool b;
-	
-	switch (STACK_TOP_TYPE)
-	{
-		case ACTION_STACK_VALUE_STRING:
-			b = STACK_TOP_N != 0;
-			VAL(bool, &STACK_TOP_VALUE) = b;
-			break;
-		case ACTION_STACK_VALUE_F32:
-			f32 f = VAL(f32, &STACK_TOP_VALUE);
-			b = f != 0.0f;
-			VAL(bool, &STACK_TOP_VALUE) = b;
-			break;
-		case ACTION_STACK_VALUE_F64:
-			f64 d = VAL(f64, &STACK_TOP_VALUE);
-			b = d != 0.0;
-			VAL(bool, &STACK_TOP_VALUE) = b;
-			break;
-		case ACTION_STACK_VALUE_INT:
-			int i = VAL(s32, &STACK_TOP_VALUE);
-			b = i != 0;
-			VAL(bool, &STACK_TOP_VALUE) = b;
-			break;
-	}
-	
-	STACK_TOP_TYPE = ACTION_STACK_VALUE_BOOLEAN;
-	
-	return ACTION_STACK_VALUE_BOOLEAN;
-}
-
 void pushVar(SWFAppContext* app_context, ActionVar* var)
 {
+	if (IS_OBJ_T(var->type))
+	{
+		ASObject* po = var->object;
+		
+		OBJ_LOCK_WRITE(po,
+		{
+			// the stack now has a reference to this object
+			retainObject(po);
+		});
+	}
+	
 	switch (var->type)
 	{
 		case ACTION_STACK_VALUE_STRING:
@@ -415,168 +262,264 @@ void peekSecondVar(SWFAppContext* app_context, ActionVar* var)
 	}
 }
 
+void convertNumericToNumber(SWFAppContext* app_context, ActionVar* v)
+{
+	f64 d;
+	
+	switch (v->type)
+	{
+		case ACTION_STACK_VALUE_F32:
+			f32 f = v->f32;
+			v->type = ACTION_STACK_VALUE_F64;
+			d = (f64) f;
+			v->f64 = d;
+			break;
+		case ACTION_STACK_VALUE_INT:
+			s32 i = v->s32;
+			v->type = ACTION_STACK_VALUE_F64;
+			d = (f64) i;
+			v->f64 = d;
+			break;
+	}
+}
+
+f64 toNumber(SWFAppContext* app_context, ActionVar* v)
+{
+	if (IS_OBJ_P(v))
+	{
+		UNIMPLEMENTED("ToNumber on an Object\n");
+	}
+	
+	switch (v->type)
+	{
+		case ACTION_STACK_VALUE_UNDEFINED:
+			return NAN;
+		
+		case ACTION_STACK_VALUE_NULL:
+			return +0.0;
+		
+		case ACTION_STACK_VALUE_BOOLEAN:
+			return v->b ? 1.0 : +0.0;
+		
+		case ACTION_STACK_VALUE_STRING:
+		case ACTION_STACK_VALUE_STR_LIST:
+			UNIMPLEMENTED("ToNumber on a String\n");
+		
+		case ACTION_STACK_VALUE_F32:
+		case ACTION_STACK_VALUE_INT:
+			convertNumericToNumber(app_context, v);
+			// fallthrough
+		case ACTION_STACK_VALUE_F64:
+			return v->f64;
+		
+		default:
+			UNREACHABLE("ToNumber\n");
+			return NAN;
+	}
+}
+
+ActionStackValueType convertString(SWFAppContext* app_context, char* var_str)
+{
+	if (STACK_TOP_TYPE == ACTION_STACK_VALUE_F32)
+	{
+		f32 temp_val = VAL(f32, &STACK_TOP_VALUE);
+		STACK_TOP_TYPE = ACTION_STACK_VALUE_STRING;
+		VAL(u64, &STACK_TOP_VALUE) = (u64) var_str;
+		snprintf(var_str, 17, "%.15g", temp_val);
+		STACK_TOP_N = (u32) strnlen(var_str, 17);
+	}
+	
+	return ACTION_STACK_VALUE_STRING;
+}
+
+ActionStackValueType convertFloat(SWFAppContext* app_context)
+{
+	if (STACK_TOP_TYPE == ACTION_STACK_VALUE_STRING)
+	{
+		f64 temp = atof((char*) VAL(u64, &STACK_TOP_VALUE));
+		STACK_TOP_TYPE = ACTION_STACK_VALUE_F64;
+		VAL(u64, &STACK_TOP_VALUE) = VAL(u64, &temp);
+		
+		return ACTION_STACK_VALUE_F64;
+	}
+	
+	return ACTION_STACK_VALUE_F32;
+}
+
+ActionStackValueType convertDouble(SWFAppContext* app_context)
+{
+	// TODO: refactor to just use ActionVars on the stack
+	
+	ActionVar v;
+	popVar(app_context, &v);
+	
+	f64 d = toNumber(app_context, &v);
+	
+	PUSH_F64(d);
+	
+	return ACTION_STACK_VALUE_F64;
+}
+
+ActionStackValueType convertInt(SWFAppContext* app_context)
+{
+	s32 i;
+	
+	switch (STACK_TOP_TYPE)
+	{
+		case ACTION_STACK_VALUE_STRING:
+			i = atoi((char*) VAL(u64, &STACK_TOP_VALUE));
+			VAL(u32, &STACK_TOP_VALUE) = i;
+			break;
+		case ACTION_STACK_VALUE_F32:
+			f32 f = VAL(f32, &STACK_TOP_VALUE);
+			i = (s32) f;
+			VAL(u32, &STACK_TOP_VALUE) = i;
+			break;
+		case ACTION_STACK_VALUE_F64:
+			f64 d = VAL(f64, &STACK_TOP_VALUE);
+			i = (s32) d;
+			VAL(u32, &STACK_TOP_VALUE) = i;
+			break;
+	}
+	
+	STACK_TOP_TYPE = ACTION_STACK_VALUE_INT;
+	
+	return ACTION_STACK_VALUE_INT;
+}
+
+// fully ECMA 262-3 compliant
+ActionStackValueType convertBool(SWFAppContext* app_context)
+{
+	// TODO: make the macros for checking objects better
+	if ((STACK_TOP_TYPE & 0x10) != 0x00)
+	{
+		VAL(bool, &STACK_TOP_VALUE) = true;
+		STACK_TOP_TYPE = ACTION_STACK_VALUE_BOOLEAN;
+		return ACTION_STACK_VALUE_BOOLEAN;
+	}
+	
+	bool b;
+	
+	switch (STACK_TOP_TYPE)
+	{
+		case ACTION_STACK_VALUE_STRING:
+			b = STACK_TOP_N != 0;
+			VAL(bool, &STACK_TOP_VALUE) = b;
+			break;
+		case ACTION_STACK_VALUE_F32:
+			f32 f = VAL(f32, &STACK_TOP_VALUE);
+			b = f != +0.0f && f != -0.0f && f != NAN;
+			VAL(bool, &STACK_TOP_VALUE) = b;
+			break;
+		case ACTION_STACK_VALUE_F64:
+			f64 d = VAL(f64, &STACK_TOP_VALUE);
+			b = d != +0.0 && d != -0.0 && d != NAN;
+			VAL(bool, &STACK_TOP_VALUE) = b;
+			break;
+		case ACTION_STACK_VALUE_INT:
+			int i = VAL(s32, &STACK_TOP_VALUE);
+			b = i != 0;
+			VAL(bool, &STACK_TOP_VALUE) = b;
+			break;
+	}
+	
+	STACK_TOP_TYPE = ACTION_STACK_VALUE_BOOLEAN;
+	
+	return ACTION_STACK_VALUE_BOOLEAN;
+}
+
 void actionAdd(SWFAppContext* app_context)
 {
-	convertFloat(app_context);
+	convertDouble(app_context);
 	ActionVar a;
 	popVar(app_context, &a);
 	
-	convertFloat(app_context);
+	convertDouble(app_context);
 	ActionVar b;
 	popVar(app_context, &b);
 	
-	if (a.type == ACTION_STACK_VALUE_F64)
-	{
-		double a_val = VAL(double, &a.value);
-		double b_val = b.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &b.value) : VAL(double, &b.value);
-		
-		double c = b_val + a_val;
-		PUSH_F64(c);
-	}
-	
-	else if (b.type == ACTION_STACK_VALUE_F64)
-	{
-		double a_val = a.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &a.value) : VAL(double, &a.value);
-		double b_val = VAL(double, &b.value);
-		
-		double c = b_val + a_val;
-		PUSH_F64(c);
-	}
-	
-	else
-	{
-		float c = VAL(float, &b.value) + VAL(float, &a.value);
-		PUSH_F32(c);
-	}
+	double c = b.f64 + a.f64;
+	PUSH_F64(c);
 }
 
 void actionSubtract(SWFAppContext* app_context)
 {
-	convertFloat(app_context);
+	convertDouble(app_context);
 	ActionVar a;
 	popVar(app_context, &a);
 	
-	convertFloat(app_context);
+	convertDouble(app_context);
 	ActionVar b;
 	popVar(app_context, &b);
 	
-	if (a.type == ACTION_STACK_VALUE_F64)
-	{
-		double a_val = VAL(double, &a.value);
-		double b_val = b.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &b.value) : VAL(double, &b.value);
-		
-		double c = b_val - a_val;
-		PUSH_F64(c);
-	}
-	
-	else if (b.type == ACTION_STACK_VALUE_F64)
-	{
-		double a_val = a.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &a.value) : VAL(double, &a.value);
-		double b_val = VAL(double, &b.value);
-		
-		double c = b_val - a_val;
-		PUSH_F64(c);
-	}
-	
-	else
-	{
-		float c = VAL(float, &b.value) - VAL(float, &a.value);
-		PUSH_F32(c);
-	}
+	double c = b.f64 - a.f64;
+	PUSH_F64(c);
 }
 
 void actionMultiply(SWFAppContext* app_context)
 {
-	convertFloat(app_context);
+	convertDouble(app_context);
 	ActionVar a;
 	popVar(app_context, &a);
 	
-	convertFloat(app_context);
+	convertDouble(app_context);
 	ActionVar b;
 	popVar(app_context, &b);
 	
-	if (a.type == ACTION_STACK_VALUE_F64)
-	{
-		double a_val = VAL(double, &a.value);
-		double b_val = b.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &b.value) : VAL(double, &b.value);
-		
-		double c = b_val*a_val;
-		PUSH_F64(c);
-	}
-	
-	else if (b.type == ACTION_STACK_VALUE_F64)
-	{
-		double a_val = a.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &a.value) : VAL(double, &a.value);
-		double b_val = VAL(double, &b.value);
-		
-		double c = b_val*a_val;
-		PUSH_F64(c);
-	}
-	
-	else
-	{
-		float c = VAL(float, &b.value)*VAL(float, &a.value);
-		PUSH_F32(c);
-	}
+	double c = b.f64*a.f64;
+	PUSH_F64(c);
 }
 
 void actionDivide(SWFAppContext* app_context)
 {
-	convertFloat(app_context);
+	convertDouble(app_context);
 	ActionVar a;
 	popVar(app_context, &a);
 	
-	convertFloat(app_context);
+	convertDouble(app_context);
 	ActionVar b;
 	popVar(app_context, &b);
 	
-	if (VAL(float, &a.value) == 0.0f)
+	f64 c;
+	
+	if (a.f64 == 0.0)
 	{
-		// SWF 4:
-		PUSH_STR("#ERROR#", 8);
-		
-		// SWF 5:
-		//~ if (a->value == 0.0f)
-		//~ {
-			//~ float c = NAN;
-		//~ }
-		
-		//~ else if (a->value > 0.0f)
-		//~ {
-			//~ float c = INFINITY;
-		//~ }
-		
-		//~ else
-		//~ {
-			//~ float c = -INFINITY;
-		//~ }
+		// TODO: handle versioning from the recompiler
+		switch (app_context->version)
+		{
+			case 4:
+			{
+				PUSH_STR("#ERROR#", 8);
+				break;
+			}
+			
+			case 5:
+			{
+				if (a.f64 == 0.0)
+				{
+					c = NAN;
+					PUSH_F64(c);
+				}
+				
+				else if (a.f64 > 0.0)
+				{
+					c = INFINITY;
+					PUSH_F64(c);
+				}
+				
+				else
+				{
+					c = -INFINITY;
+					PUSH_F64(c);
+				}
+			}
+		}
 	}
 	
 	else
 	{
-		if (a.type == ACTION_STACK_VALUE_F64)
-		{
-			double a_val = VAL(double, &a.value);
-			double b_val = b.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &b.value) : VAL(double, &b.value);
-			
-			double c = b_val/a_val;
-			PUSH_F64(c);
-		}
-		
-		else if (b.type == ACTION_STACK_VALUE_F64)
-		{
-			double a_val = a.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &a.value) : VAL(double, &a.value);
-			double b_val = VAL(double, &b.value);
-			
-			double c = b_val/a_val;
-			PUSH_F64(c);
-		}
-		
-		else
-		{
-			float c = VAL(float, &b.value)/VAL(float, &a.value);
-			PUSH_F32(c);
-		}
+		c = b.f64/a.f64;
+		PUSH_F64(c);
 	}
 }
 
@@ -586,165 +529,129 @@ void actionDivide(SWFAppContext* app_context)
 
 void actionEquals(SWFAppContext* app_context)
 {
-	convertFloat(app_context);
+	convertDouble(app_context);
 	ActionVar a;
 	popVar(app_context, &a);
 	
-	convertFloat(app_context);
+	convertDouble(app_context);
 	ActionVar b;
 	popVar(app_context, &b);
 	
-	if (a.type == ACTION_STACK_VALUE_F64)
-	{
-		double a_val = VAL(double, &a.value);
-		double b_val = b.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &b.value) : VAL(double, &b.value);
-		
-		float c = b_val == a_val ? 1.0f : 0.0f;
-		PUSH_F32(c);
-	}
-	
-	else if (b.type == ACTION_STACK_VALUE_F64)
-	{
-		double a_val = a.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &a.value) : VAL(double, &a.value);
-		double b_val = VAL(double, &b.value);
-		
-		float c = b_val == a_val ? 1.0f : 0.0f;
-		PUSH_F32(c);
-	}
-	
-	else
-	{
-		float c = VAL(float, &b.value) == VAL(float, &a.value) ? 1.0f : 0.0f;
-		PUSH_F32(c);
-	}
+	bool equals = b.f64 == a.f64;
+	PUSH_BOOL(equals);
 }
 
 void actionLess(SWFAppContext* app_context)
 {
 	ActionVar a;
-	convertFloat(app_context);
+	convertDouble(app_context);
 	popVar(app_context, &a);
 	
 	ActionVar b;
-	convertFloat(app_context);
+	convertDouble(app_context);
 	popVar(app_context, &b);
 	
-	if (a.type == ACTION_STACK_VALUE_F64)
+	bool less = b.f64 < a.f64;
+	PUSH_BOOL(less);
+}
+
+void actionLess2(SWFAppContext* app_context)
+{
+	if (IS_OBJ_T(STACK_TOP_TYPE) || IS_OBJ_T(STACK_SECOND_TOP_TYPE))
 	{
-		double a_val = VAL(double, &a.value);
-		double b_val = b.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &b.value) : VAL(double, &b.value);
-		
-		float c = b_val < a_val ? 1.0f : 0.0f;
-		PUSH_F64(c);
+		UNIMPLEMENTED("Less2 Object ToPrimitive");
 	}
 	
-	else if (b.type == ACTION_STACK_VALUE_F64)
+	if (IS_STR_T(STACK_TOP_TYPE) && IS_STR_T(STACK_SECOND_TOP_TYPE))
 	{
-		double a_val = a.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &a.value) : VAL(double, &a.value);
-		double b_val = VAL(double, &b.value);
-		
-		float c = b_val < a_val ? 1.0f : 0.0f;
-		PUSH_F64(c);
+		UNIMPLEMENTED("Less2 String comparison");
 	}
 	
-	else
+	ActionVar a;
+	convertDouble(app_context);
+	popVar(app_context, &a);
+	
+	ActionVar b;
+	convertDouble(app_context);
+	popVar(app_context, &b);
+	
+	if (b.f64 == NAN || a.f64 == NAN)
 	{
-		float c = VAL(float, &b.value) < VAL(float, &a.value) ? 1.0f : 0.0f;
-		PUSH_F32(c);
+		PUSH_UNDEFINED();
+		return;
 	}
+	
+	if (b.f64 == a.f64 ||
+		b.f64 == +0.0 && a.f64 == -0.0 ||
+		b.f64 == -0.0 && a.f64 == +0.0)
+	{
+		PUSH_BOOL(false);
+		return;
+	}
+	
+	if (b.f64 == INFINITY)
+	{
+		PUSH_BOOL(false);
+		return;
+	}
+	
+	if (a.f64 == INFINITY)
+	{
+		PUSH_BOOL(true);
+		return;
+	}
+	
+	if (a.f64 == -INFINITY)
+	{
+		PUSH_BOOL(false);
+		return;
+	}
+	
+	if (b.f64 == -INFINITY)
+	{
+		PUSH_BOOL(true);
+		return;
+	}
+	
+	PUSH_BOOL(b.f64 < a.f64);
 }
 
 void actionAnd(SWFAppContext* app_context)
 {
 	ActionVar a;
-	convertFloat(app_context);
+	convertDouble(app_context);
 	popVar(app_context, &a);
 	
 	ActionVar b;
-	convertFloat(app_context);
+	convertDouble(app_context);
 	popVar(app_context, &b);
 	
-	if (a.type == ACTION_STACK_VALUE_F64)
-	{
-		double a_val = VAL(double, &a.value);
-		double b_val = b.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &b.value) : VAL(double, &b.value);
-		
-		float c = b_val != 0.0 && a_val != 0.0 ? 1.0f : 0.0f;
-		PUSH_F64(c);
-	}
-	
-	else if (b.type == ACTION_STACK_VALUE_F64)
-	{
-		double a_val = a.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &a.value) : VAL(double, &a.value);
-		double b_val = VAL(double, &b.value);
-		
-		float c = b_val != 0.0 && a_val != 0.0 ? 1.0f : 0.0f;
-		PUSH_F64(c);
-	}
-	
-	else
-	{
-		float c = VAL(float, &b.value) != 0.0f && VAL(float, &a.value) != 0.0f ? 1.0f : 0.0f;
-		PUSH_F32(c);
-	}
+	bool and = b.f64 != 0.0 && a.f64 != 0.0;
+	PUSH_BOOL(and);
 }
 
 void actionOr(SWFAppContext* app_context)
 {
 	ActionVar a;
-	convertFloat(app_context);
+	convertDouble(app_context);
 	popVar(app_context, &a);
 	
 	ActionVar b;
-	convertFloat(app_context);
+	convertDouble(app_context);
 	popVar(app_context, &b);
 	
-	if (a.type == ACTION_STACK_VALUE_F64)
-	{
-		double a_val = VAL(double, &a.value);
-		double b_val = b.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &b.value) : VAL(double, &b.value);
-		
-		float c = b_val != 0.0 || a_val != 0.0 ? 1.0f : 0.0f;
-		PUSH_F64(c);
-	}
-	
-	else if (b.type == ACTION_STACK_VALUE_F64)
-	{
-		double a_val = a.type == ACTION_STACK_VALUE_F32 ? (double) VAL(float, &a.value) : VAL(double, &a.value);
-		double b_val = VAL(double, &b.value);
-		
-		float c = b_val != 0.0 || a_val != 0.0 ? 1.0f : 0.0f;
-		PUSH_F64(c);
-	}
-	
-	else
-	{
-		float c = VAL(float, &b.value) != 0.0f || VAL(float, &a.value) != 0.0f ? 1.0f : 0.0f;
-		PUSH_F32(c);
-	}
+	bool or = b.f64 != 0.0 || a.f64 != 0.0;
+	PUSH_BOOL(or);
 }
 
 void actionNot(SWFAppContext* app_context)
 {
 	ActionVar v;
+	convertBool(app_context);
+	popVar(app_context, &v);
 	
-	// TODO: emit different Not calls from the recompiler based on version
-	switch (app_context->version)
-	{
-		case 4:
-			convertFloat(app_context);
-			popVar(app_context, &v);
-			float f = v.value == 0.0f ? 1.0f : 0.0f;
-			PUSH_F32(f);
-			break;
-		
-		case 5:
-			convertBool(app_context);
-			popVar(app_context, &v);
-			bool b = v.b;
-			PUSH(ACTION_STACK_VALUE_BOOLEAN, (u64) b);
-			break;
-	}
+	bool b = v.b;
+	PUSH_BOOL(b);
 }
 
 // ==================================================================
@@ -950,8 +857,7 @@ void actionStringLength(SWFAppContext* app_context, char* v_str)
 	convertString(app_context, v_str);
 	popVar(app_context, &v);
 	
-	float str_size = (float) v.str_size;
-	PUSH_F32(str_size);
+	PUSH_INT(v.str_size);
 }
 
 void actionStringAdd(SWFAppContext* app_context, char* a_str, char* b_str)
@@ -1316,11 +1222,13 @@ void actionGetTime(SWFAppContext* app_context)
 // EnumeratedName helper structures for property enumeration
 // ==================================================================
 
-typedef struct EnumeratedName {
+typedef struct EnumeratedName EnumeratedName;
+
+struct EnumeratedName {
 	const char* name;
 	u32 name_length;
-	struct EnumeratedName* next;
-} EnumeratedName;
+	EnumeratedName* next;
+};
 
 /**
  * Check if a property name has already been enumerated
@@ -1908,18 +1816,6 @@ void actionSetMember(SWFAppContext* app_context)
 	const char* prop_name = (const char*) prop_name_var.value;
 	u32 prop_name_len = prop_name_var.str_size;
 	
-	switch (string_id)
-	{
-		case STR_ID_PROTO:
-		case STR_ID_PROTOTYPE:
-		{
-			fprintf(stderr, "who is changing prototypes LMFAO\n");
-			
-			// sue me
-			goto skip_property;
-		}
-	}
-	
 	if (prop_name_var.type != ACTION_STACK_VALUE_STRING)
 	{
 		EXC("Bad SetMember property\n");
@@ -1949,8 +1845,6 @@ void actionSetMember(SWFAppContext* app_context)
 			releaseObject(app_context, obj);
 		});
 	}
-	
-	skip_property:
 	
 	POP();
 	
@@ -2137,44 +2031,16 @@ void actionGetMember(SWFAppContext* app_context)
 	{
 		ASProperty* prop;
 		
-		if (LIKELY(string_id != STR_ID_PROTOTYPE))
+		OBJ_LOCK_READ(obj,
 		{
-			OBJ_LOCK_READ(obj,
-			{
-				// Look up property
-				prop = getPropertyWithPrototype(obj, string_id, prop_name, prop_name_len);
-			});
-		}
+			// Look up property
+			prop = getPropertyWithPrototype(obj, string_id, prop_name, prop_name_len);
+		});
 		
-		else
+		if (prop != NULL)
 		{
-			OBJ_LOCK_READ(obj,
-			{
-				// Look up prototype
-				prop = getProperty(obj, STR_ID_PROTOTYPE, prop_name, prop_name_len);
-			});
-		}
-		
-		if (prop != NULL || (obj_var.type == ACTION_STACK_VALUE_FUNCTION && string_id == STR_ID_PROTOTYPE))
-		{
-			if (prop == NULL)
-			{
-				prop = getOrCreatePrototype(app_context, obj);
-			}
-			
 			// Property found - push its value
 			pushVar(app_context, &prop->value);
-			
-			if (IS_OBJ(prop->value))
-			{
-				ASObject* po = prop->value.object;
-				
-				OBJ_LOCK_WRITE(po,
-				{
-					// the stack now has a reference to this object
-					retainObject(po);
-				});
-			}
 		}
 		
 		else
@@ -2418,7 +2284,12 @@ void actionNewObject(SWFAppContext* app_context)
 		// Create new object to serve as 'this'
 		ASObject* this = allocObject(app_context);
 		
-		ASProperty* prototype = getOrCreatePrototype(app_context, func_v.object);
+		OBJ_LOCK_WRITE(this,
+		{
+			retainObject(this);
+		});
+		
+		ASProperty* prototype = getProperty(func_v.object, STR_ID_PROTOTYPE, NULL, 0);
 		
 		ActionVar proto_ref_var;
 		proto_ref_var.type = ACTION_STACK_VALUE_OBJECT;
@@ -2428,6 +2299,11 @@ void actionNewObject(SWFAppContext* app_context)
 		
 		callFunction(app_context, this, &func_v, num_args);
 		POP();
+		
+		OBJ_LOCK_WRITE(this,
+		{
+			releaseObject(app_context, this);
+		});
 		
 		PUSH_OBJ(this);
 	}
@@ -2486,7 +2362,7 @@ void actionNewMethod(SWFAppContext* app_context)
 		// Create new object to serve as 'this'
 		ASObject* this = allocObject(app_context);
 		
-		ASProperty* prototype = getOrCreatePrototype(app_context, func_v.object);
+		ASProperty* prototype = getProperty(func_v.object, STR_ID_PROTOTYPE, NULL, 0);
 		
 		ActionVar proto_ref_var;
 		proto_ref_var.type = ACTION_STACK_VALUE_OBJECT;
@@ -2512,6 +2388,12 @@ void actionDefineFunction(SWFAppContext* app_context, u32 string_id, action_func
 	
 	// Create function object
 	ASObject* func_obj = allocObject(app_context);
+	
+	ActionVar proto_var;
+	proto_var.type = ACTION_STACK_VALUE_OBJECT;
+	proto_var.object = allocObject(app_context);
+	
+	setProperty(app_context, func_obj, STR_ID_PROTOTYPE, NULL, 0, &proto_var);
 	
 	// If named, store in variable
 	if (!anonymous)
@@ -2540,6 +2422,12 @@ void actionDefineFunction2(SWFAppContext* app_context, u32 string_id, action_fun
 	
 	// Create function object
 	ASObject* func_obj = allocObject(app_context);
+	
+	ActionVar proto_var;
+	proto_var.type = ACTION_STACK_VALUE_OBJECT;
+	proto_var.object = allocObject(app_context);
+	
+	setProperty(app_context, func_obj, STR_ID_PROTOTYPE, NULL, 0, &proto_var);
 	
 	// If named, store in variable
 	if (!anonymous)

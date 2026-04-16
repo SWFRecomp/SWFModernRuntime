@@ -21,6 +21,8 @@ typedef enum
 	STR_ID_MATH,
 	STR_ID_ABS,
 	STR_ID_X,
+	STR_ID_Y,
+	STR_ID_Z,
 } StringIds;
 
 typedef struct

@@ -79,6 +79,8 @@
 
 #define PUSH_F32(f) PUSH(ACTION_STACK_VALUE_F32, VAL(u32, &(f)));
 #define PUSH_F64(f) PUSH(ACTION_STACK_VALUE_F64, VAL(u64, &(f)));
+#define PUSH_INT(i) PUSH(ACTION_STACK_VALUE_INT, i);
+#define PUSH_BOOL(b) PUSH(ACTION_STACK_VALUE_BOOLEAN, b);
 
 #define PUSH_OBJ(o) \
 	PUSH(ACTION_STACK_VALUE_OBJECT, (u64) o) \
@@ -139,6 +141,8 @@
 #define IS_UNDEFINED(v) (v.type == ACTION_STACK_VALUE_UNDEFINED)
 #define IS_NULL_UNDEFINED(v) (IS_NULL(v) || IS_UNDEFINED(v))
 
+#define IS_STR_T(t) (t == ACTION_STACK_VALUE_STRING || t == ACTION_STACK_VALUE_STR_LIST)
+
 #define RETURN_VOID() PUSH_UNDEFINED()
 
 #define VAL(type, x) *((type*) x)
@@ -162,8 +166,6 @@ void pushReg(SWFAppContext* app_context, u8 reg);
 
 ASProperty* getPropertyInThisScope(u32 string_id, const char* name, u32 name_len);
 
-ActionStackValueType convertVarDouble(ActionVar* v);
-
 int evaluateCondition(SWFAppContext* app_context);
 
 // Arithmetic Operations
@@ -175,6 +177,7 @@ void actionDivide(SWFAppContext* app_context);
 // Comparison Operations
 void actionEquals(SWFAppContext* app_context);
 void actionLess(SWFAppContext* app_context);
+void actionLess2(SWFAppContext* app_context);
 void actionAnd(SWFAppContext* app_context);
 void actionOr(SWFAppContext* app_context);
 void actionNot(SWFAppContext* app_context);

@@ -244,9 +244,9 @@ void freeObject(SWFAppContext* app_context, ASObject* o, SwapVector* reachable)
 {
 	o->freed = true;
 	
-	for (size_t i = 0; i < reachable->length; ++i)
+	for (size_t i = 0; i < o->neighbors.length; ++i)
 	{
-		ASObject* r = (ASObject*) reachable->data[i];
+		ASObject* r = (ASObject*) o->neighbors.data[i];
 		
 		if (!r->freed)
 		{
@@ -269,6 +269,7 @@ void freeObject(SWFAppContext* app_context, ASObject* o, SwapVector* reachable)
 		}
 	}
 	
+	destroyObject(app_context, o);
 	FREE(o);
 	
 	LOCK_WRITE(object_queue_lock,
