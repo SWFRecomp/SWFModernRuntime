@@ -29,10 +29,22 @@
 	SP -= STACK_VAR_SIZE; \
 	SP &= ~7; \
 	STACK[SP] = ACTION_STACK_VALUE_STRING; \
+	STACK[SP + 1] = false; \
 	VAL(u32, &STACK[SP + 4]) = OLDSP; \
 	VAL(u32, &STACK[SP + 8]) = n; \
 	VAL(u32, &STACK[SP + 12]) = id; \
 	VAL(char*, &STACK[SP + 16]) = v;
+
+// Push dynamic string onto the stack
+#define PUSH_STR_STACK(n) \
+	OLDSP = SP; \
+	SP -= (u32) (4 + 4 + 8 + (n + 1)); \
+	SP &= ~7; \
+	STACK[SP] = ACTION_STACK_VALUE_STRING; \
+	STACK[SP + 1] = true; \
+	VAL(u32, &STACK[SP + 4]) = OLDSP; \
+	VAL(u32, &STACK[SP + 8]) = n; \
+	VAL(u32, &STACK[SP + 12]) = 0;
 
 // Push string without ID (for dynamic strings, ID = 0)
 #define PUSH_STR(v, n) PUSH_STR_ID(v, 0, n)
@@ -43,7 +55,8 @@
 	SP &= ~7; \
 	STACK[SP] = ACTION_STACK_VALUE_STR_LIST; \
 	VAL(u32, &STACK[SP + 4]) = OLDSP; \
-	VAL(u32, &STACK[SP + 8]) = n;
+	VAL(u32, &STACK[SP + 8]) = n; \
+	VAL(u32, &STACK[SP + 12]) = 0;
 
 #define PUSH_FUNC(v, id, f, func_type, args) \
 	OLDSP = SP; \
@@ -107,6 +120,7 @@
 	POP();
 
 #define STACK_TOP_TYPE STACK[SP]
+#define STACK_TOP_OWNS_MEM STACK[SP + 1]
 #define STACK_TOP_N VAL(u32, &STACK[SP + 8])
 #define STACK_TOP_ID VAL(u32, &STACK[SP + 12])
 #define STACK_TOP_VALUE VAL(u64, &STACK[SP + 16])
@@ -118,6 +132,7 @@
 
 #define SP_SECOND_TOP VAL(u32, &STACK[SP + 4])
 #define STACK_SECOND_TOP_TYPE STACK[SP_SECOND_TOP]
+#define STACK_SECOND_TOP_OWNS_MEM STACK[SP_SECOND_TOP + 1]
 #define STACK_SECOND_TOP_N VAL(u32, &STACK[SP_SECOND_TOP + 8])
 #define STACK_SECOND_TOP_ID VAL(u32, &STACK[SP_SECOND_TOP + 12])
 #define STACK_SECOND_TOP_VALUE VAL(u64, &STACK[SP_SECOND_TOP + 16])

@@ -192,22 +192,33 @@ void pushReg(SWFAppContext* app_context, u8 reg)
 void peekVar(SWFAppContext* app_context, ActionVar* var)
 {
 	var->type = STACK_TOP_TYPE;
-	var->str_size = STACK_TOP_N;
 	
 	switch (var->type)
 	{
 		case ACTION_STACK_VALUE_STR_LIST:
 		{
 			var->value = (u64) &STACK_TOP_VALUE;
+			var->str_size = STACK_TOP_N;
 			break;
 		}
 		
 		case ACTION_STACK_VALUE_STRING:
 		{
-			// For strings, mark as not owning memory (it's on the stack)
-			var->value = STACK_TOP_VALUE;
-			var->owns_memory = false;
 			var->string_id = STACK_TOP_ID;
+			var->str_size = STACK_TOP_N;
+			
+			if (STACK_TOP_OWNS_MEM != 0)
+			{
+				var->str = HALLOC(STACK_TOP_N + 1);
+				var->owns_memory = true;
+				memcpy(var->str, &STACK_TOP_VALUE, STACK_TOP_N + 1);
+			}
+			
+			else
+			{
+				var->value = STACK_TOP_VALUE;
+				var->owns_memory = false;
+			}
 			
 			break;
 		}
@@ -320,13 +331,57 @@ f64 toNumber(SWFAppContext* app_context, ActionVar* v)
 
 ActionStackValueType convertString(SWFAppContext* app_context, char* var_str)
 {
-	if (STACK_TOP_TYPE == ACTION_STACK_VALUE_F32)
+	ActionVar v;
+	
+	switch (STACK_TOP_TYPE)
 	{
-		f32 temp_val = VAL(f32, &STACK_TOP_VALUE);
-		STACK_TOP_TYPE = ACTION_STACK_VALUE_STRING;
-		VAL(u64, &STACK_TOP_VALUE) = (u64) var_str;
-		snprintf(var_str, 17, "%.15g", temp_val);
-		STACK_TOP_N = (u32) strnlen(var_str, 17);
+		case ACTION_STACK_VALUE_F32:
+		{
+			popVar(app_context, &v);
+			
+			PUSH_STR_STACK(16);
+			
+			f32 temp_val = v.f32;
+			STACK_TOP_TYPE = ACTION_STACK_VALUE_STRING;
+			STACK_TOP_OWNS_MEM = true;
+			snprintf((char*) &STACK_TOP_VALUE, 17, "%.15g", temp_val);
+			STACK_TOP_N = (u32) strnlen((char*) &STACK_TOP_VALUE, 17);
+			STACK_TOP_ID = 0;
+			
+			break;
+		}
+		
+		case ACTION_STACK_VALUE_F64:
+		{
+			popVar(app_context, &v);
+			
+			PUSH_STR_STACK(16);
+			
+			f64 temp_val = v.f64;
+			STACK_TOP_TYPE = ACTION_STACK_VALUE_STRING;
+			STACK_TOP_OWNS_MEM = true;
+			snprintf((char*) &STACK_TOP_VALUE, 17, "%.15g", temp_val);
+			STACK_TOP_N = (u32) strnlen((char*) &STACK_TOP_VALUE, 17);
+			STACK_TOP_ID = 0;
+			
+			break;
+		}
+		
+		case ACTION_STACK_VALUE_INT:
+		{
+			popVar(app_context, &v);
+			
+			PUSH_STR_STACK(16);
+			
+			s32 temp_val = v.s32;
+			STACK_TOP_TYPE = ACTION_STACK_VALUE_STRING;
+			STACK_TOP_OWNS_MEM = true;
+			snprintf((char*) &STACK_TOP_VALUE, 17, "%d", temp_val);
+			STACK_TOP_N = (u32) strnlen((char*) &STACK_TOP_VALUE, 17);
+			STACK_TOP_ID = 0;
+			
+			break;
+		}
 	}
 	
 	return ACTION_STACK_VALUE_STRING;
@@ -449,9 +504,25 @@ void actionAdd2(SWFAppContext* app_context)
 		UNIMPLEMENTED("Add2 Object ToPrimitive");
 	}
 	
-	if (IS_STR_T(STACK_TOP_TYPE) && IS_STR_T(STACK_SECOND_TOP_TYPE))
+	if (IS_STR_T(STACK_TOP_TYPE) || IS_STR_T(STACK_SECOND_TOP_TYPE))
 	{
-		UNIMPLEMENTED("Add2 String comparison");
+		convertString(app_context, NULL);
+		ActionVar a_str;
+		popVar(app_context, &a_str);
+		
+		convertString(app_context, NULL);
+		ActionVar b_str;
+		popVar(app_context, &b_str);
+		
+		u32 a_n = a_str.str_size;
+		u32 b_n = b_str.str_size;
+		
+		PUSH_STR_STACK(b_n + a_n);
+		memcpy((char*) &STACK_TOP_VALUE, b_str.str, b_n);
+		memcpy(((char*) &STACK_TOP_VALUE) + b_n, a_str.str, a_n);
+		*((u8*) (((char*) &STACK_TOP_VALUE) + b_n + a_n)) = '\0';
+		
+		return;
 	}
 	
 	convertDouble(app_context);
@@ -655,8 +726,6 @@ void actionEquals2(SWFAppContext* app_context)
 	convertNumericToNumber(app_context, &b);
 	convertNumericToNumber(app_context, &a);
 	
-	fprintf(stderr, "eq %f %f\n", b.f64, a.f64);
-	
 	if (b.f64 == NAN || a.f64 == NAN)
 	{
 		PUSH_BOOL(false);
@@ -752,28 +821,28 @@ void actionLess2(SWFAppContext* app_context)
 void actionAnd(SWFAppContext* app_context)
 {
 	ActionVar a;
-	convertDouble(app_context);
+	convertBool(app_context);
 	popVar(app_context, &a);
 	
 	ActionVar b;
-	convertDouble(app_context);
+	convertBool(app_context);
 	popVar(app_context, &b);
 	
-	bool and = b.f64 != 0.0 && a.f64 != 0.0;
+	bool and = b.b && a.b;
 	PUSH_BOOL(and);
 }
 
 void actionOr(SWFAppContext* app_context)
 {
 	ActionVar a;
-	convertDouble(app_context);
+	convertBool(app_context);
 	popVar(app_context, &a);
 	
 	ActionVar b;
-	convertDouble(app_context);
+	convertBool(app_context);
 	popVar(app_context, &b);
 	
-	bool or = b.f64 != 0.0 || a.f64 != 0.0;
+	bool or = b.b || a.b;
 	PUSH_BOOL(or);
 }
 
@@ -1279,7 +1348,13 @@ void actionTrace(SWFAppContext* app_context)
 	{
 		case ACTION_STACK_VALUE_STRING:
 		{
-			printf("%s\n", (char*) v.value);
+			printf("%s\n", v.str);
+			
+			if (v.owns_memory)
+			{
+				FREE(v.str);
+			}
+			
 			break;
 		}
 		
@@ -1580,8 +1655,6 @@ void actionEnumerate(SWFAppContext* app_context, char* str_buffer)
 
 bool evaluateCondition(SWFAppContext* app_context)
 {
-	fprintf(stderr, "stack is %zu\n", STACK_TOP_VALUE);
-	
 	ActionVar v;
 	convertBool(app_context);
 	popVar(app_context, &v);
