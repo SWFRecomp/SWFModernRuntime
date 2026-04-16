@@ -442,6 +442,72 @@ void actionAdd(SWFAppContext* app_context)
 	PUSH_F64(c);
 }
 
+void actionAdd2(SWFAppContext* app_context)
+{
+	if (IS_OBJ_T(STACK_TOP_TYPE) || IS_OBJ_T(STACK_SECOND_TOP_TYPE))
+	{
+		UNIMPLEMENTED("Add2 Object ToPrimitive");
+	}
+	
+	if (IS_STR_T(STACK_TOP_TYPE) && IS_STR_T(STACK_SECOND_TOP_TYPE))
+	{
+		UNIMPLEMENTED("Add2 String comparison");
+	}
+	
+	convertDouble(app_context);
+	ActionVar a;
+	popVar(app_context, &a);
+	
+	convertDouble(app_context);
+	ActionVar b;
+	popVar(app_context, &b);
+	
+	// wait it's just 754 do i need to do any of this LOL
+	
+	if ((b.f64 == NAN || a.f64 == NAN) ||
+		b.f64 == INFINITY && a.f64 == -INFINITY ||
+		b.f64 == -INFINITY && a.f64 == INFINITY)
+	{
+		f64 nan = NAN;
+		PUSH_F64(&nan);
+		return;
+	}
+	
+	if (b.f64 == INFINITY || a.f64 == INFINITY)
+	{
+		f64 inf = INFINITY;
+		PUSH_F64(inf);
+		return;
+	}
+	
+	if (b.f64 == -INFINITY || a.f64 == -INFINITY)
+	{
+		f64 ninf = -INFINITY;
+		PUSH_F64(ninf);
+		return;
+	}
+	
+	if (b.f64 == -0.0 && a.f64 == -0.0)
+	{
+		f64 n0 = -0.0;
+		PUSH_F64(n0);
+		return;
+	}
+	
+	if ((b.f64 == +0.0 || b.f64 == -0.0) &&
+		(a.f64 == +0.0 || a.f64 == -0.0))
+	{
+		f64 p0 = +0.0;
+		PUSH_F64(p0);
+		return;
+	}
+	
+	// eh too late now
+	
+	double c = b.f64 + a.f64;
+	PUSH_F64(c);
+}
+
 void actionSubtract(SWFAppContext* app_context)
 {
 	convertDouble(app_context);
@@ -539,6 +605,73 @@ void actionEquals(SWFAppContext* app_context)
 	
 	bool equals = b.f64 == a.f64;
 	PUSH_BOOL(equals);
+}
+
+void actionEquals2(SWFAppContext* app_context)
+{
+	ActionVar a;
+	popVar(app_context, &a);
+	
+	ActionVar b;
+	popVar(app_context, &b);
+	
+	if (b.type != a.type)
+	{
+		UNIMPLEMENTED("Equals2 of differing types\n");
+	}
+	
+	if (b.type == ACTION_STACK_VALUE_UNDEFINED ||
+		b.type == ACTION_STACK_VALUE_NULL)
+	{
+		PUSH_BOOL(true);
+		return;
+	}
+	
+	if (!IS_NUM_T(b.type))
+	{
+		if (IS_STR_T(b.type))
+		{
+			if (b.str_size != a.str_size)
+			{
+				PUSH_BOOL(false);
+				return;
+			}
+			
+			PUSH_BOOL(strncmp(b.str, a.str, b.str_size) == 0);
+			return;
+		}
+		
+		if (b.type == ACTION_STACK_VALUE_BOOLEAN)
+		{
+			PUSH_BOOL(b.b && a.b || !b.b && !a.b);
+			return;
+		}
+		
+		// why does this need double parens, sadge
+		PUSH_BOOL((b.object == a.object));
+		return;
+	}
+	
+	convertNumericToNumber(app_context, &b);
+	convertNumericToNumber(app_context, &a);
+	
+	fprintf(stderr, "eq %f %f\n", b.f64, a.f64);
+	
+	if (b.f64 == NAN || a.f64 == NAN)
+	{
+		PUSH_BOOL(false);
+		return;
+	}
+	
+	if (b.f64 == a.f64 ||
+		b.f64 == +0.0 && a.f64 == -0.0 ||
+		b.f64 == -0.0 && a.f64 == +0.0)
+	{
+		PUSH_BOOL(true);
+		return;
+	}
+	
+	PUSH_BOOL(false);
 }
 
 void actionLess(SWFAppContext* app_context)
@@ -650,7 +783,7 @@ void actionNot(SWFAppContext* app_context)
 	convertBool(app_context);
 	popVar(app_context, &v);
 	
-	bool b = v.b;
+	bool b = !v.b;
 	PUSH_BOOL(b);
 }
 
@@ -1445,13 +1578,15 @@ void actionEnumerate(SWFAppContext* app_context, char* str_buffer)
 	//~ }
 }
 
-int evaluateCondition(SWFAppContext* app_context)
+bool evaluateCondition(SWFAppContext* app_context)
 {
+	fprintf(stderr, "stack is %zu\n", STACK_TOP_VALUE);
+	
 	ActionVar v;
-	convertFloat(app_context);
+	convertBool(app_context);
 	popVar(app_context, &v);
 	
-	return v.f32 != 0.0f;
+	return v.b;
 }
 
 void actionDefineLocal(SWFAppContext* app_context)

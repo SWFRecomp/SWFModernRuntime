@@ -142,6 +142,7 @@
 #define IS_NULL_UNDEFINED(v) (IS_NULL(v) || IS_UNDEFINED(v))
 
 #define IS_STR_T(t) (t == ACTION_STACK_VALUE_STRING || t == ACTION_STACK_VALUE_STR_LIST)
+#define IS_NUM_T(t) (t == ACTION_STACK_VALUE_F32 || t == ACTION_STACK_VALUE_F64 || t == ACTION_STACK_VALUE_INT)
 
 #define RETURN_VOID() PUSH_UNDEFINED()
 
@@ -166,16 +167,18 @@ void pushReg(SWFAppContext* app_context, u8 reg);
 
 ASProperty* getPropertyInThisScope(u32 string_id, const char* name, u32 name_len);
 
-int evaluateCondition(SWFAppContext* app_context);
+bool evaluateCondition(SWFAppContext* app_context);
 
 // Arithmetic Operations
 void actionAdd(SWFAppContext* app_context);
+void actionAdd2(SWFAppContext* app_context);
 void actionSubtract(SWFAppContext* app_context);
 void actionMultiply(SWFAppContext* app_context);
 void actionDivide(SWFAppContext* app_context);
 
 // Comparison Operations
 void actionEquals(SWFAppContext* app_context);
+void actionEquals2(SWFAppContext* app_context);
 void actionLess(SWFAppContext* app_context);
 void actionLess2(SWFAppContext* app_context);
 void actionAnd(SWFAppContext* app_context);
