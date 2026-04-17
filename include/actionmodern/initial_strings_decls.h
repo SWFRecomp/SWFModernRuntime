@@ -29,7 +29,6 @@ typedef struct
 {
 	u32 object_string_id;
 	u32 func_string_id;
-	action_func func;
-	u32* args;
+	action_runtime_func func;
 	bool constructor;
 } RuntimeFunc;

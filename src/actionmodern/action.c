@@ -74,10 +74,10 @@ void initActions(SWFAppContext* app_context)
 		
 		ActionVar v;
 		v.type = ACTION_STACK_VALUE_FUNCTION;
-		v.func_type = FUNC_TYPE_1;
+		v.func_type = FUNC_TYPE_3;
 		v.object = allocObject(app_context);
 		v.func = runtime_funcs[i].func;
-		v.args = runtime_funcs[i].args;
+		v.args = NULL;
 		
 		if (runtime_funcs[i].constructor)
 		{
@@ -2669,6 +2669,14 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v,
 			func_v->func(app_context);
 			
 			FREE(regs);
+			break;
+		}
+		
+		case FUNC_TYPE_3:
+		{
+			action_runtime_func f = (action_runtime_func) func_v->func;
+			f(app_context, num_args);
+			
 			break;
 		}
 	}

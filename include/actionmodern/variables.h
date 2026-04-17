@@ -8,6 +8,7 @@ typedef enum
 {
 	FUNC_TYPE_1,
 	FUNC_TYPE_2,
+	FUNC_TYPE_3,
 } FunctionType;
 
 typedef struct

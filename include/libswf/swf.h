@@ -50,6 +50,7 @@ typedef struct SWFAppContext SWFAppContext;
 
 typedef void (*frame_func)(SWFAppContext* app_context);
 typedef void (*action_func)(SWFAppContext* app_context);
+typedef void (*action_runtime_func)(SWFAppContext* app_context, u32 num_args);
 
 extern frame_func frame_funcs[];
 
