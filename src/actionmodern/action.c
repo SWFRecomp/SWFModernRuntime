@@ -189,7 +189,7 @@ void pushReg(SWFAppContext* app_context, u8 reg)
 	pushVar(app_context, &scope_registers[scope_top_obj][reg]);
 }
 
-void peekVar(SWFAppContext* app_context, ActionVar* var)
+void peekConvert(SWFAppContext* app_context, ActionVar* var)
 {
 	var->type = STACK_TOP_TYPE;
 	
@@ -241,6 +241,57 @@ void peekVar(SWFAppContext* app_context, ActionVar* var)
 			break;
 		}
 	}
+}
+
+void copyReg(SWFAppContext* app_context)
+{
+	if (STACK_TOP_TYPE != ACTION_STACK_VALUE_REGISTER)
+	{
+		return;
+	}
+	
+	u8 reg = (u8) STACK_TOP_VALUE;
+	
+	POP();
+	pushReg(app_context, reg);
+}
+
+void copy2Regs(SWFAppContext* app_context)
+{
+	ActionVar reg1_v;
+	ActionVar reg2_v;
+	
+	peekConvert(app_context, &reg1_v);
+	POP();
+	
+	peekConvert(app_context, &reg2_v);
+	POP();
+	
+	if (reg2_v.type == ACTION_STACK_VALUE_REGISTER)
+	{
+		pushReg(app_context, (u8) reg2_v.u32);
+	}
+	
+	else
+	{
+		pushVar(app_context, &reg2_v);
+	}
+	
+	if (reg1_v.type == ACTION_STACK_VALUE_REGISTER)
+	{
+		pushReg(app_context, (u8) reg1_v.u32);
+	}
+	
+	else
+	{
+		pushVar(app_context, &reg1_v);
+	}
+}
+
+void peekVar(SWFAppContext* app_context, ActionVar* var)
+{
+	copyReg(app_context);
+	peekConvert(app_context, var);
 }
 
 void popVar(SWFAppContext* app_context, ActionVar* var)
@@ -331,6 +382,8 @@ f64 toNumber(SWFAppContext* app_context, ActionVar* v)
 
 ActionStackValueType convertString(SWFAppContext* app_context, char* var_str)
 {
+	copyReg(app_context);
+	
 	ActionVar v;
 	
 	switch (STACK_TOP_TYPE)
@@ -389,6 +442,8 @@ ActionStackValueType convertString(SWFAppContext* app_context, char* var_str)
 
 ActionStackValueType convertFloat(SWFAppContext* app_context)
 {
+	copyReg(app_context);
+	
 	if (STACK_TOP_TYPE == ACTION_STACK_VALUE_STRING)
 	{
 		f64 temp = atof((char*) VAL(u64, &STACK_TOP_VALUE));
@@ -405,6 +460,8 @@ ActionStackValueType convertDouble(SWFAppContext* app_context)
 {
 	// TODO: refactor to just use ActionVars on the stack
 	
+	copyReg(app_context);
+	
 	ActionVar v;
 	popVar(app_context, &v);
 	
@@ -417,6 +474,8 @@ ActionStackValueType convertDouble(SWFAppContext* app_context)
 
 ActionStackValueType convertInt(SWFAppContext* app_context)
 {
+	copyReg(app_context);
+	
 	s32 i;
 	
 	switch (STACK_TOP_TYPE)
@@ -445,6 +504,8 @@ ActionStackValueType convertInt(SWFAppContext* app_context)
 // fully ECMA 262-3 compliant
 ActionStackValueType convertBool(SWFAppContext* app_context)
 {
+	copyReg(app_context);
+	
 	// TODO: make the macros for checking objects better
 	if ((STACK_TOP_TYPE & 0x10) != 0x00)
 	{
@@ -499,6 +560,8 @@ void actionAdd(SWFAppContext* app_context)
 
 void actionAdd2(SWFAppContext* app_context)
 {
+	copy2Regs(app_context);
+	
 	if (IS_OBJ_T(STACK_TOP_TYPE) || IS_OBJ_T(STACK_SECOND_TOP_TYPE))
 	{
 		UNIMPLEMENTED("Add2 Object ToPrimitive");
@@ -678,8 +741,118 @@ void actionModulo(SWFAppContext* app_context)
 	}
 	
 	f64 mod = fmod(b.f64, a.f64);
-	
 	PUSH_F64(mod);
+}
+
+void actionIncrement(SWFAppContext* app_context)
+{
+	convertDouble(app_context);
+	ActionVar v;
+	popVar(app_context, &v);
+	
+	fprintf(stderr, "got %f\n", v.f64);
+	
+	f64 inc = v.f64 + 1.0;
+	fprintf(stderr, "inc %f\n", inc);
+	PUSH_F64(inc);
+}
+
+void actionDecrement(SWFAppContext* app_context)
+{
+	convertDouble(app_context);
+	ActionVar v;
+	popVar(app_context, &v);
+	
+	f64 dec = v.f64 - 1.0;
+	PUSH_F64(dec);
+}
+
+// ==================================================================
+// Bitwise Operations
+// ==================================================================
+
+void actionBitAnd(SWFAppContext* app_context)
+{
+	convertInt(app_context);
+	ActionVar a;
+	popVar(app_context, &a);
+	
+	convertInt(app_context);
+	ActionVar b;
+	popVar(app_context, &b);
+	
+	s32 and = b.u32 & a.u32;
+	PUSH_INT(and);
+}
+
+void actionBitOr(SWFAppContext* app_context)
+{
+	convertInt(app_context);
+	ActionVar a;
+	popVar(app_context, &a);
+	
+	convertInt(app_context);
+	ActionVar b;
+	popVar(app_context, &b);
+	
+	s32 or = b.u32 | a.u32;
+	PUSH_INT(or);
+}
+
+void actionBitLShift(SWFAppContext* app_context)
+{
+	convertInt(app_context);
+	ActionVar a;
+	popVar(app_context, &a);
+	
+	convertInt(app_context);
+	ActionVar b;
+	popVar(app_context, &b);
+	
+	s32 lsh = b.u32 << (a.u32 & 0b11111);
+	PUSH_INT(lsh);
+}
+
+void actionBitRShift(SWFAppContext* app_context)
+{
+	convertInt(app_context);
+	ActionVar a;
+	popVar(app_context, &a);
+	
+	convertInt(app_context);
+	ActionVar b;
+	popVar(app_context, &b);
+	
+	s32 rsh = b.s32 >> (a.u32 & 0b11111);
+	PUSH_INT(rsh);
+}
+
+void actionBitURShift(SWFAppContext* app_context)
+{
+	convertInt(app_context);
+	ActionVar a;
+	popVar(app_context, &a);
+	
+	convertInt(app_context);
+	ActionVar b;
+	popVar(app_context, &b);
+	
+	u32 rsh = b.u32 >> (a.u32 & 0b11111);
+	PUSH_INT(rsh);
+}
+
+void actionBitXor(SWFAppContext* app_context)
+{
+	convertInt(app_context);
+	ActionVar a;
+	popVar(app_context, &a);
+	
+	convertInt(app_context);
+	ActionVar b;
+	popVar(app_context, &b);
+	
+	u32 xor = b.u32 ^ a.u32;
+	PUSH_INT(xor);
 }
 
 // ==================================================================
@@ -781,6 +954,8 @@ void actionLess(SWFAppContext* app_context)
 
 void actionLess2(SWFAppContext* app_context)
 {
+	copy2Regs(app_context);
+	
 	if (IS_OBJ_T(STACK_TOP_TYPE) || IS_OBJ_T(STACK_SECOND_TOP_TYPE))
 	{
 		UNIMPLEMENTED("Less2 Object ToPrimitive");
@@ -1170,6 +1345,8 @@ void actionStringAdd(SWFAppContext* app_context, char* a_str, char* b_str)
 
 void actionGetVariable(SWFAppContext* app_context)
 {
+	copyReg(app_context);
+	
 	// Read variable name info from stack
 	u32 string_id = STACK_TOP_ID;
 	char* var_name = (char*) STACK_TOP_VALUE;
@@ -1261,6 +1438,8 @@ void actionSetVariable(SWFAppContext* app_context)
 	}
 	
 	POP();
+	
+	copyReg(app_context);
 	
 	// Read variable name info
 	u32 string_id = STACK_TOP_ID;
@@ -1691,26 +1870,27 @@ void actionDefineLocal(SWFAppContext* app_context)
 	// Pop value first, then name
 	// So VALUE is at top (*sp), NAME is at second (SP_SECOND_TOP)
 	
-	// Read variable name info
-	// Stack layout for strings: +0=type, +4=oldSP, +8=length, +12=string_id, +16=pointer
-	u32 string_id = STACK_SECOND_TOP_ID;
-	char* var_name = (char*) STACK_SECOND_TOP_VALUE;
-	u32 var_name_len = STACK_SECOND_TOP_N;
-	
 	// DefineLocal ALWAYS creates/updates in the local scope
 	
 	// We have a local scope object - define variable as a property
 	ASObject* local_scope = scope_chain[scope_top_obj];
 	
 	ActionVar value_var;
-	peekVar(app_context, &value_var);
+	popVar(app_context, &value_var);
+	
+	copyReg(app_context);
+	
+	// Read variable name info
+	// Stack layout for strings: +0=type, +4=oldSP, +8=length, +12=string_id, +16=pointer
+	u32 string_id = STACK_TOP_ID;
+	char* var_name = (char*) STACK_TOP_VALUE;
+	u32 var_name_len = STACK_TOP_N;
+	
+	POP();
 	
 	// Set property on the local scope object
 	// This will create the property if it doesn't exist, or update if it does
 	setProperty(app_context, local_scope, string_id, var_name, var_name_len, &value_var);
-	
-	// Pop both value and name
-	POP_2();
 }
 
 void actionDefineLocal2(SWFAppContext* app_context)
@@ -1720,10 +1900,15 @@ void actionDefineLocal2(SWFAppContext* app_context)
 	
 	// Stack layout: [name] <- sp
 	
+	copyReg(app_context);
+	
 	// Read variable name info
 	u32 string_id = STACK_TOP_ID;
 	char* var_name = (char*) STACK_TOP_VALUE;
 	u32 var_name_len = STACK_TOP_N;
+	
+	// Pop the name
+	POP();
 	
 	// Declare variable as undefined property at top of scope
 	ASObject* local_scope = scope_chain[scope_top_obj];
@@ -1735,9 +1920,6 @@ void actionDefineLocal2(SWFAppContext* app_context)
 	// Set property on the local scope object
 	// This will create the property if it doesn't exist
 	setProperty(app_context, local_scope, string_id, var_name, var_name_len, &undefined_var);
-	
-	// Pop the name
-	POP();
 }
 
 void actionTypeof(SWFAppContext* app_context, char* str_buffer)
@@ -2232,6 +2414,8 @@ void actionDelete(SWFAppContext* app_context)
 
 void actionGetMember(SWFAppContext* app_context)
 {
+	copyReg(app_context);
+	
 	// 1. Convert and pop property name (top of stack)
 	const char* prop_name = (const char*) STACK_TOP_VALUE;
 	u32 prop_name_len = STACK_TOP_N;
@@ -2684,6 +2868,8 @@ void actionDefineFunction2(SWFAppContext* app_context, u32 string_id, action_fun
 
 void actionCallFunction(SWFAppContext* app_context)
 {
+	copyReg(app_context);
+	
 	// 1. Pop function name (string) from stack
 	char* func_name = (char*) STACK_TOP_VALUE;
 	u32 string_id = STACK_TOP_ID;
@@ -2709,6 +2895,8 @@ void actionCallFunction(SWFAppContext* app_context)
 
 void actionCallMethod(SWFAppContext* app_context)
 {
+	copyReg(app_context);
+	
 	// Pop method name (string) from stack
 	char* func_name = (char*) STACK_TOP_VALUE;
 	u32 string_id = STACK_TOP_ID;

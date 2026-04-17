@@ -9,19 +9,12 @@
 #define STACK_FUNC_SIZE (4 + 4 + 8 + 8 + 8 + 8 + (4 + 4))
 
 #define PUSH(t, v) \
-	if (t == ACTION_STACK_VALUE_REGISTER) \
-	{ \
-		pushReg(app_context, (u8) v); \
-	} \
-	else \
-	{ \
-		OLDSP = SP; \
-		SP -= STACK_VAR_SIZE; \
-		SP &= ~7; \
-		STACK[SP] = t; \
-		VAL(u32, &STACK[SP + 4]) = OLDSP; \
-		VAL(u64, &STACK[SP + 16]) = v; \
-	}
+	OLDSP = SP; \
+	SP -= STACK_VAR_SIZE; \
+	SP &= ~7; \
+	STACK[SP] = t; \
+	VAL(u32, &STACK[SP + 4]) = OLDSP; \
+	VAL(u64, &STACK[SP + 16]) = v;
 
 // Push string with ID (for constant strings from compiler)
 #define PUSH_STR_ID(v, id, n) \
@@ -191,6 +184,16 @@ void actionSubtract(SWFAppContext* app_context);
 void actionMultiply(SWFAppContext* app_context);
 void actionDivide(SWFAppContext* app_context);
 void actionModulo(SWFAppContext* app_context);
+void actionIncrement(SWFAppContext* app_context);
+void actionDecrement(SWFAppContext* app_context);
+
+// Bitwise Operations
+void actionBitAnd(SWFAppContext* app_context);
+void actionBitOr(SWFAppContext* app_context);
+void actionBitLShift(SWFAppContext* app_context);
+void actionBitRShift(SWFAppContext* app_context);
+void actionBitURShift(SWFAppContext* app_context);
+void actionBitXor(SWFAppContext* app_context);
 
 // Comparison Operations
 void actionEquals(SWFAppContext* app_context);
