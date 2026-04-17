@@ -112,6 +112,8 @@
 	POP(); \
 	POP();
 
+#define DISCARD_ARGS(n) discardArgs(app_context, n)
+
 #define STACK_TOP_TYPE STACK[SP]
 #define STACK_TOP_OWNS_MEM STACK[SP + 1]
 #define STACK_TOP_N VAL(u32, &STACK[SP + 8])
@@ -161,6 +163,8 @@
 
 extern ActionVar* temp_val;
 
+extern ASObject* _global;
+
 typedef struct
 {
 	u8 reg;
@@ -170,10 +174,13 @@ typedef struct
 void initActions(SWFAppContext* app_context);
 void freeActions(SWFAppContext* app_context);
 
+void discardArgs(SWFAppContext* app_context, u32 num_args);
+
 void pushVar(SWFAppContext* app_context, ActionVar* p);
 void pushReg(SWFAppContext* app_context, u8 reg);
 
 ASProperty* getPropertyInThisScope(u32 string_id, const char* name, u32 name_len);
+void setPropertyInThisScope(SWFAppContext* app_context, u32 string_id, const char* name, u32 name_len, ActionVar* value);
 
 bool evaluateCondition(SWFAppContext* app_context);
 

@@ -6,10 +6,7 @@
 
 void new_Object(SWFAppContext* app_context, u32 num_args)
 {
-	for (u32 i = 0; i < num_args; ++i)
-	{
-		POP();
-	}
+	DISCARD_ARGS(num_args);
 	
 	RETURN_VOID();
 }

@@ -76,7 +76,7 @@ void initActions(SWFAppContext* app_context)
 		v.type = ACTION_STACK_VALUE_FUNCTION;
 		v.func_type = FUNC_TYPE_3;
 		v.object = allocObject(app_context);
-		v.func = runtime_funcs[i].func;
+		v.func = (action_func) runtime_funcs[i].func;
 		v.args = NULL;
 		
 		if (runtime_funcs[i].constructor)
@@ -93,12 +93,37 @@ void initActions(SWFAppContext* app_context)
 	mutex_init(&object_queue_lock);
 	rbtree_init(&object_free_queue, sizeof(objnode));
 	
+	for (int i = 0; i < sizeof(static_initializers)/sizeof(action_runtime_func); ++i)
+	{
+		scope_top_obj += 1;
+		scope_chain[scope_top_obj] = allocObject(app_context);
+		retainObject(scope_chain[scope_top_obj]);
+		
+		static_initializers[i](app_context, 0);
+		POP();
+		
+		OBJ_LOCK_WRITE(scope_chain[scope_top_obj],
+		{
+			releaseObject(app_context, scope_chain[scope_top_obj]);
+		});
+		
+		scope_top_obj -= 1;
+	}
+	
 	free_thread_handle = thread_start(app_context, freeThread);
 }
 
 void freeActions(SWFAppContext* app_context)
 {
 	thread_join(free_thread_handle);
+}
+
+void discardArgs(SWFAppContext* app_context, u32 num_args)
+{
+	for (u32 i = 0; i < num_args; ++i)
+	{
+		POP();
+	}
 }
 
 void searchScopesForPropertyVar(u32 string_id, const char* name, u32 name_len, ActionVar* out_var)
@@ -386,19 +411,25 @@ ActionStackValueType convertString(SWFAppContext* app_context, char* var_str)
 	
 	ActionVar v;
 	
+	char str[64];
+	
 	switch (STACK_TOP_TYPE)
 	{
 		case ACTION_STACK_VALUE_F32:
 		{
 			popVar(app_context, &v);
-			
-			PUSH_STR_STACK(16);
-			
 			f32 temp_val = v.f32;
+			
+			snprintf(str, 64, "%.15g", temp_val);
+			
+			u32 len = (u32) strnlen(str, 64);
+			
+			PUSH_STR_STACK(len);
+			
 			STACK_TOP_TYPE = ACTION_STACK_VALUE_STRING;
+			memcpy((char*) &STACK_TOP_VALUE, str, len);
 			STACK_TOP_OWNS_MEM = true;
-			snprintf((char*) &STACK_TOP_VALUE, 17, "%.15g", temp_val);
-			STACK_TOP_N = (u32) strnlen((char*) &STACK_TOP_VALUE, 17);
+			STACK_TOP_N = len;
 			STACK_TOP_ID = 0;
 			
 			break;
@@ -407,14 +438,18 @@ ActionStackValueType convertString(SWFAppContext* app_context, char* var_str)
 		case ACTION_STACK_VALUE_F64:
 		{
 			popVar(app_context, &v);
-			
-			PUSH_STR_STACK(16);
-			
 			f64 temp_val = v.f64;
+			
+			snprintf(str, 64, "%.15g", temp_val);
+			
+			u32 len = (u32) strnlen(str, 64);
+			
+			PUSH_STR_STACK(len);
+			
 			STACK_TOP_TYPE = ACTION_STACK_VALUE_STRING;
+			memcpy((char*) &STACK_TOP_VALUE, str, len);
 			STACK_TOP_OWNS_MEM = true;
-			snprintf((char*) &STACK_TOP_VALUE, 17, "%.15g", temp_val);
-			STACK_TOP_N = (u32) strnlen((char*) &STACK_TOP_VALUE, 17);
+			STACK_TOP_N = len;
 			STACK_TOP_ID = 0;
 			
 			break;
@@ -423,14 +458,18 @@ ActionStackValueType convertString(SWFAppContext* app_context, char* var_str)
 		case ACTION_STACK_VALUE_INT:
 		{
 			popVar(app_context, &v);
-			
-			PUSH_STR_STACK(16);
-			
 			s32 temp_val = v.s32;
+			
+			snprintf(str, 64, "%d", temp_val);
+			
+			u32 len = (u32) strnlen(str, 64);
+			
+			PUSH_STR_STACK(len);
+			
 			STACK_TOP_TYPE = ACTION_STACK_VALUE_STRING;
+			memcpy((char*) &STACK_TOP_VALUE, str, len);
 			STACK_TOP_OWNS_MEM = true;
-			snprintf((char*) &STACK_TOP_VALUE, 17, "%d", temp_val);
-			STACK_TOP_N = (u32) strnlen((char*) &STACK_TOP_VALUE, 17);
+			STACK_TOP_N = len;
 			STACK_TOP_ID = 0;
 			
 			break;
