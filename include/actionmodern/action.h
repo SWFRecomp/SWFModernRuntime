@@ -61,7 +61,7 @@
 	VAL(u64, &STACK[SP + 16]) = (u64) v; \
 	VAL(u64, &STACK[SP + 24]) = (u64) f; \
 	VAL(u64, &STACK[SP + 32]) = (u64) args; \
-	VAL(u64, &STACK[SP + 41]) = (u8) func_type; \
+	STACK[SP + 41] = (u8) func_type; \
 	OBJ_LOCK_WRITE((ASObject*) v, \
 	{ \
 		retainObject((ASObject*) v); \

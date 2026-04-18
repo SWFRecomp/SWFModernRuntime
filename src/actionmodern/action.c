@@ -214,7 +214,7 @@ void setPropertyInThisScope(SWFAppContext* app_context, u32 string_id, const cha
 
 void pushVar(SWFAppContext* app_context, ActionVar* var)
 {
-	if (IS_OBJ_T(var->type))
+	if (IS_OBJ_T(var->type) && var->type != ACTION_STACK_VALUE_FUNCTION)
 	{
 		ASObject* po = var->object;
 		
@@ -672,8 +672,6 @@ void actionAdd(SWFAppContext* app_context)
 
 void actionAdd2(SWFAppContext* app_context)
 {
-	copy2Regs(app_context);
-	
 	if (IS_OBJ_T(STACK_TOP_TYPE) || IS_OBJ_T(STACK_SECOND_TOP_TYPE))
 	{
 		ActionVar a;
@@ -715,6 +713,7 @@ void actionAdd2(SWFAppContext* app_context)
 		u32 b_n = b_str.str_size;
 		
 		PUSH_STR_STACK(b_n + a_n);
+		
 		memcpy((char*) &STACK_TOP_VALUE, b_str.str, b_n);
 		memcpy(((char*) &STACK_TOP_VALUE) + b_n, a_str.str, a_n);
 		*((u8*) (((char*) &STACK_TOP_VALUE) + b_n + a_n)) = '\0';
@@ -1094,8 +1093,6 @@ void actionLess(SWFAppContext* app_context)
 
 void actionLess2(SWFAppContext* app_context)
 {
-	copy2Regs(app_context);
-	
 	if (IS_OBJ_T(STACK_TOP_TYPE) || IS_OBJ_T(STACK_SECOND_TOP_TYPE))
 	{
 		ActionVar a;
