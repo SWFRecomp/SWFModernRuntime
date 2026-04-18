@@ -179,8 +179,19 @@ void discardArgs(SWFAppContext* app_context, u32 num_args);
 void pushVar(SWFAppContext* app_context, ActionVar* p);
 void pushReg(SWFAppContext* app_context, u8 reg);
 
+void popVar(SWFAppContext* app_context, ActionVar* var);
+
+f64 toNumber(SWFAppContext* app_context, ActionVar* v);
+void toPrimitive(SWFAppContext* app_context, ASObject* this, ActionVar* primitive);
+void toString(SWFAppContext* app_context, f64 num);
+
+ActionStackValueType convertDouble(SWFAppContext* app_context);
+
 ASProperty* getPropertyInThisScope(u32 string_id, const char* name, u32 name_len);
 void setPropertyInThisScope(SWFAppContext* app_context, u32 string_id, const char* name, u32 name_len, ActionVar* value);
+
+void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v, u32 num_args);
+void getAndCallMethod(SWFAppContext* app_context, ASObject* this, u32 method_name, u32 num_args);
 
 bool evaluateCondition(SWFAppContext* app_context);
 

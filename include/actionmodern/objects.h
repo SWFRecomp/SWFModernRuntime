@@ -49,6 +49,7 @@ typedef struct
 {
 	rbtree t;
 	u32 refcount;
+	void* extra_data;
 	recomp_mutex_t lock;
 	bool reached;
 	bool used;
@@ -79,6 +80,7 @@ typedef struct
 
 // Allocate new object
 ASObject* allocObject(SWFAppContext* app_context);
+ASObject* allocObjectNoPrototype(SWFAppContext* app_context);
 
 // Increment reference count
 // Should be called when:

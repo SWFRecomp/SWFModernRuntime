@@ -10,17 +10,13 @@
 
 #include <objects.h>
 
-/**
- * Object Allocation
- *
- * Allocates a new ASObject and returns it.
- */
-ASObject* allocObject(SWFAppContext* app_context)
+ASObject* allocObjectCommon(SWFAppContext* app_context)
 {
 	ASObject* obj = (ASObject*) HALLOC(sizeof(ASObject));
 	
 	rbtree_init(&obj->t, sizeof(ASProperty));
 	obj->refcount = 0;
+	obj->extra_data = NULL;
 	mutex_init(&obj->lock);
 	obj->reached = false;
 	obj->used = false;
@@ -29,6 +25,43 @@ ASObject* allocObject(SWFAppContext* app_context)
 	SVEC_INIT(&obj->neighbors);
 	SVEC_INIT(&obj->blocked_list);
 	obj->temp_rc = 0;
+	
+	ActionVar constructor_var;
+	constructor_var.type = ACTION_STACK_VALUE_STRING;
+	constructor_var.str = app_context->str_table[STR_ID_OBJECT];
+	constructor_var.string_id = STR_ID_OBJECT;
+	constructor_var.str_size = 6;
+	constructor_var.owns_memory = false;
+	setProperty(app_context, obj, STR_ID_CONSTRUCTOR, NULL, 0, &constructor_var);
+	
+	return obj;
+}
+
+/**
+ * Object Allocation
+ *
+ * Allocates a new ASObject and returns it.
+ */
+ASObject* allocObject(SWFAppContext* app_context)
+{
+	ASObject* obj = allocObjectCommon(app_context);
+	
+	ActionVar proto_var;
+	proto_var.type = ACTION_STACK_VALUE_OBJECT;
+	proto_var.object = (ASObject*) app_context->object_prototype;
+	setProperty(app_context, obj, STR_ID_PROTO, NULL, 0, &proto_var);
+	
+	return obj;
+}
+
+/**
+ * Object Allocation (No Prototype)
+ *
+ * Allocates a new ASObject (without setting its prototype) and returns it.
+ */
+ASObject* allocObjectNoPrototype(SWFAppContext* app_context)
+{
+	ASObject* obj = allocObjectCommon(app_context);
 	
 	return obj;
 }
@@ -81,6 +114,11 @@ void destroyObject(SWFAppContext* app_context, ASObject* obj)
 	{
 		ASProperty* p = rbtree_pop_root(&obj->t);
 		FREE(p);
+	}
+	
+	if (obj->extra_data != NULL)
+	{
+		FREE(obj->extra_data);
 	}
 	
 	SVEC_RELEASE(&obj->neighbors);

@@ -3,6 +3,8 @@
 #include <common.h>
 #include <swf.h>
 
+typedef void (*action_runtime_func)(SWFAppContext* app_context, void* this, u32 num_args);
+
 typedef enum
 {
 	STR_ID_EMPTY = 1,
@@ -11,10 +13,13 @@ typedef enum
 	STR_ID_PARENT,
 	STR_ID_RECOMP,
 	STR_ID_OBJECT,
+	STR_ID_TO_STRING,
+	STR_ID_VALUE_OF,
 	STR_ID_NUMBER,
 	STR_ID_THIS,
 	STR_ID_ARGUMENTS,
 	STR_ID_SUPER,
+	STR_ID_CONSTRUCTOR,
 	STR_ID_PROTOTYPE,
 	STR_ID_PROTO,
 	STR_ID_LENGTH,

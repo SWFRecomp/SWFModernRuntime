@@ -32,6 +32,8 @@ ASObject* _global;
 
 void initActions(SWFAppContext* app_context)
 {
+	app_context->object_prototype = allocObjectNoPrototype(app_context);
+	
 	start_time = get_elapsed_ms();
 	
 	for (u32 i = 0; i < 2; ++i)
@@ -78,16 +80,60 @@ void initActions(SWFAppContext* app_context)
 		v.object = allocObject(app_context);
 		v.func = (action_func) runtime_funcs[i].func;
 		v.args = NULL;
+		v.func_name_string_id = runtime_funcs[i].func_string_id;
 		
 		if (runtime_funcs[i].constructor)
 		{
 			ActionVar proto_var;
 			proto_var.type = ACTION_STACK_VALUE_OBJECT;
-			proto_var.object = allocObject(app_context);
+			
+			if (runtime_funcs[i].func_string_id != STR_ID_OBJECT)
+			{
+				proto_var.object = allocObject(app_context);
+			}
+			
+			else
+			{
+				proto_var.object = app_context->object_prototype;
+			}
+			
 			setProperty(app_context, v.object, STR_ID_PROTOTYPE, NULL, 0, &proto_var);
 		}
 		
 		setProperty(app_context, obj, runtime_funcs[i].func_string_id, NULL, 0, &v);
+	}
+	
+	for (int i = 0; i < sizeof(runtime_meths)/sizeof(RuntimeFunc); ++i)
+	{
+		ASObject* obj;
+		
+		ASProperty* p = getProperty(_global, runtime_meths[i].object_string_id, NULL, 0);
+		
+		if (p != NULL)
+		{
+			obj = (ASObject*) p->value.value;
+		}
+		
+		else
+		{
+			UNIMPLEMENTED("Method on non-existent object");
+		}
+		
+		ActionVar v;
+		v.type = ACTION_STACK_VALUE_FUNCTION;
+		v.func_type = FUNC_TYPE_3;
+		v.object = allocObject(app_context);
+		v.func = (action_func) runtime_meths[i].func;
+		v.args = NULL;
+		v.func_name_string_id = runtime_meths[i].func_string_id;
+		
+		if (runtime_meths[i].constructor)
+		{
+			UNIMPLEMENTED("Constructor method");
+		}
+		
+		ASObject* prototype = getProperty(obj, STR_ID_PROTOTYPE, NULL, 0)->value.object;
+		setProperty(app_context, prototype, runtime_meths[i].func_string_id, NULL, 0, &v);
 	}
 	
 	mutex_init(&object_queue_lock);
@@ -99,7 +145,7 @@ void initActions(SWFAppContext* app_context)
 		scope_chain[scope_top_obj] = allocObject(app_context);
 		retainObject(scope_chain[scope_top_obj]);
 		
-		static_initializers[i](app_context, 0);
+		static_initializers[i](app_context, NULL, 0);
 		POP();
 		
 		OBJ_LOCK_WRITE(scope_chain[scope_top_obj],
@@ -253,6 +299,7 @@ void peekConvert(SWFAppContext* app_context, ActionVar* var)
 			var->func_type = STACK_TOP_FUNC_FUNC_TYPE;
 			var->value = STACK_TOP_VALUE;
 			var->func = (action_func) STACK_TOP_FUNC;
+			var->func_name_string_id = STACK_TOP_ID;
 			var->args = (u32*) STACK_TOP_FUNC_ARGS;
 			var->reg_count = (u8) STACK_TOP_FUNC_REG_COUNT;
 			var->flags = (u16) STACK_TOP_FUNC_FLAGS;
@@ -374,7 +421,7 @@ f64 toNumber(SWFAppContext* app_context, ActionVar* v)
 {
 	if (IS_OBJ_P(v))
 	{
-		UNIMPLEMENTED("ToNumber on an Object\n");
+		UNIMPLEMENTED("ToNumber on an Object");
 	}
 	
 	switch (v->type)
@@ -390,7 +437,7 @@ f64 toNumber(SWFAppContext* app_context, ActionVar* v)
 		
 		case ACTION_STACK_VALUE_STRING:
 		case ACTION_STACK_VALUE_STR_LIST:
-			UNIMPLEMENTED("ToNumber on a String\n");
+			UNIMPLEMENTED("ToNumber on a String");
 		
 		case ACTION_STACK_VALUE_F32:
 		case ACTION_STACK_VALUE_INT:
@@ -400,9 +447,35 @@ f64 toNumber(SWFAppContext* app_context, ActionVar* v)
 			return v->f64;
 		
 		default:
-			UNREACHABLE("ToNumber\n");
+			UNREACHABLE("ToNumber");
 			return NAN;
 	}
+}
+
+void toPrimitive(SWFAppContext* app_context, ASObject* this, ActionVar* primitive)
+{
+	getAndCallMethod(app_context, this, STR_ID_VALUE_OF, 0);
+	popVar(app_context, primitive);
+	
+	if (IS_OBJ_T(primitive->type))
+	{
+		getAndCallMethod(app_context, this, STR_ID_TO_STRING, 0);
+		popVar(app_context, primitive);
+	}
+}
+
+void toString(SWFAppContext* app_context, f64 num)
+{
+	char str[64];
+	
+	// TODO: implement real toString ECMA-262 3rd Edition algorithm
+	snprintf(str, 64, "%.15g", num);
+	u32 len = (u32) strnlen(str, 64);
+	
+	PUSH_STR_STACK(len);
+	char* stack_str = (char*) &STACK_TOP_VALUE;
+	
+	memcpy(stack_str, str, len);
 }
 
 ActionStackValueType convertString(SWFAppContext* app_context, char* var_str)
@@ -603,7 +676,29 @@ void actionAdd2(SWFAppContext* app_context)
 	
 	if (IS_OBJ_T(STACK_TOP_TYPE) || IS_OBJ_T(STACK_SECOND_TOP_TYPE))
 	{
-		UNIMPLEMENTED("Add2 Object ToPrimitive");
+		ActionVar a;
+		popVar(app_context, &a);
+		
+		ActionVar b;
+		popVar(app_context, &b);
+		
+		if (IS_OBJ_T(b.type))
+		{
+			ASObject* this = b.object;
+			
+			toPrimitive(app_context, this, &b);
+		}
+		
+		if (IS_OBJ_T(a.type))
+		{
+			ASObject* this = a.object;
+			
+			toPrimitive(app_context, this, &a);
+		}
+		
+		pushVar(app_context, &b);
+		
+		pushVar(app_context, &a);
 	}
 	
 	if (IS_STR_T(STACK_TOP_TYPE) || IS_STR_T(STACK_SECOND_TOP_TYPE))
@@ -753,13 +848,12 @@ void actionDivide(SWFAppContext* app_context)
 				}
 			}
 		}
+		
+		return;
 	}
 	
-	else
-	{
-		c = b.f64/a.f64;
-		PUSH_F64(c);
-	}
+	c = b.f64/a.f64;
+	PUSH_F64(c);
 }
 
 void actionModulo(SWFAppContext* app_context)
@@ -789,10 +883,7 @@ void actionIncrement(SWFAppContext* app_context)
 	ActionVar v;
 	popVar(app_context, &v);
 	
-	fprintf(stderr, "got %f\n", v.f64);
-	
 	f64 inc = v.f64 + 1.0;
-	fprintf(stderr, "inc %f\n", inc);
 	PUSH_F64(inc);
 }
 
@@ -922,7 +1013,7 @@ void actionEquals2(SWFAppContext* app_context)
 	
 	if (b.type != a.type)
 	{
-		UNIMPLEMENTED("Equals2 of differing types\n");
+		UNIMPLEMENTED("Equals2 of differing types");
 	}
 	
 	if (b.type == ACTION_STACK_VALUE_UNDEFINED ||
@@ -955,6 +1046,16 @@ void actionEquals2(SWFAppContext* app_context)
 		// why does this need double parens, sadge
 		PUSH_BOOL((b.object == a.object));
 		return;
+	}
+	
+	if (IS_OBJ_T(b.type))
+	{
+		toPrimitive(app_context, b.object, &b);
+	}
+	
+	if (IS_OBJ_T(a.type))
+	{
+		toPrimitive(app_context, a.object, &a);
 	}
 	
 	convertNumericToNumber(app_context, &b);
@@ -997,7 +1098,29 @@ void actionLess2(SWFAppContext* app_context)
 	
 	if (IS_OBJ_T(STACK_TOP_TYPE) || IS_OBJ_T(STACK_SECOND_TOP_TYPE))
 	{
-		UNIMPLEMENTED("Less2 Object ToPrimitive");
+		ActionVar a;
+		popVar(app_context, &a);
+		
+		ActionVar b;
+		popVar(app_context, &b);
+		
+		if (IS_OBJ_T(b.type))
+		{
+			ASObject* this = b.object;
+			
+			toPrimitive(app_context, this, &b);
+		}
+		
+		if (IS_OBJ_T(a.type))
+		{
+			ASObject* this = a.object;
+			
+			toPrimitive(app_context, this, &a);
+		}
+		
+		pushVar(app_context, &b);
+		
+		pushVar(app_context, &a);
 	}
 	
 	if (IS_STR_T(STACK_TOP_TYPE) && IS_STR_T(STACK_SECOND_TOP_TYPE))
@@ -1584,6 +1707,16 @@ void actionTrace(SWFAppContext* app_context)
 	ActionVar v;
 	popVar(app_context, &v);
 	
+	if (IS_OBJ_T(v.type))
+	{
+		getAndCallMethod(app_context, v.object, STR_ID_TO_STRING, 0);
+		popVar(app_context, &v);
+		
+		printf("%s\n", v.str);
+		
+		return;
+	}
+	
 	switch (v.type)
 	{
 		case ACTION_STACK_VALUE_STRING:
@@ -1639,12 +1772,6 @@ void actionTrace(SWFAppContext* app_context)
 		case ACTION_STACK_VALUE_INT:
 		{
 			printf("%d\n", v.s32);
-			break;
-		}
-		
-		case ACTION_STACK_VALUE_OBJECT:
-		{
-			printf("%p\n", v.object);
 			break;
 		}
 		
@@ -2714,7 +2841,7 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v,
 		case FUNC_TYPE_3:
 		{
 			action_runtime_func f = (action_runtime_func) func_v->func;
-			f(app_context, num_args);
+			f(app_context, this, num_args);
 			
 			break;
 		}
@@ -2723,6 +2850,12 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v,
 	releaseObject(app_context, scope_chain[scope_top_obj]);
 	
 	scope_top_obj -= 1;
+}
+
+void getAndCallMethod(SWFAppContext* app_context, ASObject* this, u32 method_name, u32 num_args)
+{
+	ActionVar meth_v = getPropertyWithPrototype(this, method_name, NULL, 0)->value;
+	callFunction(app_context, this, &meth_v, num_args);
 }
 
 void actionNewObject(SWFAppContext* app_context)
@@ -2757,6 +2890,15 @@ void actionNewObject(SWFAppContext* app_context)
 		proto_ref_var.object = prototype->value.object;
 		
 		setProperty(app_context, this, STR_ID_PROTO, NULL, 0, &proto_ref_var);
+		
+		ActionVar constructor_var;
+		constructor_var.type = ACTION_STACK_VALUE_STRING;
+		constructor_var.str = app_context->str_table[func_v.func_name_string_id];
+		constructor_var.str_size = app_context->str_len_table[func_v.func_name_string_id];
+		constructor_var.string_id = func_v.func_name_string_id;
+		constructor_var.owns_memory = false;
+		
+		setProperty(app_context, this, STR_ID_CONSTRUCTOR, NULL, 0, &constructor_var);
 		
 		callFunction(app_context, this, &func_v, num_args);
 		POP();
@@ -2831,6 +2973,15 @@ void actionNewMethod(SWFAppContext* app_context)
 		
 		setProperty(app_context, this, STR_ID_PROTO, NULL, 0, &proto_ref_var);
 		
+		ActionVar constructor_var;
+		constructor_var.type = ACTION_STACK_VALUE_STRING;
+		constructor_var.str = app_context->str_table[func_v.func_name_string_id];
+		constructor_var.str_size = app_context->str_len_table[func_v.func_name_string_id];
+		constructor_var.string_id = func_v.func_name_string_id;
+		constructor_var.owns_memory = false;
+		
+		setProperty(app_context, this, STR_ID_CONSTRUCTOR, NULL, 0, &constructor_var);
+		
 		callFunction(app_context, this, &func_v, num_args);
 		POP();
 		
@@ -2856,9 +3007,9 @@ void actionDefineFunction(SWFAppContext* app_context, u32 string_id, action_func
 	
 	setProperty(app_context, func_obj, STR_ID_PROTOTYPE, NULL, 0, &proto_var);
 	
-	// If named, store in variable
 	if (!anonymous)
 	{
+		// If named, store in variable
 		ActionVar func_var;
 		func_var.type = ACTION_STACK_VALUE_FUNCTION;
 		func_var.func_type = FUNC_TYPE_1;
@@ -2890,9 +3041,9 @@ void actionDefineFunction2(SWFAppContext* app_context, u32 string_id, action_fun
 	
 	setProperty(app_context, func_obj, STR_ID_PROTOTYPE, NULL, 0, &proto_var);
 	
-	// If named, store in variable
 	if (!anonymous)
 	{
+		// If named, store in variable
 		ActionVar func_var;
 		func_var.type = ACTION_STACK_VALUE_FUNCTION;
 		func_var.func_type = FUNC_TYPE_2;
@@ -2959,6 +3110,54 @@ void actionCallMethod(SWFAppContext* app_context)
 	ActionVar num_args_var;
 	popVar(app_context, &num_args_var);
 	u32 num_args = (u32) num_args_var.value;
+	
+	switch (this_v.type)
+	{
+		case ACTION_STACK_VALUE_F32:
+		case ACTION_STACK_VALUE_F64:
+		case ACTION_STACK_VALUE_INT:
+		{
+			switch (string_id)
+			{
+				case STR_ID_TO_STRING:
+				{
+					convertNumericToNumber(app_context, &this_v);
+					toString(app_context, this_v.f64);
+					
+					break;
+				}
+				
+				case STR_ID_VALUE_OF:
+				{
+					PUSH_F64(this_v.f64);
+					
+					break;
+				}
+				
+				default:
+				{
+					// Function not found - throw
+					EXC_ARG("Function not found: %s\n", func_name);
+				}
+			}
+			
+			return;
+		}
+		
+		case ACTION_STACK_VALUE_STRING:
+		{
+			switch (string_id)
+			{
+				default:
+				{
+					// Function not found - throw
+					EXC_ARG("Function not found: %s\n", func_name);
+				}
+			}
+			
+			return;
+		}
+	}
 	
 	ASProperty* meth_p = NULL;
 	

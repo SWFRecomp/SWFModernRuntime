@@ -50,7 +50,6 @@ typedef struct SWFAppContext SWFAppContext;
 
 typedef void (*frame_func)(SWFAppContext* app_context);
 typedef void (*action_func)(SWFAppContext* app_context);
-typedef void (*action_runtime_func)(SWFAppContext* app_context, u32 num_args);
 
 extern frame_func frame_funcs[];
 
@@ -65,7 +64,9 @@ typedef struct SWFAppContext
 	u8 version;
 	
 	frame_func* frame_funcs;
+	
 	char** str_table;
+	u32* str_len_table;
 	
 	int width;
 	int height;
@@ -78,6 +79,8 @@ typedef struct SWFAppContext
 	size_t heap_size;
 	
 	size_t max_string_id;
+	
+	void* object_prototype;
 	
 	size_t bitmap_count;
 	size_t bitmap_highest_w;
