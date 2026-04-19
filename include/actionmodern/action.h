@@ -181,10 +181,11 @@ void pushReg(SWFAppContext* app_context, u8 reg);
 
 void popVar(SWFAppContext* app_context, ActionVar* var);
 
-f64 toNumber(SWFAppContext* app_context, ActionVar* v);
-void toPrimitive(SWFAppContext* app_context, ASObject* this, ActionVar* primitive);
-void toString(SWFAppContext* app_context, f64 num);
+void toNumber(SWFAppContext* app_context, ActionVar* v);
+void toPrimitive(SWFAppContext* app_context, ASObject* this);
+void toString(SWFAppContext* app_context, ActionVar* v);
 
+ActionStackValueType convertString(SWFAppContext* app_context);
 ActionStackValueType convertDouble(SWFAppContext* app_context);
 
 ASProperty* getPropertyInThisScope(u32 string_id, const char* name, u32 name_len);
@@ -230,6 +231,9 @@ void actionStringAdd(SWFAppContext* app_context, char* a_str, char* b_str);
 // Variable Operations
 void actionGetVariable(SWFAppContext* app_context);
 void actionSetVariable(SWFAppContext* app_context);
+void actionToNumber(SWFAppContext* app_context);
+void actionToString(SWFAppContext* app_context);
+void actionTypeOf(SWFAppContext* app_context);
 
 // Utility Operations
 void actionTrace(SWFAppContext* app_context);
@@ -238,7 +242,6 @@ void actionGetTime(SWFAppContext* app_context);
 // Object Operations
 void actionGetMember(SWFAppContext* app_context);
 void actionSetMember(SWFAppContext* app_context);
-void actionTypeof(SWFAppContext* app_context, char* str_buffer);
 void actionEnumerate(SWFAppContext* app_context, char* str_buffer);
 void actionDelete(SWFAppContext* app_context);
 void actionDelete2(SWFAppContext* app_context, char* str_buffer);

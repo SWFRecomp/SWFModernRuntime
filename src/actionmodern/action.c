@@ -417,59 +417,68 @@ void convertNumericToNumber(SWFAppContext* app_context, ActionVar* v)
 	}
 }
 
-f64 toNumber(SWFAppContext* app_context, ActionVar* v)
+void toNumber(SWFAppContext* app_context, ActionVar* v)
 {
 	if (IS_OBJ_P(v))
 	{
 		UNIMPLEMENTED("ToNumber on an Object");
 	}
 	
+	f64 num;
+	
 	switch (v->type)
 	{
 		case ACTION_STACK_VALUE_UNDEFINED:
-			return NAN;
+			num = NAN;
+			break;
 		
 		case ACTION_STACK_VALUE_NULL:
-			return +0.0;
+			num = +0.0;
+			break;
 		
 		case ACTION_STACK_VALUE_BOOLEAN:
-			return v->b ? 1.0 : +0.0;
+			num = v->b ? 1.0 : +0.0;
+			break;
 		
 		case ACTION_STACK_VALUE_STRING:
 		case ACTION_STACK_VALUE_STR_LIST:
-			UNIMPLEMENTED("ToNumber on a String");
+			// TODO: implement real ToNumber ECMA-262 3rd Edition algorithm
+			char* end;
+			num = strtod(v->str, &end);
+			break;
 		
 		case ACTION_STACK_VALUE_F32:
 		case ACTION_STACK_VALUE_INT:
 			convertNumericToNumber(app_context, v);
 			// fallthrough
 		case ACTION_STACK_VALUE_F64:
-			return v->f64;
+			num = v->f64;
+			break;
 		
 		default:
 			UNREACHABLE("ToNumber");
-			return NAN;
 	}
+	
+	PUSH_F64(num);
 }
 
-void toPrimitive(SWFAppContext* app_context, ASObject* this, ActionVar* primitive)
+void toPrimitive(SWFAppContext* app_context, ASObject* this)
 {
 	getAndCallMethod(app_context, this, STR_ID_VALUE_OF, 0);
-	popVar(app_context, primitive);
 	
-	if (IS_OBJ_T(primitive->type))
+	if (IS_OBJ_T(STACK_TOP_TYPE))
 	{
+		POP();
 		getAndCallMethod(app_context, this, STR_ID_TO_STRING, 0);
-		popVar(app_context, primitive);
 	}
 }
 
-void toString(SWFAppContext* app_context, f64 num)
+void toString(SWFAppContext* app_context, ActionVar* v)
 {
 	char str[64];
 	
-	// TODO: implement real toString ECMA-262 3rd Edition algorithm
-	snprintf(str, 64, "%.15g", num);
+	// TODO: implement real ToString ECMA-262 3rd Edition algorithm
+	snprintf(str, 64, "%.15g", v->f64);
 	u32 len = (u32) strnlen(str, 64);
 	
 	PUSH_STR_STACK(len);
@@ -478,7 +487,7 @@ void toString(SWFAppContext* app_context, f64 num)
 	memcpy(stack_str, str, len);
 }
 
-ActionStackValueType convertString(SWFAppContext* app_context, char* var_str)
+ActionStackValueType convertString(SWFAppContext* app_context)
 {
 	copyReg(app_context);
 	
@@ -577,9 +586,7 @@ ActionStackValueType convertDouble(SWFAppContext* app_context)
 	ActionVar v;
 	popVar(app_context, &v);
 	
-	f64 d = toNumber(app_context, &v);
-	
-	PUSH_F64(d);
+	toNumber(app_context, &v);
 	
 	return ACTION_STACK_VALUE_F64;
 }
@@ -672,6 +679,8 @@ void actionAdd(SWFAppContext* app_context)
 
 void actionAdd2(SWFAppContext* app_context)
 {
+	copy2Regs(app_context);
+	
 	if (IS_OBJ_T(STACK_TOP_TYPE) || IS_OBJ_T(STACK_SECOND_TOP_TYPE))
 	{
 		ActionVar a;
@@ -684,28 +693,34 @@ void actionAdd2(SWFAppContext* app_context)
 		{
 			ASObject* this = b.object;
 			
-			toPrimitive(app_context, this, &b);
+			toPrimitive(app_context, this);
+		}
+		
+		else
+		{
+			pushVar(app_context, &b);
 		}
 		
 		if (IS_OBJ_T(a.type))
 		{
 			ASObject* this = a.object;
 			
-			toPrimitive(app_context, this, &a);
+			toPrimitive(app_context, this);
 		}
 		
-		pushVar(app_context, &b);
-		
-		pushVar(app_context, &a);
+		else
+		{
+			pushVar(app_context, &a);
+		}
 	}
 	
 	if (IS_STR_T(STACK_TOP_TYPE) || IS_STR_T(STACK_SECOND_TOP_TYPE))
 	{
-		convertString(app_context, NULL);
+		convertString(app_context);
 		ActionVar a_str;
 		popVar(app_context, &a_str);
 		
-		convertString(app_context, NULL);
+		convertString(app_context);
 		ActionVar b_str;
 		popVar(app_context, &b_str);
 		
@@ -1049,12 +1064,12 @@ void actionEquals2(SWFAppContext* app_context)
 	
 	if (IS_OBJ_T(b.type))
 	{
-		toPrimitive(app_context, b.object, &b);
+		toPrimitive(app_context, b.object);
 	}
 	
 	if (IS_OBJ_T(a.type))
 	{
-		toPrimitive(app_context, a.object, &a);
+		toPrimitive(app_context, a.object);
 	}
 	
 	convertNumericToNumber(app_context, &b);
@@ -1093,6 +1108,8 @@ void actionLess(SWFAppContext* app_context)
 
 void actionLess2(SWFAppContext* app_context)
 {
+	copy2Regs(app_context);
+	
 	if (IS_OBJ_T(STACK_TOP_TYPE) || IS_OBJ_T(STACK_SECOND_TOP_TYPE))
 	{
 		ActionVar a;
@@ -1105,14 +1122,14 @@ void actionLess2(SWFAppContext* app_context)
 		{
 			ASObject* this = b.object;
 			
-			toPrimitive(app_context, this, &b);
+			toPrimitive(app_context, this);
 		}
 		
 		if (IS_OBJ_T(a.type))
 		{
 			ASObject* this = a.object;
 			
-			toPrimitive(app_context, this, &a);
+			toPrimitive(app_context, this);
 		}
 		
 		pushVar(app_context, &b);
@@ -1373,11 +1390,11 @@ int strcmp_not_a_list_b(u64 a_value, u64 b_value)
 void actionStringEquals(SWFAppContext* app_context, char* a_str, char* b_str)
 {
 	ActionVar a;
-	convertString(app_context, a_str);
+	convertString(app_context);
 	popVar(app_context, &a);
 	
 	ActionVar b;
-	convertString(app_context, b_str);
+	convertString(app_context);
 	popVar(app_context, &b);
 	
 	int cmp_result;
@@ -1412,7 +1429,7 @@ void actionStringEquals(SWFAppContext* app_context, char* a_str, char* b_str)
 void actionStringLength(SWFAppContext* app_context, char* v_str)
 {
 	ActionVar v;
-	convertString(app_context, v_str);
+	convertString(app_context);
 	popVar(app_context, &v);
 	
 	PUSH_INT(v.str_size);
@@ -1421,11 +1438,11 @@ void actionStringLength(SWFAppContext* app_context, char* v_str)
 void actionStringAdd(SWFAppContext* app_context, char* a_str, char* b_str)
 {
 	ActionVar a;
-	convertString(app_context, a_str);
+	convertString(app_context);
 	peekVar(app_context, &a);
 	
 	ActionVar b;
-	convertString(app_context, b_str);
+	convertString(app_context);
 	peekSecondVar(app_context, &b);
 	
 	u64 num_a_strings;
@@ -1693,6 +1710,16 @@ void actionSetVariable(SWFAppContext* app_context)
 			releaseObject(app_context, o);
 		});
 	}
+}
+
+void actionToNumber(SWFAppContext* app_context)
+{
+	convertDouble(app_context);
+}
+
+void actionToString(SWFAppContext* app_context)
+{
+	convertString(app_context);
 }
 
 // ==================================================================
@@ -2085,52 +2112,52 @@ void actionDefineLocal2(SWFAppContext* app_context)
 	setProperty(app_context, local_scope, string_id, var_name, var_name_len, &undefined_var);
 }
 
-void actionTypeof(SWFAppContext* app_context, char* str_buffer)
+void actionTypeOf(SWFAppContext* app_context)
 {
-	//~ // Peek at the type without modifying value
-	//~ u8 type = STACK_TOP_TYPE;
+	copyReg(app_context);
 	
-	//~ // Pop the value
-	//~ POP();
+	// Peek at the type without modifying value
+	u8 type = STACK_TOP_TYPE;
 	
-	//~ // Determine type string based on stack type
-	//~ const char* type_str;
-	//~ switch (type)
-	//~ {
-		//~ case ACTION_STACK_VALUE_F32:
-		//~ case ACTION_STACK_VALUE_F64:
-			//~ type_str = "number";
-			//~ break;
-			
-		//~ case ACTION_STACK_VALUE_STRING:
-		//~ case ACTION_STACK_VALUE_STR_LIST:
-			//~ type_str = "string";
-			//~ break;
-			
-		//~ case ACTION_STACK_VALUE_FUNCTION:
-			//~ type_str = "function";
-			//~ break;
-			
-		//~ case ACTION_STACK_VALUE_OBJECT:
-		//~ case ACTION_STACK_VALUE_ARRAY:
-			//~ // Arrays are objects in ActionScript (typeof [] returns "object")
-			//~ type_str = "object";
-			//~ break;
-			
-		//~ case ACTION_STACK_VALUE_UNDEFINED:
-			//~ type_str = "undefined";
-			//~ break;
-			
-		//~ default:
-			//~ type_str = "undefined";
-			//~ break;
-	//~ }
+	// Pop the value
+	POP();
 	
-	//~ // Copy to str_buffer and push
-	//~ int len = strlen(type_str);
-	//~ strncpy(str_buffer, type_str, 16);
-	//~ str_buffer[len] = '\0';
-	//~ PUSH_STR(str_buffer, len);
+	// Determine type string based on stack type
+	char* type_str;
+	switch (type)
+	{
+		case ACTION_STACK_VALUE_F32:
+		case ACTION_STACK_VALUE_F64:
+			type_str = "number";
+			break;
+			
+		case ACTION_STACK_VALUE_STRING:
+		case ACTION_STACK_VALUE_STR_LIST:
+			type_str = "string";
+			break;
+			
+		case ACTION_STACK_VALUE_FUNCTION:
+			type_str = "function";
+			break;
+			
+		case ACTION_STACK_VALUE_OBJECT:
+		case ACTION_STACK_VALUE_ARRAY:
+			// Arrays are objects in ActionScript (typeof [] returns "object")
+			type_str = "object";
+			break;
+			
+		case ACTION_STACK_VALUE_UNDEFINED:
+			type_str = "undefined";
+			break;
+			
+		default:
+			type_str = "undefined";
+			break;
+	}
+	
+	// Copy to str_buffer and push
+	u32 len = (u32) strnlen(type_str, 16);
+	PUSH_STR(type_str, len);
 }
 
 void actionDelete2(SWFAppContext* app_context, char* str_buffer)
@@ -2310,14 +2337,32 @@ static int checkInstanceOf(ActionVar* obj_var, ActionVar* ctor_var)
 	return 0;
 }
 
-void actionStoreRegister(SWFAppContext* app_context, u8 reg)
+void actionStoreRegister(SWFAppContext* app_context, u8 reg_i)
 {
 	// Peek the top of stack (don't pop!)
 	ActionVar value;
 	peekVar(app_context, &value);
 	
+	ActionVar* reg = &scope_registers[scope_top_obj][reg_i];
+	
+	if (IS_OBJ_T(value.type))
+	{
+		OBJ_LOCK_WRITE((ASObject*) value.object,
+		{
+			retainObject(value.object);
+		});
+	}
+	
+	if (IS_OBJ_T(reg->type))
+	{
+		OBJ_LOCK_WRITE((ASObject*) reg->object,
+		{
+			releaseObject(app_context, reg->object);
+		});
+	}
+	
 	// Store value in register
-	scope_registers[scope_top_obj][reg] = value;
+	*reg = value;
 }
 
 void actionInitArray(SWFAppContext* app_context)
@@ -2457,8 +2502,7 @@ void actionInitObject(SWFAppContext* app_context)
 	{
 		// Pop property name first (it's on top)
 		ActionVar name_var;
-		char f[17];
-		convertString(app_context, f);
+		convertString(app_context);
 		popVar(app_context, &name_var);
 		
 		// Pop property value (it's below the name)
@@ -2725,6 +2769,11 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v,
 			
 			ActionVar* regs = scope_registers[scope_top_obj];
 			
+			for (u8 i = 0; i < 4; ++i)
+			{
+				regs[i].type = ACTION_STACK_VALUE_UNDEFINED;
+			}
+			
 			if (this != NULL)
 			{
 				ActionVar this_v;
@@ -2760,6 +2809,11 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v,
 			scope_registers[scope_top_obj] = HALLOC((reg_count + 1)*sizeof(ActionVar));
 			
 			ActionVar* regs = scope_registers[scope_top_obj];
+			
+			for (u8 i = 0; i < reg_count + 1; ++i)
+			{
+				regs[i].type = ACTION_STACK_VALUE_UNDEFINED;
+			}
 			
 			// Pop arguments from stack (in reverse order)
 			if (num_args > 0)
@@ -2900,12 +2954,12 @@ void actionNewObject(SWFAppContext* app_context)
 		callFunction(app_context, this, &func_v, num_args);
 		POP();
 		
+		PUSH_OBJ(this);
+		
 		OBJ_LOCK_WRITE(this,
 		{
 			releaseObject(app_context, this);
 		});
-		
-		PUSH_OBJ(this);
 	}
 	
 	else
@@ -2962,6 +3016,11 @@ void actionNewMethod(SWFAppContext* app_context)
 		// Create new object to serve as 'this'
 		ASObject* this = allocObject(app_context);
 		
+		OBJ_LOCK_WRITE(this,
+		{
+			retainObject(this);
+		});
+		
 		ASProperty* prototype = getProperty(func_v.object, STR_ID_PROTOTYPE, NULL, 0);
 		
 		ActionVar proto_ref_var;
@@ -2983,6 +3042,11 @@ void actionNewMethod(SWFAppContext* app_context)
 		POP();
 		
 		PUSH_OBJ(this);
+		
+		OBJ_LOCK_WRITE(this,
+		{
+			releaseObject(app_context, this);
+		});
 	}
 	
 	else
@@ -3119,14 +3183,14 @@ void actionCallMethod(SWFAppContext* app_context)
 				case STR_ID_TO_STRING:
 				{
 					convertNumericToNumber(app_context, &this_v);
-					toString(app_context, this_v.f64);
+					toString(app_context, &this_v);
 					
 					break;
 				}
 				
 				case STR_ID_VALUE_OF:
 				{
-					PUSH_F64(this_v.f64);
+					PUSH_VAR(&this_v);
 					
 					break;
 				}
@@ -3145,6 +3209,20 @@ void actionCallMethod(SWFAppContext* app_context)
 		{
 			switch (string_id)
 			{
+				case STR_ID_TO_STRING:
+				{
+					PUSH_VAR(&this_v);
+					
+					break;
+				}
+				
+				case STR_ID_VALUE_OF:
+				{
+					toNumber(app_context, &this_v);
+					
+					break;
+				}
+				
 				default:
 				{
 					// Function not found - throw

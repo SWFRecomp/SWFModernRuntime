@@ -4,7 +4,7 @@
 
 #include <initial_strings_decls.h>
 
-void new_Object(SWFAppContext* app_context, ASObject* this, u32 num_args)
+void Object_new(SWFAppContext* app_context, ASObject* this, u32 num_args)
 {
 	DISCARD_ARGS(num_args);
 	

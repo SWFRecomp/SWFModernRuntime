@@ -1,14 +1,14 @@
 #include <math.h>
 
-#include <Number.h>
+#include <String_recomp.h>
 
 #include <heap.h>
 
 #include <initial_strings_decls.h>
 
-#define EXTDATA(member) (((NumberData*) this->extra_data)->member)
+#define EXTDATA(member) (((StringData*) this->extra_data)->member)
 
-void Number_init(SWFAppContext* app_context, ASObject* this, u32 num_args)
+void String_init(SWFAppContext* app_context, ASObject* this, u32 num_args)
 {
 	DISCARD_ARGS(num_args);
 	
@@ -35,42 +35,48 @@ void Number_init(SWFAppContext* app_context, ASObject* this, u32 num_args)
 	RETURN_VOID();
 }
 
-void Number_new(SWFAppContext* app_context, ASObject* this, u32 num_args)
+void String_new(SWFAppContext* app_context, ASObject* this, u32 num_args)
 {
-	this->extra_data = HALLOC(sizeof(NumberData));
+	this->extra_data = HALLOC(sizeof(StringData));
 	
-	EXTDATA(num).type = ACTION_STACK_VALUE_F64;
-	
-	ActionVar num;
+	ActionVar* str = &EXTDATA(str);
 	
 	if (num_args > 0)
 	{
-		convertDouble(app_context);
-		popVar(app_context, &num);
+		convertString(app_context);
+		popVar(app_context, str);
 		
 		DISCARD_ARGS(num_args - 1);
 		
-		EXTDATA(num).f64 = num.f64;
+		char* old_str = str->str;
+		u32 len = str->str_size + 1;
+		
+		str->str = HALLOC(len);
+		memcpy(str->str, old_str, len);
 	}
 	
 	else
 	{
-		EXTDATA(num).f64 = 0.0;
+		str->type = ACTION_STACK_VALUE_STRING;
+		str->str = NULL;
+		str->str_size = 0;
+		str->string_id = 0;
+		str->owns_memory = false;
 	}
 	
 	RETURN_VOID();
 }
 
-void Number_toString(SWFAppContext* app_context, ASObject* this, u32 num_args)
+void String_toString(SWFAppContext* app_context, ASObject* this, u32 num_args)
 {
 	DISCARD_ARGS(num_args);
 	
-	toString(app_context, &EXTDATA(num));
+	PUSH_VAR(&EXTDATA(str));
 }
 
-void Number_valueOf(SWFAppContext* app_context, ASObject* this, u32 num_args)
+void String_valueOf(SWFAppContext* app_context, ASObject* this, u32 num_args)
 {
 	DISCARD_ARGS(num_args);
 	
-	PUSH_VAR(&EXTDATA(num));
+	PUSH_VAR(&EXTDATA(str));
 }
