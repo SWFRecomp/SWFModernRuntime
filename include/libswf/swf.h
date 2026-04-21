@@ -81,6 +81,7 @@ typedef struct SWFAppContext
 	size_t max_string_id;
 	
 	void* object_prototype;
+	void* object_constructor;
 	
 	size_t bitmap_count;
 	size_t bitmap_highest_w;

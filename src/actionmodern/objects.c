@@ -26,14 +26,6 @@ ASObject* allocObjectCommon(SWFAppContext* app_context)
 	SVEC_INIT(&obj->blocked_list);
 	obj->temp_rc = 0;
 	
-	ActionVar constructor_var;
-	constructor_var.type = ACTION_STACK_VALUE_STRING;
-	constructor_var.str = app_context->str_table[STR_ID_OBJECT];
-	constructor_var.string_id = STR_ID_OBJECT;
-	constructor_var.str_size = 6;
-	constructor_var.owns_memory = false;
-	setProperty(app_context, obj, STR_ID_CONSTRUCTOR, NULL, 0, &constructor_var);
-	
 	return obj;
 }
 
@@ -51,17 +43,10 @@ ASObject* allocObject(SWFAppContext* app_context)
 	proto_var.object = (ASObject*) app_context->object_prototype;
 	setProperty(app_context, obj, STR_ID_PROTO, NULL, 0, &proto_var);
 	
-	return obj;
-}
-
-/**
- * Object Allocation (No Prototype)
- *
- * Allocates a new ASObject (without setting its prototype) and returns it.
- */
-ASObject* allocObjectNoPrototype(SWFAppContext* app_context)
-{
-	ASObject* obj = allocObjectCommon(app_context);
+	ActionVar constructor_var;
+	constructor_var.type = ACTION_STACK_VALUE_OBJECT;
+	constructor_var.object = app_context->object_constructor;
+	setProperty(app_context, obj, STR_ID_CONSTRUCTOR, NULL, 0, &constructor_var);
 	
 	return obj;
 }
@@ -397,20 +382,15 @@ bool deleteProperty(SWFAppContext* app_context, ASObject* obj, const char* name,
  */
 ASObject* getConstructor(ASObject* obj)
 {
-	if (obj == NULL)
-	{
-		return NULL;
-	}
-	
 	// Look for "constructor" property
-	static const char* constructor_name = "constructor";
-	ActionVar* ctor = &getProperty(obj, 0, constructor_name, 11)->value;
+	ASObject* ctor = getProperty(obj, STR_ID_CONSTRUCTOR, NULL, 0)->value.object;
 	
-	if (ctor != NULL && ctor->type == ACTION_STACK_VALUE_OBJECT)
+	if (LIKELY(ctor != NULL))
 	{
-		return (ASObject*) ctor->value;
+		return ctor;
 	}
 	
+	UNREACHABLE("Object without constructor");
 	return NULL;
 }
 
@@ -583,47 +563,47 @@ void retainArray(ASArray* arr)
 
 void releaseArray(SWFAppContext* app_context, ASArray* arr)
 {
-	if (arr == NULL)
-	{
-		return;
-	}
+	//~ if (arr == NULL)
+	//~ {
+		//~ return;
+	//~ }
 	
-	arr->refcount--;
+	//~ arr->refcount--;
 	
-	if (arr->refcount == 0)
-	{
-		// Release all element values
-		for (u32 i = 0; i < arr->length; i++)
-		{
-			// If element is an object, release it recursively
-			if (arr->elements[i].type == ACTION_STACK_VALUE_OBJECT)
-			{
-				ASObject* child_obj = (ASObject*) arr->elements[i].value;
-				releaseObject(app_context, child_obj);
-			}
-			// If element is an array, release it recursively
-			else if (arr->elements[i].type == ACTION_STACK_VALUE_ARRAY)
-			{
-				ASArray* child_arr = (ASArray*) arr->elements[i].value;
-				releaseArray(app_context, child_arr);
-			}
-			// If element is a string that owns memory, free it
-			else if (arr->elements[i].type == ACTION_STACK_VALUE_STRING &&
-			         arr->elements[i].owns_memory)
-			{
-				free(arr->elements[i].str);
-			}
-		}
+	//~ if (arr->refcount == 0)
+	//~ {
+		//~ // Release all element values
+		//~ for (u32 i = 0; i < arr->length; i++)
+		//~ {
+			//~ // If element is an object, release it recursively
+			//~ if (arr->elements[i].type == ACTION_STACK_VALUE_OBJECT)
+			//~ {
+				//~ ASObject* child_obj = (ASObject*) arr->elements[i].value;
+				//~ releaseObject(app_context, child_obj);
+			//~ }
+			//~ // If element is an array, release it recursively
+			//~ else if (arr->elements[i].type == ACTION_STACK_VALUE_ARRAY)
+			//~ {
+				//~ ASArray* child_arr = (ASArray*) arr->elements[i].value;
+				//~ releaseArray(app_context, child_arr);
+			//~ }
+			//~ // If element is a string that owns memory, free it
+			//~ else if (arr->elements[i].type == ACTION_STACK_VALUE_STRING &&
+			         //~ arr->elements[i].owns_memory)
+			//~ {
+				//~ free(arr->elements[i].str);
+			//~ }
+		//~ }
 		
-		// Free element array
-		if (arr->elements != NULL)
-		{
-			free(arr->elements);
-		}
+		//~ // Free element array
+		//~ if (arr->elements != NULL)
+		//~ {
+			//~ free(arr->elements);
+		//~ }
 		
-		// Free array itself
-		free(arr);
-	}
+		//~ // Free array itself
+		//~ free(arr);
+	//~ }
 }
 
 ActionVar* getArrayElement(ASArray* arr, u32 index)
@@ -638,75 +618,75 @@ ActionVar* getArrayElement(ASArray* arr, u32 index)
 
 void setArrayElement(SWFAppContext* app_context, ASArray* arr, u32 index, ActionVar* value)
 {
-	if (arr == NULL || value == NULL)
-	{
-		return;
-	}
+	//~ if (arr == NULL || value == NULL)
+	//~ {
+		//~ return;
+	//~ }
 
-	// Grow array if needed
-	if (index >= arr->capacity)
-	{
-		u32 new_capacity = (index + 1) * 2;  // Grow to accommodate index
-		ActionVar* new_elements = (ActionVar*) realloc(arr->elements,
-		                                                sizeof(ActionVar) * new_capacity);
-		if (new_elements == NULL)
-		{
-			fprintf(stderr, "ERROR: Failed to grow array\n");
-			return;
-		}
+	//~ // Grow array if needed
+	//~ if (index >= arr->capacity)
+	//~ {
+		//~ u32 new_capacity = (index + 1) * 2;  // Grow to accommodate index
+		//~ ActionVar* new_elements = (ActionVar*) realloc(arr->elements,
+		                                                //~ sizeof(ActionVar) * new_capacity);
+		//~ if (new_elements == NULL)
+		//~ {
+			//~ fprintf(stderr, "ERROR: Failed to grow array\n");
+			//~ return;
+		//~ }
 
-		arr->elements = new_elements;
+		//~ arr->elements = new_elements;
 
-		// Zero out new slots
-		memset(&arr->elements[arr->capacity], 0,
-		       sizeof(ActionVar) * (new_capacity - arr->capacity));
+		//~ // Zero out new slots
+		//~ memset(&arr->elements[arr->capacity], 0,
+		       //~ sizeof(ActionVar) * (new_capacity - arr->capacity));
 
-		arr->capacity = new_capacity;
-	}
+		//~ arr->capacity = new_capacity;
+	//~ }
 
-	// Release old value if it exists and is an object/array
-	if (index < arr->length)
-	{
-		if (arr->elements[index].type == ACTION_STACK_VALUE_OBJECT)
-		{
-			ASObject* old_obj = (ASObject*) arr->elements[index].value;
-			releaseObject(app_context, old_obj);
-		}
-		else if (arr->elements[index].type == ACTION_STACK_VALUE_ARRAY)
-		{
-			ASArray* old_arr = (ASArray*) arr->elements[index].value;
-			releaseArray(app_context, old_arr);
-		}
-		else if (arr->elements[index].type == ACTION_STACK_VALUE_STRING &&
-		         arr->elements[index].owns_memory)
-		{
-			free(arr->elements[index].str);
-		}
-	}
+	//~ // Release old value if it exists and is an object/array
+	//~ if (index < arr->length)
+	//~ {
+		//~ if (arr->elements[index].type == ACTION_STACK_VALUE_OBJECT)
+		//~ {
+			//~ ASObject* old_obj = (ASObject*) arr->elements[index].value;
+			//~ releaseObject(app_context, old_obj);
+		//~ }
+		//~ else if (arr->elements[index].type == ACTION_STACK_VALUE_ARRAY)
+		//~ {
+			//~ ASArray* old_arr = (ASArray*) arr->elements[index].value;
+			//~ releaseArray(app_context, old_arr);
+		//~ }
+		//~ else if (arr->elements[index].type == ACTION_STACK_VALUE_STRING &&
+		         //~ arr->elements[index].owns_memory)
+		//~ {
+			//~ free(arr->elements[index].str);
+		//~ }
+	//~ }
 
-	// Set new value
-	arr->elements[index] = *value;
+	//~ // Set new value
+	//~ arr->elements[index] = *value;
 
-	// Update length if needed
-	if (index >= arr->length)
-	{
-		arr->length = index + 1;
-	}
+	//~ // Update length if needed
+	//~ if (index >= arr->length)
+	//~ {
+		//~ arr->length = index + 1;
+	//~ }
 
-	// Retain new value if it's an object or array
-	if (value->type == ACTION_STACK_VALUE_OBJECT)
-	{
-		ASObject* new_obj = (ASObject*) value->value;
-		retainObject(new_obj);
-	}
-	else if (value->type == ACTION_STACK_VALUE_ARRAY)
-	{
-		ASArray* new_arr = (ASArray*) value->value;
-		retainArray(new_arr);
-	}
+	//~ // Retain new value if it's an object or array
+	//~ if (value->type == ACTION_STACK_VALUE_OBJECT)
+	//~ {
+		//~ ASObject* new_obj = (ASObject*) value->value;
+		//~ retainObject(new_obj);
+	//~ }
+	//~ else if (value->type == ACTION_STACK_VALUE_ARRAY)
+	//~ {
+		//~ ASArray* new_arr = (ASArray*) value->value;
+		//~ retainArray(new_arr);
+	//~ }
 
-#ifdef DEBUG
-	printf("[DEBUG] setArrayElement: arr=%p, index=%u, length=%u\n",
-		(void*)arr, index, arr->length);
-#endif
+//~ #ifdef DEBUG
+	//~ printf("[DEBUG] setArrayElement: arr=%p, index=%u, length=%u\n",
+		//~ (void*)arr, index, arr->length);
+//~ #endif
 }

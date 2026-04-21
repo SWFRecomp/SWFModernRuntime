@@ -4,14 +4,18 @@
 
 #include <toplevel.h>
 #include <Object.h>
+#include <Function.h>
 #include <Number.h>
 #include <String_recomp.h>
+#include <Array.h>
 
 RuntimeFunc runtime_funcs[] =
 {
 	{0, STR_ID_OBJECT, Object_new, true},
+	{0, STR_ID_FUNCTION, Function_new, true},
 	{0, STR_ID_NUMBER, Number_new, true},
 	{0, STR_ID_STRING, String_new, true},
+	{0, STR_ID_ARRAY, Array_new, true},
 	{0, STR_ID_ASSETPROPFLAGS, ASSetPropFlags, false},
 };
 

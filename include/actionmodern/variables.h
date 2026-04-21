@@ -17,18 +17,6 @@ typedef struct
 	
 	union
 	{
-		// function
-		struct
-		{
-			FunctionType func_type;
-			
-			action_func func;
-			void* args;
-			u8 reg_count;
-			u16 flags;
-			u32 func_name_string_id;
-		};
-		
 		// string
 		struct
 		{

@@ -6,7 +6,6 @@
 #include <stackvalue.h>
 
 #define STACK_VAR_SIZE (4 + 4 + 8 + 8)
-#define STACK_FUNC_SIZE (4 + 4 + 8 + 8 + 8 + 8 + (4 + 4))
 
 #define PUSH(t, v) \
 	OLDSP = SP; \
@@ -50,35 +49,6 @@
 	VAL(u32, &STACK[SP + 4]) = OLDSP; \
 	VAL(u32, &STACK[SP + 8]) = n; \
 	VAL(u32, &STACK[SP + 12]) = 0;
-
-#define PUSH_FUNC(v, id, f, func_type, args) \
-	OLDSP = SP; \
-	SP -= STACK_FUNC_SIZE; \
-	SP &= ~7; \
-	STACK[SP] = ACTION_STACK_VALUE_FUNCTION; \
-	VAL(u32, &STACK[SP + 4]) = OLDSP; \
-	VAL(u32, &STACK[SP + 12]) = id; \
-	VAL(u64, &STACK[SP + 16]) = (u64) v; \
-	VAL(u64, &STACK[SP + 24]) = (u64) f; \
-	VAL(u64, &STACK[SP + 32]) = (u64) args; \
-	STACK[SP + 41] = (u8) func_type; \
-	OBJ_LOCK_WRITE((ASObject*) v, \
-	{ \
-		retainObject((ASObject*) v); \
-	});
-
-#define PUSH_FUNC_UNKNOWN(v, id, f, func_type, args, reg_count, flags) \
-	PUSH_FUNC(v, id, f, func_type, args); \
-	VAL(u8, &STACK[SP + 40]) = reg_count; \
-	VAL(u16, &STACK[SP + 42]) = flags;
-
-#define PUSH_FUNC_1(v, id, f, args) \
-	PUSH_FUNC(v, id, f, FUNC_TYPE_1, args);
-
-#define PUSH_FUNC_2(v, id, f, args, reg_count, flags) \
-	PUSH_FUNC(v, id, f, FUNC_TYPE_2, args); \
-	VAL(u8, &STACK[SP + 40]) = reg_count; \
-	VAL(u16, &STACK[SP + 42]) = flags;
 
 #define PUSH_NULL() PUSH(ACTION_STACK_VALUE_NULL, 0)
 #define PUSH_UNDEFINED() PUSH(ACTION_STACK_VALUE_UNDEFINED, 0)
@@ -187,6 +157,7 @@ void toString(SWFAppContext* app_context, ActionVar* v);
 
 ActionStackValueType convertString(SWFAppContext* app_context);
 ActionStackValueType convertDouble(SWFAppContext* app_context);
+ActionStackValueType convertIntECMA(SWFAppContext* app_context);
 
 ASProperty* getPropertyInThisScope(u32 string_id, const char* name, u32 name_len);
 void setPropertyInThisScope(SWFAppContext* app_context, u32 string_id, const char* name, u32 name_len, ActionVar* value);

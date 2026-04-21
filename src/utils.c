@@ -3,6 +3,16 @@
 #include <heap.h>
 #include <utils.h>
 
+size_t get_power_two_size(size_t old_size, size_t size)
+{
+	while (old_size < size)
+	{
+		old_size <<= 1;
+	}
+	
+	return old_size;
+}
+
 void grow_ptr(SWFAppContext* app_context, char** ptr, size_t* capacity_ptr, size_t elem_size)
 {
 	char* data = *ptr;
@@ -17,6 +27,25 @@ void grow_ptr(SWFAppContext* app_context, char** ptr, size_t* capacity_ptr, size
 	
 	*ptr = new_data;
 	*capacity_ptr = capacity << 1;
+}
+
+void grow_ptr_far(SWFAppContext* app_context, char** ptr, size_t* capacity_ptr, size_t elem_size, size_t new_size)
+{
+	char* data = *ptr;
+	size_t capacity = *capacity_ptr;
+	size_t old_data_size = capacity*elem_size;
+	
+	size_t new_capacity = get_power_two_size(capacity, new_size);
+	size_t new_data_size = new_capacity*elem_size;
+	
+	char* new_data = HALLOC(new_data_size);
+	
+	memcpy(new_data, data, old_data_size);
+	
+	FREE(data);
+	
+	*ptr = new_data;
+	*capacity_ptr = new_capacity;
 }
 
 #if defined(_MSC_VER)

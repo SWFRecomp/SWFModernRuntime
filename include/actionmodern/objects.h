@@ -13,14 +13,14 @@
 #define IS_OBJ_T(t) ((t & 0xF0) == 0x10)
 
 #define OBJ_LOCK_READ(obj, code) \
-	mutex_lock_read(&(obj)->lock); \
+	mutex_lock_read(&((ASObject*) (obj))->lock); \
 	code \
-	mutex_unlock_read(&(obj)->lock);
+	mutex_unlock_read(&((ASObject*) (obj))->lock);
 
 #define OBJ_LOCK_WRITE(obj, code) \
-	mutex_lock_write(&(obj)->lock); \
+	mutex_lock_write(&((ASObject*) (obj))->lock); \
 	code \
-	mutex_unlock_write(&(obj)->lock);
+	mutex_unlock_write(&((ASObject*) (obj))->lock);
 
 /**
  * ASObject - ActionScript Object with Reference Counting
@@ -79,8 +79,8 @@ typedef struct
  */
 
 // Allocate new object
+ASObject* allocObjectCommon(SWFAppContext* app_context);
 ASObject* allocObject(SWFAppContext* app_context);
-ASObject* allocObjectNoPrototype(SWFAppContext* app_context);
 
 // Increment reference count
 // Should be called when:
@@ -130,7 +130,7 @@ void setProperty(SWFAppContext* app_context, ASObject* this, u32 string_id, cons
 bool deleteProperty(SWFAppContext* app_context, ASObject* obj, const char* name, u32 name_length);
 
 // Get the constructor function for an object
-// Returns the constructor property if it exists, NULL otherwise
+// Returns the constructor property
 ASObject* getConstructor(ASObject* obj);
 
 /**
