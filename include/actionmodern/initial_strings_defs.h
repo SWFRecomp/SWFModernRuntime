@@ -27,6 +27,8 @@ RuntimeFunc runtime_meths[] =
 	{STR_ID_NUMBER, STR_ID_VALUE_OF, Number_valueOf, false},
 	{STR_ID_STRING, STR_ID_TO_STRING, String_toString, false},
 	{STR_ID_STRING, STR_ID_VALUE_OF, String_valueOf, false},
+	{STR_ID_ARRAY, STR_ID_PUSH, Array_push, false},
+	{STR_ID_ARRAY, STR_ID_POP, Array_pop, false},
 };
 
 action_runtime_func static_initializers[] =

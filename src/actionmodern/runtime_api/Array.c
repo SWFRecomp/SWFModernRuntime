@@ -43,6 +43,7 @@ void Array_new(SWFAppContext* app_context, ASObject* this, u32 num_args)
 			EXTDATA(data)[i].type = ACTION_STACK_VALUE_UNDEFINED;
 		}
 		
+		RETURN_VOID();
 		return;
 	}
 	
@@ -70,6 +71,7 @@ void Array_new(SWFAppContext* app_context, ASObject* this, u32 num_args)
 			EXTDATA(data)[i].type = ACTION_STACK_VALUE_UNDEFINED;
 		}
 		
+		RETURN_VOID();
 		return;
 	}
 	

@@ -14,6 +14,8 @@ typedef struct
 void Array_init(SWFAppContext* app_context, ASObject* this, u32 num_args);
 
 void Array_new(SWFAppContext* app_context, ASObject* this, u32 num_args);
+void Array_push(SWFAppContext* app_context, ASObject* this, u32 num_args);
+void Array_pop(SWFAppContext* app_context, ASObject* this, u32 num_args);
 void Array_toString(SWFAppContext* app_context, ASObject* this, u32 num_args);
 
 ActionVar* Array_getElement(SWFAppContext* app_context, ASObject* this, s32 i);

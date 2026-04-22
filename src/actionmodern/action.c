@@ -2185,12 +2185,20 @@ void actionDefineLocal(SWFAppContext* app_context)
 	// So VALUE is at top (*sp), NAME is at second (SP_SECOND_TOP)
 	
 	// DefineLocal ALWAYS creates/updates in the local scope
-	
 	// We have a local scope object - define variable as a property
 	ASObject* local_scope = scope_chain[scope_top_obj];
-	
 	ActionVar value_var;
-	popVar(app_context, &value_var);
+	peekVar(app_context, &value_var);
+	
+	if (IS_OBJ_T(value_var.type))
+	{
+		OBJ_LOCK_WRITE(value_var.object,
+		{
+			retainObject(value_var.object);
+		});
+	}
+	
+	POP();
 	
 	copyReg(app_context);
 	
@@ -2205,6 +2213,14 @@ void actionDefineLocal(SWFAppContext* app_context)
 	// Set property on the local scope object
 	// This will create the property if it doesn't exist, or update if it does
 	setProperty(app_context, local_scope, string_id, var_name, var_name_len, &value_var);
+	
+	if (IS_OBJ_T(value_var.type))
+	{
+		OBJ_LOCK_WRITE(value_var.object,
+		{
+			releaseObject(app_context, value_var.object);
+		});
+	}
 }
 
 void actionDefineLocal2(SWFAppContext* app_context)
@@ -3105,12 +3121,40 @@ void actionNewObject(SWFAppContext* app_context)
 {
 	// 1. Pop constructor name (string)
 	ActionVar ctor_name_var;
-	popVar(app_context, &ctor_name_var);
+	peekVar(app_context, &ctor_name_var);
+	
+	ASObject* ctor_name_obj = ctor_name_var.object;
+	
+	if (IS_OBJ_T(ctor_name_var.type))
+	{
+		UNIMPLEMENTED("NewObject constructor name object\n");
+		
+		//~ OBJ_LOCK_WRITE(ctor_name_obj,
+		//~ {
+			//~ retainObject(ctor_name_obj);
+		//~ });
+	}
+	
+	POP();
 	
 	// 2. Pop number of arguments
 	ActionVar num_args_var;
-	popVar(app_context, &num_args_var);
+	peekVar(app_context, &num_args_var);
 	u32 num_args = (u32) num_args_var.value;
+	
+	ASObject* num_args_obj = num_args_var.object;
+	
+	if (IS_OBJ_T(num_args_var.type))
+	{
+		UNIMPLEMENTED("NewObject num args object\n");
+		
+		//~ OBJ_LOCK_WRITE(num_args_obj,
+		//~ {
+			//~ retainObject(num_args_obj);
+		//~ });
+	}
+	
+	POP();
 	
 	// Try to find existing constructor function
 	ActionVar func_v;
@@ -3151,6 +3195,22 @@ void actionNewObject(SWFAppContext* app_context)
 	{
 		EXC_ARG("Constructor function %s not found.\n", (char*) ctor_name_var.value);
 	}
+	
+	//~ if (IS_OBJ_T(ctor_name_var.type))
+	//~ {
+		//~ OBJ_LOCK_WRITE(ctor_name_obj,
+		//~ {
+			//~ releaseObject(app_context, ctor_name_obj);
+		//~ });
+	//~ }
+	
+	//~ if (IS_OBJ_T(num_args_var.type))
+	//~ {
+		//~ OBJ_LOCK_WRITE(num_args_obj,
+		//~ {
+			//~ releaseObject(app_context, num_args_obj);
+		//~ });
+	//~ }
 }
 
 /**
@@ -3166,32 +3226,63 @@ void actionNewObject(SWFAppContext* app_context)
  * 3. Pops the number of arguments from the stack
  * 4. Executes the method call as constructor
  * 5. Pushes the newly constructed object to the stack
- *
- * Current implementation:
- * - Built-in constructors supported: Array, Object, Date, String, Number, Boolean
- * - String/Number/Boolean wrapper objects store primitive values in 'valueOf' property
- * - Function objects as constructors: SUPPORTED (blank method name with function object)
- * - User-defined constructors: SUPPORTED (method property containing function object)
- * - 'this' binding: SUPPORTED for DefineFunction2, limited for DefineFunction
- * - Constructor return value: Discarded per spec (always returns new object)
  */
 void actionNewMethod(SWFAppContext* app_context)
 {
 	// Pop constructor method name (string)
 	ActionVar ctor_name_var;
-	popVar(app_context, &ctor_name_var);
+	peekVar(app_context, &ctor_name_var);
+	
+	ASObject* ctor_name_obj = ctor_name_var.object;
+	
+	if (IS_OBJ_T(ctor_name_var.type))
+	{
+		UNIMPLEMENTED("NewMethod constructor name object");
+		
+		//~ OBJ_LOCK_WRITE(ctor_name_obj,
+		//~ {
+			//~ retainObject(ctor_name_obj);
+		//~ });
+	}
+	
+	POP();
 	
 	// Pop object which holds the method
 	ActionVar object_var;
-	popVar(app_context, &object_var);
+	peekVar(app_context, &object_var);
+	
+	ASObject* obj = object_var.object;
+	
+	if (IS_OBJ_T(ctor_name_var.type))
+	{
+		OBJ_LOCK_WRITE(obj,
+		{
+			retainObject(obj);
+		});
+	}
+	
+	POP();
 	
 	// Pop number of arguments
 	ActionVar num_args_var;
-	popVar(app_context, &num_args_var);
+	peekVar(app_context, &num_args_var);
 	u32 num_args = (u32) num_args_var.value;
 	
+	ASObject* num_args_obj = num_args_var.object;
+	
+	if (IS_OBJ_T(ctor_name_var.type))
+	{
+		UNIMPLEMENTED("NewMethod num args object");
+		
+		//~ OBJ_LOCK_WRITE(num_args_obj,
+		//~ {
+			//~ retainObject(num_args_obj);
+		//~ });
+	}
+	
+	POP();
+	
 	// Try to find constructor method
-	ASObject* obj = (ASObject*) object_var.value;
 	ActionVar func_v;
 	getPropertyVar(obj, ctor_name_var.string_id, NULL, 0, &func_v);
 	
@@ -3230,6 +3321,14 @@ void actionNewMethod(SWFAppContext* app_context)
 	else
 	{
 		EXC_ARG("Constructor method %s not found.\n", (char*) ctor_name_var.value);
+	}
+	
+	if (IS_OBJ_T(object_var.type))
+	{
+		OBJ_LOCK_WRITE(obj,
+		{
+			releaseObject(app_context, obj);
+		});
 	}
 }
 
@@ -3344,6 +3443,16 @@ void actionCallMethod(SWFAppContext* app_context)
 {
 	copyReg(app_context);
 	
+	if (IS_OBJ_T(STACK_TOP_TYPE))
+	{
+		UNIMPLEMENTED("CallMethod method name object");
+		
+		//~ OBJ_LOCK_WRITE(obj,
+		//~ {
+			//~ retainObject(obj);
+		//~ });
+	}
+	
 	// Pop method name (string) from stack
 	char* func_name = (char*) STACK_TOP_VALUE;
 	u32 string_id = STACK_TOP_ID;
@@ -3351,14 +3460,36 @@ void actionCallMethod(SWFAppContext* app_context)
 	
 	// Pop object from stack
 	ActionVar this_v;
-	popVar(app_context, &this_v);
+	peekVar(app_context, &this_v);
 	
 	ASObject* this = this_v.object;
 	
+	if (IS_OBJ_T(this_v.type))
+	{
+		OBJ_LOCK_WRITE(this,
+		{
+			retainObject(this);
+		});
+	}
+	
+	POP();
+	
 	// Pop number of arguments
 	ActionVar num_args_var;
-	popVar(app_context, &num_args_var);
+	peekVar(app_context, &num_args_var);
 	u32 num_args = (u32) num_args_var.value;
+	
+	if (IS_OBJ_T(num_args_var.type))
+	{
+		UNIMPLEMENTED("CallMethod num args object");
+		
+		//~ OBJ_LOCK_WRITE(obj,
+		//~ {
+			//~ retainObject(obj);
+		//~ });
+	}
+	
+	POP();
 	
 	switch (this_v.type)
 	{
@@ -3443,5 +3574,13 @@ void actionCallMethod(SWFAppContext* app_context)
 	{
 		// Function not found - throw
 		EXC_ARG("Function not found: %s\n", func_name);
+	}
+	
+	if (IS_OBJ_T(this_v.type))
+	{
+		OBJ_LOCK_WRITE(this,
+		{
+			releaseObject(app_context, this);
+		});
 	}
 }
