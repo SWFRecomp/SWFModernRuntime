@@ -89,11 +89,6 @@
 #define STACK_TOP_N VAL(u32, &STACK[SP + 8])
 #define STACK_TOP_ID VAL(u32, &STACK[SP + 12])
 #define STACK_TOP_VALUE VAL(u64, &STACK[SP + 16])
-#define STACK_TOP_FUNC VAL(u64, &STACK[SP + 24])
-#define STACK_TOP_FUNC_ARGS VAL(u64, &STACK[SP + 32])
-#define STACK_TOP_FUNC_REG_COUNT STACK[SP + 40]
-#define STACK_TOP_FUNC_FUNC_TYPE STACK[SP + 41]
-#define STACK_TOP_FUNC_FLAGS VAL(u16, &STACK[SP + 42])
 
 #define SP_SECOND_TOP VAL(u32, &STACK[SP + 4])
 #define STACK_SECOND_TOP_TYPE STACK[SP_SECOND_TOP]
@@ -101,11 +96,6 @@
 #define STACK_SECOND_TOP_N VAL(u32, &STACK[SP_SECOND_TOP + 8])
 #define STACK_SECOND_TOP_ID VAL(u32, &STACK[SP_SECOND_TOP + 12])
 #define STACK_SECOND_TOP_VALUE VAL(u64, &STACK[SP_SECOND_TOP + 16])
-#define STACK_SECOND_TOP_FUNC VAL(u64, &STACK[SP_SECOND_TOP + 24])
-#define STACK_SECOND_TOP_FUNC_ARGS VAL(u64, &STACK[SP_SECOND_TOP + 32])
-#define STACK_SECOND_TOP_FUNC_REG_COUNT STACK[SP_SECOND_TOP + 40]
-#define STACK_SECOND_TOP_FUNC_FUNC_TYPE STACK[SP_SECOND_TOP + 41]
-#define STACK_SECOND_TOP_FUNC_FLAGS VAL(u16, &STACK[SP_SECOND_TOP + 42])
 
 #define FUNC_FLAG_PRELOAD_PARENT        0b0000000010000000
 #define FUNC_FLAG_PRELOAD_ROOT          0b0000000001000000
@@ -149,6 +139,7 @@ void discardArgs(SWFAppContext* app_context, u32 num_args);
 void pushVar(SWFAppContext* app_context, ActionVar* p);
 void pushReg(SWFAppContext* app_context, u8 reg);
 
+void peekVar(SWFAppContext* app_context, ActionVar* var);
 void popVar(SWFAppContext* app_context, ActionVar* var);
 
 void toNumber(SWFAppContext* app_context, ActionVar* v);
