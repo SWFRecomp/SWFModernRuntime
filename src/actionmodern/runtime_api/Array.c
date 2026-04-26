@@ -86,16 +86,23 @@ void Array_new(SWFAppContext* app_context, ASObject* this, u32 num_args)
 void Array_push(SWFAppContext* app_context, ASObject* this, u32 num_args)
 {
 	ActionVar v;
-	popVar(app_context, &v);
+	peekVar(app_context, &v);
 	
-	DISCARD_ARGS(num_args - 1);
-	
-	ActionVar* data = EXTDATA(data);
 	size_t length = ++EXTDATA(length);
 	
-	ENSURE_SIZE(data, length, EXTDATA(capacity), sizeof(ActionVar));
+	ENSURE_SIZE(EXTDATA(data), length, EXTDATA(capacity), sizeof(ActionVar));
 	
-	data[length - 1] = v;
+	if (IS_OBJ_T(v.type))
+	{
+		OBJ_LOCK_WRITE(v.object,
+		{
+			retainObject(v.object);
+		});
+	}
+	
+	EXTDATA(data)[length - 1] = v;
+	
+	DISCARD_ARGS(num_args);
 	
 	f64 length_f64 = (f64) length;
 	PUSH_F64(length_f64);
