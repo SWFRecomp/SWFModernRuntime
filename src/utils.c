@@ -163,7 +163,7 @@ void vmem_release(char* addr, size_t size)
 
 void thread_start(SWFAppContext* app_context, runtime_thread_func f, recomp_thread_t* handle)
 {
-	pthread_create(handle, NULL, f, app_context);
+	pthread_create(handle, NULL, (void* (*)(void*)) f, app_context);
 }
 
 void thread_exit()

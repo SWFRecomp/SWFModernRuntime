@@ -19,8 +19,6 @@ size_t max_depth = 0;
 
 FlashbangContext* context;
 
-void tagInit(app_context);
-
 void tagMain(SWFAppContext* app_context)
 {
 	frame_func* frame_funcs = app_context->frame_funcs;
