@@ -83,9 +83,9 @@ void vmem_release(char* addr, size_t size)
 	VirtualFree(addr, 0, MEM_RELEASE);
 }
 
-uintptr_t thread_start(SWFAppContext* app_context, runtime_thread_func f)
+void thread_start(SWFAppContext* app_context, runtime_thread_func f, recomp_thread_t* handle)
 {
-	return _beginthreadex(NULL, 0, f, app_context, 0, NULL);
+	*((uintptr_t*) handle) = _beginthreadex(NULL, 0, f, app_context, 0, NULL);
 }
 
 void thread_exit()
@@ -93,35 +93,40 @@ void thread_exit()
 	_endthreadex(0);
 }
 
-void thread_join(uintptr_t handle)
+void thread_join(recomp_thread_t* handle)
 {
 	WaitForSingleObject((HANDLE) handle, INFINITE);
 	CloseHandle((HANDLE) handle);
 }
 
-void mutex_init(recomp_mutex_t* mutex)
+void rwlock_init(recomp_rwlock_t* rwlock)
 {
-	InitializeSRWLock((PSRWLOCK) mutex);
+	InitializeSRWLock((PSRWLOCK) rwlock);
 }
 
-void mutex_lock_read(recomp_mutex_t* mutex)
+void rwlock_lock_read(recomp_rwlock_t* rwlock)
 {
-	AcquireSRWLockShared((PSRWLOCK) mutex);
+	AcquireSRWLockShared((PSRWLOCK) rwlock);
 }
 
-void mutex_unlock_read(recomp_mutex_t* mutex)
+void rwlock_unlock_read(recomp_rwlock_t* rwlock)
 {
-	ReleaseSRWLockShared((PSRWLOCK) mutex);
+	ReleaseSRWLockShared((PSRWLOCK) rwlock);
 }
 
-void mutex_lock_write(recomp_mutex_t* mutex)
+void rwlock_lock_write(recomp_rwlock_t* rwlock)
 {
-	AcquireSRWLockExclusive((PSRWLOCK) mutex);
+	AcquireSRWLockExclusive((PSRWLOCK) rwlock);
 }
 
-void mutex_unlock_write(recomp_mutex_t* mutex)
+void rwlock_unlock_write(recomp_rwlock_t* rwlock)
 {
-	ReleaseSRWLockExclusive((PSRWLOCK) mutex);
+	ReleaseSRWLockExclusive((PSRWLOCK) rwlock);
+}
+
+void rwlock_destroy(recomp_rwlock_t* rwlock)
+{
+	
 }
 
 #elif defined(__GNUC__)
@@ -138,6 +143,14 @@ u32 get_elapsed_ms()
 	return (now.tv_sec)*1000 + (now.tv_nsec)/1000000;
 }
 
+void recomp_sleep(u32 ms)
+{
+	struct timespec ms_ts;
+	ms_ts.tv_sec = ms/1000;
+	ms_ts.tv_nsec = (ms % 1000)*1000000;
+	nanosleep(&ms_ts, NULL);
+}
+
 char* vmem_reserve(size_t size)
 {
 	return mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
@@ -146,6 +159,51 @@ char* vmem_reserve(size_t size)
 void vmem_release(char* addr, size_t size)
 {
 	munmap(addr, size);
+}
+
+void thread_start(SWFAppContext* app_context, runtime_thread_func f, recomp_thread_t* handle)
+{
+	pthread_create(handle, NULL, f, app_context);
+}
+
+void thread_exit()
+{
+	
+}
+
+void thread_join(recomp_thread_t* handle)
+{
+	pthread_join(*handle, NULL);
+}
+
+void rwlock_init(recomp_rwlock_t* rwlock)
+{
+	pthread_rwlock_init(rwlock, NULL);
+}
+
+void rwlock_lock_read(recomp_rwlock_t* rwlock)
+{
+	pthread_rwlock_rdlock(rwlock);
+}
+
+void rwlock_unlock_read(recomp_rwlock_t* rwlock)
+{
+	pthread_rwlock_unlock(rwlock);
+}
+
+void rwlock_lock_write(recomp_rwlock_t* rwlock)
+{
+	pthread_rwlock_wrlock(rwlock);
+}
+
+void rwlock_unlock_write(recomp_rwlock_t* rwlock)
+{
+	pthread_rwlock_unlock(rwlock);
+}
+
+void rwlock_destroy(recomp_rwlock_t* rwlock)
+{
+	pthread_rwlock_destroy(rwlock);
 }
 
 #endif

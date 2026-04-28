@@ -74,7 +74,7 @@ typedef struct SWFAppContext
 	const float* stage_to_ndc;
 	
 	O1HeapInstance* heap_instance;
-	recomp_mutex_t heap_lock;
+	recomp_rwlock_t heap_lock;
 	char* heap;
 	size_t heap_size;
 	

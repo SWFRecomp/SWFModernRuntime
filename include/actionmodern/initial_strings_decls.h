@@ -2,8 +2,9 @@
 
 #include <common.h>
 #include <swf.h>
+#include <objects.h>
 
-typedef void (*action_runtime_func)(SWFAppContext* app_context, void* this, u32 num_args);
+typedef void (*action_runtime_func)(SWFAppContext* app_context, ASObject* this, u32 num_args);
 
 typedef enum
 {

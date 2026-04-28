@@ -74,11 +74,13 @@ if(NOT NO_GRAPHICS)
         zlibstatic
         lzma
         SDL3::SDL3
+        m
     )
 else()
     target_link_libraries(${PROJECT_NAME} PUBLIC
         zlibstatic
         lzma
+        m
     )
 endif()
 

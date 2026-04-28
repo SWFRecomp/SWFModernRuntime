@@ -1,3 +1,4 @@
+#include <string.h>
 #include <math.h>
 
 #include <String_recomp.h>

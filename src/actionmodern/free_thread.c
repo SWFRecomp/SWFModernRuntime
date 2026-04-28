@@ -235,7 +235,7 @@ u32 countObjs(SwapVector* v, ASObject* o)
 	return num_objs;
 }
 
-recomp_mutex_t object_queue_lock;
+recomp_rwlock_t object_queue_lock;
 rbtree object_free_queue;
 
 void attemptFree(SWFAppContext* app_context, ASObject* o);
@@ -407,7 +407,7 @@ void attemptFree(SWFAppContext* app_context, ASObject* o)
 	SVEC_RELEASE(&reachable);
 }
 
-uintptr_t free_thread_handle;
+recomp_thread_t free_thread_handle;
 
 DECLARE_RUNTIME_THREAD_FUNC(freeThread)
 {

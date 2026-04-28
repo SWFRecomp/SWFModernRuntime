@@ -10,7 +10,7 @@ void heap_init(SWFAppContext* app_context, size_t size)
 	app_context->heap = h;
 	app_context->heap_size = size;
 	app_context->heap_instance = o1heapInit(h, size);
-	mutex_init(&app_context->heap_lock);
+	rwlock_init(&app_context->heap_lock);
 }
 
 void* heap_alloc(SWFAppContext* app_context, size_t size)

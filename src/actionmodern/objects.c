@@ -17,7 +17,7 @@ ASObject* allocObjectCommon(SWFAppContext* app_context)
 	rbtree_init(&obj->t, sizeof(ASProperty));
 	obj->refcount = 0;
 	obj->extra_data = NULL;
-	mutex_init(&obj->lock);
+	rwlock_init(&obj->lock);
 	obj->reached = false;
 	obj->used = false;
 	obj->blocked = false;
@@ -63,7 +63,7 @@ void retainObject(ASObject* obj)
 }
 
 extern rbtree object_free_queue;
-extern recomp_mutex_t object_queue_lock;
+extern recomp_rwlock_t object_queue_lock;
 
 void queueObjectFreeCheck(SWFAppContext* app_context, ASObject* obj)
 {

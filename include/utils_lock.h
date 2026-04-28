@@ -1,15 +1,27 @@
 #pragma once
 
-#include <windows.h>
-
 #define LOCK_READ(lock, code) \
-	mutex_lock_read(&lock); \
+	rwlock_lock_read(&lock); \
 	code \
-	mutex_unlock_read(&lock);
+	rwlock_unlock_read(&lock);
 
 #define LOCK_WRITE(lock, code) \
-	mutex_lock_write(&lock); \
+	rwlock_lock_write(&lock); \
 	code \
-	mutex_unlock_write(&lock);
+	rwlock_unlock_write(&lock);
 
-typedef SRWLOCK recomp_mutex_t;
+#if defined(_MSC_VER)
+// Microsoft
+
+#include <windows.h>
+
+typedef SRWLOCK recomp_rwlock_t;
+
+#elif defined(__GNUC__)
+// GCC
+
+#include <pthread.h>
+
+typedef pthread_rwlock_t recomp_rwlock_t;
+
+#endif

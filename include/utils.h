@@ -7,8 +7,31 @@
 
 #include <utils_lock.h>
 
+#if defined(_MSC_VER)
+// Microsoft
+
+#include <windows.h>
+
 #define LIKELY(exp) exp
 #define UNLIKELY(exp) exp
+
+#define DECLARE_RUNTIME_THREAD_FUNC(f) unsigned int f(SWFAppContext* app_context)
+
+typedef HANDLE recomp_thread_t;
+typedef unsigned int (*runtime_thread_func)(SWFAppContext* arg);
+
+#elif defined(__GNUC__)
+// GCC
+
+#define LIKELY(exp) __builtin_expect(exp, true)
+#define UNLIKELY(exp) __builtin_expect(exp, false)
+
+#define DECLARE_RUNTIME_THREAD_FUNC(f) void* f(SWFAppContext* app_context)
+
+typedef pthread_t recomp_thread_t;
+typedef void* (*runtime_thread_func)(SWFAppContext* arg);
+
+#endif
 
 #define ENSURE_SIZE(ptr, new_size, capac, elem_size) \
 	if (UNLIKELY(new_size >= capac)) \
@@ -34,18 +57,13 @@ int getpagesize();
 char* vmem_reserve(size_t size);
 void vmem_release(char* addr, size_t size);
 
-typedef unsigned int (*runtime_thread_func)(void* arg);
-
-uintptr_t thread_start(SWFAppContext* app_context, runtime_thread_func f);
+void thread_start(SWFAppContext* app_context, runtime_thread_func f, recomp_thread_t* handle);
 void thread_exit();
-void thread_join(uintptr_t handle);
+void thread_join(recomp_thread_t* handle);
 
-#include <windows.h>
-
-#define DECLARE_RUNTIME_THREAD_FUNC(f) unsigned int f(SWFAppContext* app_context)
-
-void mutex_init(recomp_mutex_t* mutex);
-void mutex_lock_read(recomp_mutex_t* mutex);
-void mutex_unlock_read(recomp_mutex_t* mutex);
-void mutex_lock_write(recomp_mutex_t* mutex);
-void mutex_unlock_write(recomp_mutex_t* mutex);
+void rwlock_init(recomp_rwlock_t* rwlock);
+void rwlock_lock_read(recomp_rwlock_t* rwlock);
+void rwlock_unlock_read(recomp_rwlock_t* rwlock);
+void rwlock_lock_write(recomp_rwlock_t* rwlock);
+void rwlock_unlock_write(recomp_rwlock_t* rwlock);
+void rwlock_destroy(recomp_rwlock_t* rwlock);

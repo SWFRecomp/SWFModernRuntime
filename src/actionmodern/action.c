@@ -10,7 +10,7 @@
 #include <recomp.h>
 #include <initial_strings_defs.h>
 #include <heap.h>
-#include <object.h>
+#include <objects.h>
 #include <free_thread.h>
 #include <utils.h>
 
@@ -163,7 +163,7 @@ void initActions(SWFAppContext* app_context)
 		setProperty(app_context, prototype, runtime_meths[i].func_string_id, NULL, 0, &v);
 	}
 	
-	mutex_init(&object_queue_lock);
+	rwlock_init(&object_queue_lock);
 	rbtree_init(&object_free_queue, sizeof(objnode));
 	
 	for (int i = 0; i < sizeof(static_initializers)/sizeof(action_runtime_func); ++i)
@@ -183,12 +183,14 @@ void initActions(SWFAppContext* app_context)
 		scope_top_obj -= 1;
 	}
 	
-	free_thread_handle = thread_start(app_context, freeThread);
+	thread_start(app_context, freeThread, &free_thread_handle);
 }
 
 void freeActions(SWFAppContext* app_context)
 {
-	thread_join(free_thread_handle);
+	thread_join(&free_thread_handle);
+	
+	rwlock_destroy(&object_queue_lock);
 }
 
 void discardArgs(SWFAppContext* app_context, u32 num_args)
@@ -875,7 +877,7 @@ void actionAdd2(SWFAppContext* app_context)
 		b.f64 == -INFINITY && a.f64 == INFINITY)
 	{
 		f64 nan = NAN;
-		PUSH_F64(&nan);
+		PUSH_F64(nan);
 		return;
 	}
 	
@@ -2295,7 +2297,7 @@ void actionTypeOf(SWFAppContext* app_context)
 	}
 	
 	// Copy to str_buffer and push
-	u32 len = (u32) strnlen(type_str, 16);
+	u32 len = (u32) strnlen(type_str, 10);
 	PUSH_STR(type_str, len);
 }
 
@@ -2916,7 +2918,8 @@ void actionGetMember(SWFAppContext* app_context)
 			// Handle string properties
 			if (prop_name_var.string_id == STR_ID_LENGTH)
 			{
-				PUSH_F32((f32) obj_var.str_size);
+				f64 str_size_f64 = (f64) obj_var.str_size;
+				PUSH_F64(str_size_f64);
 			}
 			
 			else

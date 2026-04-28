@@ -13,14 +13,14 @@
 #define IS_OBJ_T(t) ((t & 0xF0) == 0x10)
 
 #define OBJ_LOCK_READ(obj, code) \
-	mutex_lock_read(&((ASObject*) (obj))->lock); \
+	rwlock_lock_read(&((ASObject*) (obj))->lock); \
 	code \
-	mutex_unlock_read(&((ASObject*) (obj))->lock);
+	rwlock_unlock_read(&((ASObject*) (obj))->lock);
 
 #define OBJ_LOCK_WRITE(obj, code) \
-	mutex_lock_write(&((ASObject*) (obj))->lock); \
+	rwlock_lock_write(&((ASObject*) (obj))->lock); \
 	code \
-	mutex_unlock_write(&((ASObject*) (obj))->lock);
+	rwlock_unlock_write(&((ASObject*) (obj))->lock);
 
 /**
  * ASObject - ActionScript Object with Reference Counting
@@ -50,7 +50,7 @@ typedef struct
 	rbtree t;
 	u32 refcount;
 	void* extra_data;
-	recomp_mutex_t lock;
+	recomp_rwlock_t lock;
 	bool reached;
 	bool used;
 	bool blocked;
