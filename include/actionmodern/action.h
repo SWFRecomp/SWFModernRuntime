@@ -139,6 +139,8 @@ void discardArgs(SWFAppContext* app_context, u32 num_args);
 void pushVar(SWFAppContext* app_context, ActionVar* p);
 void pushReg(SWFAppContext* app_context, u8 reg);
 
+void releaseObjectVar(SWFAppContext* app_context, ActionVar* var);
+
 void peekVar(SWFAppContext* app_context, ActionVar* var);
 void popVar(SWFAppContext* app_context, ActionVar* var);
 

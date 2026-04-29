@@ -74,13 +74,13 @@ if(NOT NO_GRAPHICS)
         zlibstatic
         lzma
         SDL3::SDL3
-        m
+        $<$<PLATFORM_ID:Linux>:m>
     )
 else()
     target_link_libraries(${PROJECT_NAME} PUBLIC
         zlibstatic
         lzma
-        m
+        $<$<PLATFORM_ID:Linux>:m>
     )
 endif()
 

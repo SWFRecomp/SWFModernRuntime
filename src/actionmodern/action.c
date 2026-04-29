@@ -322,6 +322,25 @@ void peekConvert(SWFAppContext* app_context, ActionVar* var)
 			break;
 		}
 	}
+	
+	if (IS_OBJ_T(var->type))
+	{
+		OBJ_LOCK_WRITE(var->object,
+		{
+			retainObject(var->object);
+		});
+	}
+}
+
+void releaseObjectVar(SWFAppContext* app_context, ActionVar* var)
+{
+	if (IS_OBJ_T(var->type))
+	{
+		OBJ_LOCK_WRITE(var->object,
+		{
+			releaseObject(app_context, var->object);
+		});
+	}
 }
 
 void copyReg(SWFAppContext* app_context)
@@ -367,6 +386,9 @@ void copy2Regs(SWFAppContext* app_context)
 	{
 		pushVar(app_context, &reg1_v);
 	}
+	
+	releaseObjectVar(app_context, &reg1_v);
+	releaseObjectVar(app_context, &reg2_v);
 }
 
 void peekVar(SWFAppContext* app_context, ActionVar* var)
@@ -541,7 +563,7 @@ void toString(SWFAppContext* app_context, ActionVar* v)
 	PUSH_STR_STACK(len);
 	char* stack_str = (char*) &STACK_TOP_VALUE;
 	
-	memcpy(stack_str, str, len);
+	memcpy(stack_str, str, len + 1);
 }
 
 ActionStackValueType convertString(SWFAppContext* app_context)
@@ -556,8 +578,7 @@ ActionStackValueType convertString(SWFAppContext* app_context)
 	{
 		case ACTION_STACK_VALUE_NULL:
 		{
-			popVar(app_context, &v);
-			
+			POP();
 			snprintf(str, 64, "null");
 			
 			u32 len = 4;
@@ -575,8 +596,7 @@ ActionStackValueType convertString(SWFAppContext* app_context)
 		
 		case ACTION_STACK_VALUE_UNDEFINED:
 		{
-			popVar(app_context, &v);
-			
+			POP();
 			snprintf(str, 64, "undefined");
 			
 			u32 len = 9;
@@ -595,7 +615,6 @@ ActionStackValueType convertString(SWFAppContext* app_context)
 		case ACTION_STACK_VALUE_BOOLEAN:
 		{
 			popVar(app_context, &v);
-			
 			snprintf(str, 64, (v.b) ? "true" : "false");
 			
 			u32 len = (v.b) ? 4 : 5;
@@ -608,6 +627,7 @@ ActionStackValueType convertString(SWFAppContext* app_context)
 			STACK_TOP_N = len;
 			STACK_TOP_ID = 0;
 			
+			releaseObjectVar(app_context, &v);
 			break;
 		}
 		
@@ -628,6 +648,7 @@ ActionStackValueType convertString(SWFAppContext* app_context)
 			STACK_TOP_N = len;
 			STACK_TOP_ID = 0;
 			
+			releaseObjectVar(app_context, &v);
 			break;
 		}
 		
@@ -637,7 +658,6 @@ ActionStackValueType convertString(SWFAppContext* app_context)
 			f64 temp_val = v.f64;
 			
 			snprintf(str, 64, "%.15g", temp_val);
-			
 			u32 len = (u32) strnlen(str, 64);
 			
 			PUSH_STR_STACK(len);
@@ -648,6 +668,7 @@ ActionStackValueType convertString(SWFAppContext* app_context)
 			STACK_TOP_N = len;
 			STACK_TOP_ID = 0;
 			
+			releaseObjectVar(app_context, &v);
 			break;
 		}
 		
@@ -668,6 +689,7 @@ ActionStackValueType convertString(SWFAppContext* app_context)
 			STACK_TOP_N = len;
 			STACK_TOP_ID = 0;
 			
+			releaseObjectVar(app_context, &v);
 			break;
 		}
 	}
@@ -701,6 +723,8 @@ ActionStackValueType convertDouble(SWFAppContext* app_context)
 	popVar(app_context, &v);
 	
 	toNumber(app_context, &v);
+	
+	releaseObjectVar(app_context, &v);
 	
 	return ACTION_STACK_VALUE_F64;
 }
@@ -742,6 +766,8 @@ ActionStackValueType convertIntECMA(SWFAppContext* app_context)
 	popVar(app_context, &v);
 	
 	toInteger(app_context, &v);
+	
+	releaseObjectVar(app_context, &v);
 	
 	return ACTION_STACK_VALUE_F64;
 }
@@ -800,6 +826,10 @@ void actionAdd(SWFAppContext* app_context)
 	popVar(app_context, &b);
 	
 	double c = b.f64 + a.f64;
+	
+	releaseObjectVar(app_context, &a);
+	releaseObjectVar(app_context, &b);
+	
 	PUSH_F64(c);
 }
 
@@ -838,6 +868,9 @@ void actionAdd2(SWFAppContext* app_context)
 		{
 			pushVar(app_context, &a);
 		}
+		
+		releaseObjectVar(app_context, &a);
+		releaseObjectVar(app_context, &b);
 	}
 	
 	if (IS_STR_T(STACK_TOP_TYPE) || IS_STR_T(STACK_SECOND_TOP_TYPE))
@@ -859,6 +892,9 @@ void actionAdd2(SWFAppContext* app_context)
 		memcpy(((char*) &STACK_TOP_VALUE) + b_n, a_str.str, a_n);
 		*((u8*) (((char*) &STACK_TOP_VALUE) + b_n + a_n)) = '\0';
 		
+		releaseObjectVar(app_context, &a_str);
+		releaseObjectVar(app_context, &b_str);
+		
 		return;
 	}
 	
@@ -876,6 +912,8 @@ void actionAdd2(SWFAppContext* app_context)
 		b.f64 == INFINITY && a.f64 == -INFINITY ||
 		b.f64 == -INFINITY && a.f64 == INFINITY)
 	{
+		releaseObjectVar(app_context, &a);
+		releaseObjectVar(app_context, &b);
 		f64 nan = NAN;
 		PUSH_F64(nan);
 		return;
@@ -883,6 +921,8 @@ void actionAdd2(SWFAppContext* app_context)
 	
 	if (b.f64 == INFINITY || a.f64 == INFINITY)
 	{
+		releaseObjectVar(app_context, &a);
+		releaseObjectVar(app_context, &b);
 		f64 inf = INFINITY;
 		PUSH_F64(inf);
 		return;
@@ -890,6 +930,8 @@ void actionAdd2(SWFAppContext* app_context)
 	
 	if (b.f64 == -INFINITY || a.f64 == -INFINITY)
 	{
+		releaseObjectVar(app_context, &a);
+		releaseObjectVar(app_context, &b);
 		f64 ninf = -INFINITY;
 		PUSH_F64(ninf);
 		return;
@@ -897,6 +939,8 @@ void actionAdd2(SWFAppContext* app_context)
 	
 	if (b.f64 == -0.0 && a.f64 == -0.0)
 	{
+		releaseObjectVar(app_context, &a);
+		releaseObjectVar(app_context, &b);
 		f64 n0 = -0.0;
 		PUSH_F64(n0);
 		return;
@@ -905,6 +949,8 @@ void actionAdd2(SWFAppContext* app_context)
 	if ((b.f64 == +0.0 || b.f64 == -0.0) &&
 		(a.f64 == +0.0 || a.f64 == -0.0))
 	{
+		releaseObjectVar(app_context, &a);
+		releaseObjectVar(app_context, &b);
 		f64 p0 = +0.0;
 		PUSH_F64(p0);
 		return;
@@ -913,6 +959,10 @@ void actionAdd2(SWFAppContext* app_context)
 	// eh too late now
 	
 	double c = b.f64 + a.f64;
+	
+	releaseObjectVar(app_context, &a);
+	releaseObjectVar(app_context, &b);
+	
 	PUSH_F64(c);
 }
 
@@ -927,6 +977,10 @@ void actionSubtract(SWFAppContext* app_context)
 	popVar(app_context, &b);
 	
 	double c = b.f64 - a.f64;
+	
+	releaseObjectVar(app_context, &a);
+	releaseObjectVar(app_context, &b);
+	
 	PUSH_F64(c);
 }
 
@@ -941,6 +995,10 @@ void actionMultiply(SWFAppContext* app_context)
 	popVar(app_context, &b);
 	
 	double c = b.f64*a.f64;
+	
+	releaseObjectVar(app_context, &a);
+	releaseObjectVar(app_context, &b);
+	
 	PUSH_F64(c);
 }
 
@@ -989,10 +1047,17 @@ void actionDivide(SWFAppContext* app_context)
 			}
 		}
 		
+		releaseObjectVar(app_context, &a);
+		releaseObjectVar(app_context, &b);
+		
 		return;
 	}
 	
 	c = b.f64/a.f64;
+	
+	releaseObjectVar(app_context, &a);
+	releaseObjectVar(app_context, &b);
+	
 	PUSH_F64(c);
 }
 
@@ -1008,12 +1073,18 @@ void actionModulo(SWFAppContext* app_context)
 	
 	if (UNLIKELY(a.f64 == 0.0))
 	{
+		releaseObjectVar(app_context, &a);
+		releaseObjectVar(app_context, &b);
 		f64 nan = NAN;
 		PUSH_F64(nan);
 		return;
 	}
 	
 	f64 mod = fmod(b.f64, a.f64);
+	
+	releaseObjectVar(app_context, &a);
+	releaseObjectVar(app_context, &b);
+	
 	PUSH_F64(mod);
 }
 
@@ -1024,6 +1095,9 @@ void actionIncrement(SWFAppContext* app_context)
 	popVar(app_context, &v);
 	
 	f64 inc = v.f64 + 1.0;
+	
+	releaseObjectVar(app_context, &v);
+	
 	PUSH_F64(inc);
 }
 
@@ -1034,6 +1108,9 @@ void actionDecrement(SWFAppContext* app_context)
 	popVar(app_context, &v);
 	
 	f64 dec = v.f64 - 1.0;
+	
+	releaseObjectVar(app_context, &v);
+	
 	PUSH_F64(dec);
 }
 
@@ -1052,6 +1129,10 @@ void actionBitAnd(SWFAppContext* app_context)
 	popVar(app_context, &b);
 	
 	s32 and = b.u32 & a.u32;
+	
+	releaseObjectVar(app_context, &a);
+	releaseObjectVar(app_context, &b);
+	
 	PUSH_INT(and);
 }
 
@@ -1066,6 +1147,10 @@ void actionBitOr(SWFAppContext* app_context)
 	popVar(app_context, &b);
 	
 	s32 or = b.u32 | a.u32;
+	
+	releaseObjectVar(app_context, &a);
+	releaseObjectVar(app_context, &b);
+	
 	PUSH_INT(or);
 }
 
@@ -1080,6 +1165,10 @@ void actionBitLShift(SWFAppContext* app_context)
 	popVar(app_context, &b);
 	
 	s32 lsh = b.u32 << (a.u32 & 0b11111);
+	
+	releaseObjectVar(app_context, &a);
+	releaseObjectVar(app_context, &b);
+	
 	PUSH_INT(lsh);
 }
 
@@ -1094,6 +1183,10 @@ void actionBitRShift(SWFAppContext* app_context)
 	popVar(app_context, &b);
 	
 	s32 rsh = b.s32 >> (a.u32 & 0b11111);
+	
+	releaseObjectVar(app_context, &a);
+	releaseObjectVar(app_context, &b);
+	
 	PUSH_INT(rsh);
 }
 
@@ -1108,6 +1201,10 @@ void actionBitURShift(SWFAppContext* app_context)
 	popVar(app_context, &b);
 	
 	u32 rsh = b.u32 >> (a.u32 & 0b11111);
+	
+	releaseObjectVar(app_context, &a);
+	releaseObjectVar(app_context, &b);
+	
 	PUSH_INT(rsh);
 }
 
@@ -1122,6 +1219,10 @@ void actionBitXor(SWFAppContext* app_context)
 	popVar(app_context, &b);
 	
 	u32 xor = b.u32 ^ a.u32;
+	
+	releaseObjectVar(app_context, &a);
+	releaseObjectVar(app_context, &b);
+	
 	PUSH_INT(xor);
 }
 
@@ -1140,6 +1241,10 @@ void actionEquals(SWFAppContext* app_context)
 	popVar(app_context, &b);
 	
 	bool equals = b.f64 == a.f64;
+	
+	releaseObjectVar(app_context, &a);
+	releaseObjectVar(app_context, &b);
+	
 	PUSH_BOOL(equals);
 }
 
@@ -1153,14 +1258,23 @@ void actionEquals2(SWFAppContext* app_context)
 	
 	if (b.type != a.type)
 	{
-		UNIMPLEMENTED("Equals2 of differing types");
+		if (IS_NUM_T(a.type) && IS_NUM_T(b.type))
+		{
+			convertNumericToNumber(app_context, &a);
+			convertNumericToNumber(app_context, &b);
+		}
+		
+		else
+		{
+			UNIMPLEMENTED("Equals2 of differing types");
+		}
 	}
 	
 	if (b.type == ACTION_STACK_VALUE_UNDEFINED ||
 		b.type == ACTION_STACK_VALUE_NULL)
 	{
 		PUSH_BOOL(true);
-		return;
+		goto release;
 	}
 	
 	if (!IS_NUM_T(b.type))
@@ -1170,22 +1284,22 @@ void actionEquals2(SWFAppContext* app_context)
 			if (b.str_size != a.str_size)
 			{
 				PUSH_BOOL(false);
-				return;
+				goto release;
 			}
 			
 			PUSH_BOOL(strncmp(b.str, a.str, b.str_size) == 0);
-			return;
+			goto release;
 		}
 		
 		if (b.type == ACTION_STACK_VALUE_BOOLEAN)
 		{
 			PUSH_BOOL(b.b && a.b || !b.b && !a.b);
-			return;
+			goto release;
 		}
 		
 		// why does this need double parens, sadge
 		PUSH_BOOL((b.object == a.object));
-		return;
+		goto release;
 	}
 	
 	if (IS_OBJ_T(b.type))
@@ -1204,7 +1318,7 @@ void actionEquals2(SWFAppContext* app_context)
 	if (b.f64 == NAN || a.f64 == NAN)
 	{
 		PUSH_BOOL(false);
-		return;
+		goto release;
 	}
 	
 	if (b.f64 == a.f64 ||
@@ -1212,8 +1326,13 @@ void actionEquals2(SWFAppContext* app_context)
 		b.f64 == -0.0 && a.f64 == +0.0)
 	{
 		PUSH_BOOL(true);
-		return;
+		goto release;
 	}
+	
+	release:
+	
+	releaseObjectVar(app_context, &a);
+	releaseObjectVar(app_context, &b);
 	
 	PUSH_BOOL(false);
 }
@@ -1229,6 +1348,10 @@ void actionLess(SWFAppContext* app_context)
 	popVar(app_context, &b);
 	
 	bool less = b.f64 < a.f64;
+	
+	releaseObjectVar(app_context, &a);
+	releaseObjectVar(app_context, &b);
+	
 	PUSH_BOOL(less);
 }
 
@@ -1261,6 +1384,9 @@ void actionLess2(SWFAppContext* app_context)
 		pushVar(app_context, &b);
 		
 		pushVar(app_context, &a);
+		
+		releaseObjectVar(app_context, &a);
+		releaseObjectVar(app_context, &b);
 	}
 	
 	if (IS_STR_T(STACK_TOP_TYPE) && IS_STR_T(STACK_SECOND_TOP_TYPE))
@@ -1279,7 +1405,7 @@ void actionLess2(SWFAppContext* app_context)
 	if (b.f64 == NAN || a.f64 == NAN)
 	{
 		PUSH_UNDEFINED();
-		return;
+		goto release;
 	}
 	
 	if (b.f64 == a.f64 ||
@@ -1287,32 +1413,37 @@ void actionLess2(SWFAppContext* app_context)
 		b.f64 == -0.0 && a.f64 == +0.0)
 	{
 		PUSH_BOOL(false);
-		return;
+		goto release;
 	}
 	
 	if (b.f64 == INFINITY)
 	{
 		PUSH_BOOL(false);
-		return;
+		goto release;
 	}
 	
 	if (a.f64 == INFINITY)
 	{
 		PUSH_BOOL(true);
-		return;
+		goto release;
 	}
 	
 	if (a.f64 == -INFINITY)
 	{
 		PUSH_BOOL(false);
-		return;
+		goto release;
 	}
 	
 	if (b.f64 == -INFINITY)
 	{
 		PUSH_BOOL(true);
-		return;
+		goto release;
 	}
+	
+	release:
+	
+	releaseObjectVar(app_context, &a);
+	releaseObjectVar(app_context, &b);
 	
 	PUSH_BOOL(b.f64 < a.f64);
 }
@@ -1328,6 +1459,10 @@ void actionAnd(SWFAppContext* app_context)
 	popVar(app_context, &b);
 	
 	bool and = b.b && a.b;
+	
+	releaseObjectVar(app_context, &a);
+	releaseObjectVar(app_context, &b);
+	
 	PUSH_BOOL(and);
 }
 
@@ -1342,6 +1477,10 @@ void actionOr(SWFAppContext* app_context)
 	popVar(app_context, &b);
 	
 	bool or = b.b || a.b;
+	
+	releaseObjectVar(app_context, &a);
+	releaseObjectVar(app_context, &b);
+	
 	PUSH_BOOL(or);
 }
 
@@ -1352,6 +1491,9 @@ void actionNot(SWFAppContext* app_context)
 	popVar(app_context, &v);
 	
 	bool b = !v.b;
+	
+	releaseObjectVar(app_context, &v);
+	
 	PUSH_BOOL(b);
 }
 
@@ -1548,6 +1690,9 @@ void actionStringEquals(SWFAppContext* app_context, char* a_str, char* b_str)
 		cmp_result = strcmp((char*) a.value, (char*) b.value);
 	}
 	
+	releaseObjectVar(app_context, &a);
+	releaseObjectVar(app_context, &b);
+	
 	float result = cmp_result == 0 ? 1.0f : 0.0f;
 	PUSH_F32(result);
 }
@@ -1563,6 +1708,8 @@ void actionStringLength(SWFAppContext* app_context, char* v_str)
 
 void actionStringAdd(SWFAppContext* app_context, char* a_str, char* b_str)
 {
+	// TODO: check if this handles the stack properly
+	
 	ActionVar a;
 	convertString(app_context);
 	peekVar(app_context, &a);
@@ -1649,6 +1796,8 @@ void actionGetVariable(SWFAppContext* app_context)
 {
 	copyReg(app_context);
 	
+	// TODO: see if this can be an object
+	
 	// Read variable name info from stack
 	u32 string_id = STACK_TOP_ID;
 	char* var_name = (char*) STACK_TOP_VALUE;
@@ -1701,17 +1850,6 @@ void actionGetVariable(SWFAppContext* app_context)
 	{
 		// Push variable value to stack
 		PUSH_VAR(&p->value);
-		
-		if (IS_OBJ(p->value))
-		{
-			ASObject* po = (ASObject*) p->value.value;
-			
-			OBJ_LOCK_WRITE(po,
-			{
-				// the stack now has a reference to this object
-				retainObject(po);
-			});
-		}
 	}
 	
 	else
@@ -1726,20 +1864,7 @@ void actionSetVariable(SWFAppContext* app_context)
 	// We need value at top, name at second
 	
 	ActionVar value;
-	peekVar(app_context, &value);
-	
-	if (IS_OBJ(value))
-	{
-		ASObject* o = (ASObject*) value.value;
-		
-		OBJ_LOCK_WRITE(o,
-		{
-			// we now have a reference to this object
-			retainObject((ASObject*) value.value);
-		});
-	}
-	
-	POP();
+	popVar(app_context, &value);
 	
 	copyReg(app_context);
 	
@@ -1805,6 +1930,14 @@ void actionSetVariable(SWFAppContext* app_context)
 			old_obj = (ASObject*) p->value.value;
 		}
 		
+		if (IS_OBJ(value))
+		{
+			OBJ_LOCK_WRITE(value.object,
+			{
+				retainObject(value.object);
+			});
+		}
+		
 		OBJ_LOCK_WRITE(scope_obj,
 		{
 			p->value = value;
@@ -1826,16 +1959,7 @@ void actionSetVariable(SWFAppContext* app_context)
 	
 	release_value:
 	
-	if (IS_OBJ(value))
-	{
-		ASObject* o = (ASObject*) value.value;
-		
-		OBJ_LOCK_WRITE(o,
-		{
-			// we no longer have a reference to this object
-			releaseObject(app_context, o);
-		});
-	}
+	releaseObjectVar(app_context, &value);
 }
 
 void actionToNumber(SWFAppContext* app_context)
@@ -1860,10 +1984,12 @@ void actionTrace(SWFAppContext* app_context)
 	if (IS_OBJ_T(v.type))
 	{
 		getAndCallMethod(app_context, v.object, STR_ID_TO_STRING, 0);
+		releaseObjectVar(app_context, &v);
 		popVar(app_context, &v);
 		
 		printf("%s\n", v.str);
 		
+		releaseObjectVar(app_context, &v);
 		return;
 	}
 	
@@ -1933,6 +2059,8 @@ void actionTrace(SWFAppContext* app_context)
 	}
 	
 	fflush(stdout);
+	
+	releaseObjectVar(app_context, &v);
 }
 
 void actionGetTime(SWFAppContext* app_context)
@@ -2176,7 +2304,11 @@ bool evaluateCondition(SWFAppContext* app_context)
 	convertBool(app_context);
 	popVar(app_context, &v);
 	
-	return v.b;
+	bool b = v.b;
+	
+	releaseObjectVar(app_context, &v);
+	
+	return b;
 }
 
 void actionDefineLocal(SWFAppContext* app_context)
@@ -2190,17 +2322,7 @@ void actionDefineLocal(SWFAppContext* app_context)
 	// We have a local scope object - define variable as a property
 	ASObject* local_scope = scope_chain[scope_top_obj];
 	ActionVar value_var;
-	peekVar(app_context, &value_var);
-	
-	if (IS_OBJ_T(value_var.type))
-	{
-		OBJ_LOCK_WRITE(value_var.object,
-		{
-			retainObject(value_var.object);
-		});
-	}
-	
-	POP();
+	popVar(app_context, &value_var);
 	
 	copyReg(app_context);
 	
@@ -2216,13 +2338,7 @@ void actionDefineLocal(SWFAppContext* app_context)
 	// This will create the property if it doesn't exist, or update if it does
 	setProperty(app_context, local_scope, string_id, var_name, var_name_len, &value_var);
 	
-	if (IS_OBJ_T(value_var.type))
-	{
-		OBJ_LOCK_WRITE(value_var.object,
-		{
-			releaseObject(app_context, value_var.object);
-		});
-	}
+	releaseObjectVar(app_context, &value_var);
 }
 
 void actionDefineLocal2(SWFAppContext* app_context)
@@ -2504,6 +2620,8 @@ void actionStoreRegister(SWFAppContext* app_context, u8 reg_i)
 	
 	// Store value in register
 	*reg = value;
+	
+	releaseObjectVar(app_context, &value);
 }
 
 //~ void actionInitArray(SWFAppContext* app_context)
@@ -2552,24 +2670,11 @@ void actionSetMember(SWFAppContext* app_context)
 	
 	// Fetch the value to assign
 	ActionVar value_var;
-	peekVar(app_context, &value_var);
-	
-	if (IS_OBJ(value_var))
-	{
-		ASObject* o = (ASObject*) value_var.value;
-		
-		OBJ_LOCK_WRITE(o,
-		{
-			// we now have a reference to this object
-			retainObject(o);
-		});
-	}
-	
-	POP();
+	popVar(app_context, &value_var);
 	
 	// Pop the property name
 	ActionVar prop_name_var;
-	peekVar(app_context, &prop_name_var);
+	popVar(app_context, &prop_name_var);
 	
 	ASObject* prop_obj;
 	
@@ -2577,18 +2682,12 @@ void actionSetMember(SWFAppContext* app_context)
 	{
 		prop_obj = prop_name_var.object;
 		
-		OBJ_LOCK_WRITE(prop_obj,
-		{
-			// we now have a reference to this object
-			retainObject(prop_obj);
-		});
-		
 		toPrimitive(app_context, prop_obj);
+		
+		releaseObjectVar(app_context, &prop_name_var);
 		
 		popVar(app_context, &prop_name_var);
 	}
-	
-	POP();
 	
 	if (UNLIKELY(prop_name_var.type != ACTION_STACK_VALUE_STRING))
 	{
@@ -2605,18 +2704,12 @@ void actionSetMember(SWFAppContext* app_context)
 	
 	// Fetch the object
 	ActionVar obj_var;
-	peekVar(app_context, &obj_var);
+	popVar(app_context, &obj_var);
 	
 	// Check if the object is actually an object type
 	if (IS_OBJ(obj_var))
 	{
 		ASObject* obj = (ASObject*) obj_var.value;
-		
-		OBJ_LOCK_WRITE(obj,
-		{
-			// we now have a reference to this object
-			retainObject(obj);
-		});
 		
 		ASObject* constructor = getConstructor(obj);
 		
@@ -2632,41 +2725,23 @@ void actionSetMember(SWFAppContext* app_context)
 			
 			default:
 			{
+				if (UNLIKELY(IS_NUM_T(prop_name_var.type)))
+				{
+					fprintf(stderr, "SetMember found Number index used on non-Array\n");
+					EXC("Please patch this to use an Array LOL");
+				}
+				
 				// Set the property on the object
 				setProperty(app_context, obj, prop_name_var.string_id, NULL, 0, &value_var);
 				
 				break;
 			}
 		}
-		
-		OBJ_LOCK_WRITE(obj,
-		{
-			// we no longer have a reference to this object
-			releaseObject(app_context, obj);
-		});
 	}
 	
-	POP();
-	
-	if (IS_OBJ(value_var))
-	{
-		ASObject* o = (ASObject*) value_var.value;
-		
-		OBJ_LOCK_WRITE(o,
-		{
-			// we no longer have a reference to this object
-			releaseObject(app_context, o);
-		});
-	}
-	
-	if (IS_OBJ(prop_name_var))
-	{
-		OBJ_LOCK_WRITE(prop_name_var.object,
-		{
-			// we now have a reference to this object
-			releaseObject(app_context, prop_name_var.object);
-		});
-	}
+	releaseObjectVar(app_context, &obj_var);
+	releaseObjectVar(app_context, &value_var);
+	releaseObjectVar(app_context, &prop_name_var);
 	
 	// If it's not an object type, we silently ignore the operation
 	// (Flash behavior for setting properties on non-objects)
@@ -2811,7 +2886,7 @@ void actionDelete(SWFAppContext* app_context)
 void actionGetMember(SWFAppContext* app_context)
 {
 	ActionVar prop_name_var;
-	peekVar(app_context, &prop_name_var);
+	popVar(app_context, &prop_name_var);
 	
 	ASObject* prop_obj;
 	
@@ -2819,18 +2894,12 @@ void actionGetMember(SWFAppContext* app_context)
 	{
 		prop_obj = prop_name_var.object;
 		
-		OBJ_LOCK_WRITE(prop_obj,
-		{
-			// we now have a reference to this object
-			retainObject(prop_obj);
-		});
-		
 		toPrimitive(app_context, prop_obj);
+		
+		releaseObjectVar(app_context, &prop_name_var);
 		
 		popVar(app_context, &prop_name_var);
 	}
-	
-	POP();
 	
 	if (UNLIKELY(prop_name_var.type != ACTION_STACK_VALUE_STRING))
 	{
@@ -2847,21 +2916,9 @@ void actionGetMember(SWFAppContext* app_context)
 	
 	// 2. Pop object (second on stack)
 	ActionVar obj_var;
-	peekVar(app_context, &obj_var);
+	popVar(app_context, &obj_var);
 	
 	ASObject* obj = (ASObject*) obj_var.value;
-	
-	// Check if the object is actually an object type
-	if (IS_OBJ(obj_var))
-	{
-		OBJ_LOCK_WRITE(obj,
-		{
-			// we now have a reference to this object
-			retainObject(obj);
-		});
-	}
-	
-	POP();
 	
 	bool special_object = false;
 	
@@ -2939,23 +2996,8 @@ void actionGetMember(SWFAppContext* app_context)
 		}
 	}
 	
-	if (IS_OBJ(obj_var))
-	{
-		OBJ_LOCK_WRITE(obj,
-		{
-			// we no longer have a reference to this object
-			releaseObject(app_context, obj);
-		});
-	}
-	
-	if (IS_OBJ(prop_name_var))
-	{
-		OBJ_LOCK_WRITE(prop_name_var.object,
-		{
-			// we now have a reference to this object
-			releaseObject(app_context, prop_name_var.object);
-		});
-	}
+	releaseObjectVar(app_context, &obj_var);
+	releaseObjectVar(app_context, &prop_name_var);
 }
 
 void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v, u32 num_args)
@@ -2997,13 +3039,15 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v,
 				for (u32 i = 0; i < num_args; ++i)
 				{
 					ActionVar v;
-					peekVar(app_context, &v);
+					popVar(app_context, &v);
 					setPropertyInThisScope(app_context, args[i], NULL, 0, &v);
-					POP();
+					releaseObjectVar(app_context, &v);
 				}
 			}
 			
 			Function_get_func(app_context, func_obj)(app_context);
+			
+			copyReg(app_context);
 			
 			FREE(regs);
 			break;
@@ -3030,15 +3074,14 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v,
 			{
 				for (u32 i = 0; i < num_args; ++i)
 				{
-					
 					Function2Param* arg = &args2[i];
 					
 					if (arg->reg == 0)
 					{
 						ActionVar v;
-						peekVar(app_context, &v);
+						popVar(app_context, &v);
 						setPropertyInThisScope(app_context, arg->string_id, NULL, 0, &v);
-						POP();
+						releaseObjectVar(app_context, &v);
 					}
 					
 					else
@@ -3096,6 +3139,8 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v,
 			
 			Function_get_func(app_context, func_obj)(app_context);
 			
+			copyReg(app_context);
+			
 			FREE(regs);
 			break;
 		}
@@ -3109,7 +3154,10 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v,
 		}
 	}
 	
-	releaseObject(app_context, scope_chain[scope_top_obj]);
+	OBJ_LOCK_WRITE(scope_chain[scope_top_obj],
+	{
+		releaseObject(app_context, scope_chain[scope_top_obj]);
+	});
 	
 	scope_top_obj -= 1;
 }
@@ -3124,40 +3172,24 @@ void actionNewObject(SWFAppContext* app_context)
 {
 	// 1. Pop constructor name (string)
 	ActionVar ctor_name_var;
-	peekVar(app_context, &ctor_name_var);
+	popVar(app_context, &ctor_name_var);
 	
 	ASObject* ctor_name_obj = ctor_name_var.object;
 	
 	if (IS_OBJ_T(ctor_name_var.type))
 	{
 		UNIMPLEMENTED("NewObject constructor name object\n");
-		
-		//~ OBJ_LOCK_WRITE(ctor_name_obj,
-		//~ {
-			//~ retainObject(ctor_name_obj);
-		//~ });
 	}
-	
-	POP();
 	
 	// 2. Pop number of arguments
 	ActionVar num_args_var;
-	peekVar(app_context, &num_args_var);
+	popVar(app_context, &num_args_var);
 	u32 num_args = (u32) num_args_var.value;
-	
-	ASObject* num_args_obj = num_args_var.object;
 	
 	if (IS_OBJ_T(num_args_var.type))
 	{
 		UNIMPLEMENTED("NewObject num args object\n");
-		
-		//~ OBJ_LOCK_WRITE(num_args_obj,
-		//~ {
-			//~ retainObject(num_args_obj);
-		//~ });
 	}
-	
-	POP();
 	
 	// Try to find existing constructor function
 	ActionVar func_v;
@@ -3199,21 +3231,8 @@ void actionNewObject(SWFAppContext* app_context)
 		EXC_ARG("Constructor function %s not found.\n", (char*) ctor_name_var.value);
 	}
 	
-	//~ if (IS_OBJ_T(ctor_name_var.type))
-	//~ {
-		//~ OBJ_LOCK_WRITE(ctor_name_obj,
-		//~ {
-			//~ releaseObject(app_context, ctor_name_obj);
-		//~ });
-	//~ }
-	
-	//~ if (IS_OBJ_T(num_args_var.type))
-	//~ {
-		//~ OBJ_LOCK_WRITE(num_args_obj,
-		//~ {
-			//~ releaseObject(app_context, num_args_obj);
-		//~ });
-	//~ }
+	releaseObjectVar(app_context, &num_args_var);
+	releaseObjectVar(app_context, &ctor_name_var);
 }
 
 /**
@@ -3234,56 +3253,30 @@ void actionNewMethod(SWFAppContext* app_context)
 {
 	// Pop constructor method name (string)
 	ActionVar ctor_name_var;
-	peekVar(app_context, &ctor_name_var);
+	popVar(app_context, &ctor_name_var);
 	
 	ASObject* ctor_name_obj = ctor_name_var.object;
 	
 	if (IS_OBJ_T(ctor_name_var.type))
 	{
 		UNIMPLEMENTED("NewMethod constructor name object");
-		
-		//~ OBJ_LOCK_WRITE(ctor_name_obj,
-		//~ {
-			//~ retainObject(ctor_name_obj);
-		//~ });
 	}
-	
-	POP();
 	
 	// Pop object which holds the method
 	ActionVar object_var;
-	peekVar(app_context, &object_var);
+	popVar(app_context, &object_var);
 	
 	ASObject* obj = object_var.object;
 	
-	if (IS_OBJ_T(ctor_name_var.type))
-	{
-		OBJ_LOCK_WRITE(obj,
-		{
-			retainObject(obj);
-		});
-	}
-	
-	POP();
-	
 	// Pop number of arguments
 	ActionVar num_args_var;
-	peekVar(app_context, &num_args_var);
+	popVar(app_context, &num_args_var);
 	u32 num_args = (u32) num_args_var.value;
-	
-	ASObject* num_args_obj = num_args_var.object;
 	
 	if (IS_OBJ_T(ctor_name_var.type))
 	{
 		UNIMPLEMENTED("NewMethod num args object");
-		
-		//~ OBJ_LOCK_WRITE(num_args_obj,
-		//~ {
-			//~ retainObject(num_args_obj);
-		//~ });
 	}
-	
-	POP();
 	
 	// Try to find constructor method
 	ActionVar func_v;
@@ -3326,13 +3319,9 @@ void actionNewMethod(SWFAppContext* app_context)
 		EXC_ARG("Constructor method %s not found.\n", (char*) ctor_name_var.value);
 	}
 	
-	if (IS_OBJ_T(object_var.type))
-	{
-		OBJ_LOCK_WRITE(obj,
-		{
-			releaseObject(app_context, obj);
-		});
-	}
+	releaseObjectVar(app_context, &num_args_var);
+	releaseObjectVar(app_context, &object_var);
+	releaseObjectVar(app_context, &ctor_name_var);
 }
 
 void actionDefineFunction(SWFAppContext* app_context, u32 string_id, action_func func, u32* args, bool anonymous)
@@ -3440,6 +3429,8 @@ void actionCallFunction(SWFAppContext* app_context)
 	}
 	
 	callFunction(app_context, NULL, &func_v, num_args);
+	
+	releaseObjectVar(app_context, &num_args_var);
 }
 
 void actionCallMethod(SWFAppContext* app_context)
@@ -3449,11 +3440,6 @@ void actionCallMethod(SWFAppContext* app_context)
 	if (IS_OBJ_T(STACK_TOP_TYPE))
 	{
 		UNIMPLEMENTED("CallMethod method name object");
-		
-		//~ OBJ_LOCK_WRITE(obj,
-		//~ {
-			//~ retainObject(obj);
-		//~ });
 	}
 	
 	// Pop method name (string) from stack
@@ -3463,36 +3449,19 @@ void actionCallMethod(SWFAppContext* app_context)
 	
 	// Pop object from stack
 	ActionVar this_v;
-	peekVar(app_context, &this_v);
+	popVar(app_context, &this_v);
 	
 	ASObject* this = this_v.object;
 	
-	if (IS_OBJ_T(this_v.type))
-	{
-		OBJ_LOCK_WRITE(this,
-		{
-			retainObject(this);
-		});
-	}
-	
-	POP();
-	
 	// Pop number of arguments
 	ActionVar num_args_var;
-	peekVar(app_context, &num_args_var);
+	popVar(app_context, &num_args_var);
 	u32 num_args = (u32) num_args_var.value;
 	
 	if (IS_OBJ_T(num_args_var.type))
 	{
 		UNIMPLEMENTED("CallMethod num args object");
-		
-		//~ OBJ_LOCK_WRITE(obj,
-		//~ {
-			//~ retainObject(obj);
-		//~ });
 	}
-	
-	POP();
 	
 	switch (this_v.type)
 	{
@@ -3524,7 +3493,7 @@ void actionCallMethod(SWFAppContext* app_context)
 				}
 			}
 			
-			return;
+			goto release;
 		}
 		
 		case ACTION_STACK_VALUE_STRING:
@@ -3552,7 +3521,7 @@ void actionCallMethod(SWFAppContext* app_context)
 				}
 			}
 			
-			return;
+			goto release;
 		}
 	}
 	
@@ -3579,11 +3548,8 @@ void actionCallMethod(SWFAppContext* app_context)
 		EXC_ARG("Function not found: %s\n", func_name);
 	}
 	
-	if (IS_OBJ_T(this_v.type))
-	{
-		OBJ_LOCK_WRITE(this,
-		{
-			releaseObject(app_context, this);
-		});
-	}
+	release:
+	
+	releaseObjectVar(app_context, &num_args_var);
+	releaseObjectVar(app_context, &this_v);
 }

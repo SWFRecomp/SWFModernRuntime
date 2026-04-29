@@ -10,10 +10,14 @@
 
 #include <objects.h>
 
+u32 next_id = 0;
+
 ASObject* allocObjectCommon(SWFAppContext* app_context)
 {
 	ASObject* obj = (ASObject*) HALLOC(sizeof(ASObject));
 	
+	obj->id = next_id;
+	next_id += 1;
 	rbtree_init(&obj->t, sizeof(ASProperty));
 	obj->refcount = 0;
 	obj->extra_data = NULL;

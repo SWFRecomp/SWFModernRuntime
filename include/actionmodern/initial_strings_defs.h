@@ -23,6 +23,7 @@ RuntimeFunc runtime_meths[] =
 {
 	{STR_ID_OBJECT, STR_ID_TO_STRING, Object_toString, false},
 	{STR_ID_OBJECT, STR_ID_VALUE_OF, Object_valueOf, false},
+	{STR_ID_OBJECT, STR_ID_RECOMP_ID, Object_recompId, false},
 	{STR_ID_NUMBER, STR_ID_TO_STRING, Number_toString, false},
 	{STR_ID_NUMBER, STR_ID_VALUE_OF, Number_valueOf, false},
 	{STR_ID_STRING, STR_ID_TO_STRING, String_toString, false},

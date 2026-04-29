@@ -34,3 +34,10 @@ void Object_valueOf(SWFAppContext* app_context, ASObject* this, u32 num_args)
 	
 	PUSH_OBJ(this);
 }
+
+void Object_recompId(SWFAppContext* app_context, ASObject* this, u32 num_args)
+{
+	DISCARD_ARGS(num_args);
+	
+	PUSH_INT(this->id);
+}

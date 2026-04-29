@@ -17,7 +17,7 @@
 
 #define DECLARE_RUNTIME_THREAD_FUNC(f) unsigned int f(SWFAppContext* app_context)
 
-typedef HANDLE recomp_thread_t;
+typedef uintptr_t recomp_thread_t;
 typedef unsigned int (*runtime_thread_func)(SWFAppContext* arg);
 
 #elif defined(__GNUC__)

@@ -85,7 +85,7 @@ void vmem_release(char* addr, size_t size)
 
 void thread_start(SWFAppContext* app_context, runtime_thread_func f, recomp_thread_t* handle)
 {
-	*((uintptr_t*) handle) = _beginthreadex(NULL, 0, f, app_context, 0, NULL);
+	*handle = _beginthreadex(NULL, 0, f, app_context, 0, NULL);
 }
 
 void thread_exit()
@@ -95,8 +95,8 @@ void thread_exit()
 
 void thread_join(recomp_thread_t* handle)
 {
-	WaitForSingleObject((HANDLE) handle, INFINITE);
-	CloseHandle((HANDLE) handle);
+	WaitForSingleObject((HANDLE) *handle, INFINITE);
+	CloseHandle((HANDLE) *handle);
 }
 
 void rwlock_init(recomp_rwlock_t* rwlock)

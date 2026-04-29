@@ -115,6 +115,14 @@ void Array_pop(SWFAppContext* app_context, ASObject* this, u32 num_args)
 	ActionVar* data = EXTDATA(data);
 	size_t length = --EXTDATA(length);
 	
+	if (IS_OBJ_T(data[length].type))
+	{
+		OBJ_LOCK_WRITE(data[length].object,
+		{
+			releaseObject(app_context, data[length].object);
+		});
+	}
+	
 	PUSH_VAR(&data[length]);
 }
 
@@ -152,10 +160,27 @@ ActionVar* Array_getElement(SWFAppContext* app_context, ASObject* this, s32 i)
 
 void Array_setElement(SWFAppContext* app_context, ASObject* this, s32 i, ActionVar* v)
 {
+	ENSURE_SIZE_FAR(EXTDATA(data), i + 1, EXTDATA(capacity), sizeof(ActionVar));
+	
 	if (i >= EXTDATA(length))
 	{
-		ENSURE_SIZE_FAR(EXTDATA(data), i + 1, EXTDATA(capacity), sizeof(ActionVar));
 		EXTDATA(length) = i + 1;
+	}
+	
+	if (IS_OBJ_T(v->type))
+	{
+		OBJ_LOCK_WRITE(v->object,
+		{
+			retainObject(v->object);
+		});
+	}
+	
+	if (IS_OBJ_T(EXTDATA(data)[i].type))
+	{
+		OBJ_LOCK_WRITE(EXTDATA(data)[i].object,
+		{
+			releaseObject(app_context, EXTDATA(data)[i].object);
+		});
 	}
 	
 	EXTDATA(data)[i] = *v;

@@ -47,6 +47,7 @@
 
 typedef struct
 {
+	u32 id;
 	rbtree t;
 	u32 refcount;
 	void* extra_data;
