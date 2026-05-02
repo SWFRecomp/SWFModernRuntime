@@ -1,8 +1,9 @@
 #pragma once
 
 #include <stdint.h>
+#include <stddef.h>
 
-#include <swf.h>
+#include <common.h>
 
 #define SVEC_INIT(v) svec_init(app_context, v)
 #define SVEC_PUSH(v, x) svec_push(app_context, v, (uintptr_t) x)
@@ -23,6 +24,8 @@ typedef struct
 	size_t length_bytes;
 	size_t arena_capacity;
 } SwapVector;
+
+typedef struct SWFAppContext SWFAppContext;
 
 void svec_init(SWFAppContext* app_context, SwapVector* v);
 void svec_push(SWFAppContext* app_context, SwapVector* v, uintptr_t value);

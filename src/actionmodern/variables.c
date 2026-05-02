@@ -14,18 +14,18 @@ size_t var_array_size = 0;
 
 void initMap()
 {
-	var_map = hashmap_create();
+	//~ var_map = hashmap_create();
 }
 
 void initVarArray(SWFAppContext* app_context, size_t max_string_id)
 {
-	var_array_size = max_string_id + 1;
-	var_array = (ActionVar**) HALLOC(var_array_size*sizeof(ActionVar*));
+	//~ var_array_size = max_string_id + 1;
+	//~ var_array = (ActionVar**) HALLOC(var_array_size*sizeof(ActionVar*));
 	
-	for (size_t i = 1; i < var_array_size; ++i)
-	{
-		var_array[i] = (ActionVar*) HALLOC(sizeof(ActionVar));
-	}
+	//~ for (size_t i = 1; i < var_array_size; ++i)
+	//~ {
+		//~ var_array[i] = (ActionVar*) HALLOC(sizeof(ActionVar));
+	//~ }
 }
 
 static int free_variable_callback(const void* key, size_t ksize, uintptr_t value, void* app_context_void)
@@ -122,34 +122,34 @@ void setVariableWithValue(SWFAppContext* app_context, ActionVar* var)
 
 void freeMap(SWFAppContext* app_context)
 {
-	// Free hashmap-based variables
-	if (var_map)
-	{
-		hashmap_iterate(var_map, free_variable_callback, app_context);
-		hashmap_free(var_map);
-		var_map = NULL;
-	}
+	//~ // Free hashmap-based variables
+	//~ if (var_map)
+	//~ {
+		//~ hashmap_iterate(var_map, free_variable_callback, app_context);
+		//~ hashmap_free(var_map);
+		//~ var_map = NULL;
+	//~ }
 	
-	// Free array-based variables
-	if (var_array)
-	{
-		for (size_t i = 1; i < var_array_size; i++)
-		{
-			if (var_array[i])
-			{
-				// Free heap-allocated strings
-				if (var_array[i]->type == ACTION_STACK_VALUE_STRING &&
-				    var_array[i]->owns_memory)
-				{
-					FREE(var_array[i]->str);
-				}
+	//~ // Free array-based variables
+	//~ if (var_array)
+	//~ {
+		//~ for (size_t i = 1; i < var_array_size; i++)
+		//~ {
+			//~ if (var_array[i])
+			//~ {
+				//~ // Free heap-allocated strings
+				//~ if (var_array[i]->type == ACTION_STACK_VALUE_STRING &&
+				    //~ var_array[i]->owns_memory)
+				//~ {
+					//~ FREE(var_array[i]->str);
+				//~ }
 				
-				FREE(var_array[i]);
-			}
-		}
+				//~ FREE(var_array[i]);
+			//~ }
+		//~ }
 		
-		FREE(var_array);
-		var_array = NULL;
-		var_array_size = 0;
-	}
+		//~ FREE(var_array);
+		//~ var_array = NULL;
+		//~ var_array_size = 0;
+	//~ }
 }

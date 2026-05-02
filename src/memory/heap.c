@@ -22,6 +22,17 @@ void* heap_alloc(SWFAppContext* app_context, size_t size)
 		ret = o1heapAllocate(app_context->heap_instance, size);
 	});
 	
+	if (UNLIKELY(ret == NULL))
+	{
+		//~ for (size_t i = 0; i < app_context->active_objects.length; ++i)
+		//~ {
+			//~ u32* o = (u32*) app_context->active_objects.data[i];
+			//~ fprintf(stderr, "unfreed object %d\n", *o);
+		//~ }
+		
+		UNREACHABLE("Out of memory, quitting");
+	}
+	
 	return ret;
 }
 

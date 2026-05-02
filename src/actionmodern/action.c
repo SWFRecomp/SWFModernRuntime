@@ -32,8 +32,13 @@ ASObject* _global;
 
 void initActions(SWFAppContext* app_context)
 {
+	SVEC_INIT(&app_context->active_objects);
+	
 	app_context->object_prototype = allocObjectCommon(app_context);
 	app_context->object_constructor = allocObjectCommon(app_context);
+	
+	retainObject(app_context->object_prototype);
+	retainObject(app_context->object_constructor);
 	
 	start_time = get_elapsed_ms();
 	
@@ -183,12 +188,36 @@ void initActions(SWFAppContext* app_context)
 		scope_top_obj -= 1;
 	}
 	
+	app_context->stop_free = false;
+	app_context->global_free_override = false;
+	
 	thread_start(app_context, freeThread, &free_thread_handle);
 }
 
 void freeActions(SWFAppContext* app_context)
 {
+	LOCK_WRITE(object_queue_lock,
+	{
+		app_context->stop_free = true;
+	});
+	
 	thread_join(&free_thread_handle);
+	
+	//~ while (app_context->active_objects.length > 0)
+	//~ {
+		//~ ASObject* o = (ASObject*) app_context->active_objects.data[0];
+		//~ fprintf(stderr, "unfreed object %d (%p) with rc %d\n", o->id, o, o->refcount);
+		
+		//~ destroyObject(app_context, o);
+		//~ FREE(o);
+	//~ }
+	
+	for (u32 i = 0; i < 2; ++i)
+	{
+		FREE(scope_registers[i]);
+	}
+	
+	SVEC_RELEASE(&app_context->active_objects);
 	
 	rwlock_destroy(&object_queue_lock);
 }
@@ -780,6 +809,12 @@ ActionStackValueType convertBool(SWFAppContext* app_context)
 	// TODO: make the macros for checking objects better
 	if ((STACK_TOP_TYPE & 0x10) != 0x00)
 	{
+		ASObject* o = (ASObject*) STACK_TOP_VALUE;
+		OBJ_LOCK_WRITE(o,
+		{
+			releaseObject(app_context, o);
+		});
+		
 		VAL(bool, &STACK_TOP_VALUE) = true;
 		STACK_TOP_TYPE = ACTION_STACK_VALUE_BOOLEAN;
 		return ACTION_STACK_VALUE_BOOLEAN;
@@ -3049,6 +3084,17 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v,
 			
 			copyReg(app_context);
 			
+			for (u8 i = 0; i < 4; ++i)
+			{
+				if (IS_OBJ_T(regs[i].type))
+				{
+					OBJ_LOCK_WRITE(regs[i].object,
+					{
+						releaseObject(app_context, regs[i].object);
+					});
+				}
+			}
+			
 			FREE(regs);
 			break;
 		}
@@ -3140,6 +3186,17 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v,
 			Function_get_func(app_context, func_obj)(app_context);
 			
 			copyReg(app_context);
+			
+			for (u8 i = 0; i < reg_count + 1; ++i)
+			{
+				if (IS_OBJ_T(regs[i].type))
+				{
+					OBJ_LOCK_WRITE(regs[i].object,
+					{
+						releaseObject(app_context, regs[i].object);
+					});
+				}
+			}
 			
 			FREE(regs);
 			break;

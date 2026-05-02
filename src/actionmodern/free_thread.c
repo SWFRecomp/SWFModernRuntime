@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include <objects.h>
 #include <heap.h>
 
@@ -33,9 +35,9 @@ void unblock(ASObject* o)
 	SVEC_CLEAR(&o->blocked_list);
 }
 
-bool traverseIteration(SWFAppContext* app_context, ASObject* o, SwapVector* path_stack, SwapVector* cycles);
+bool traverseIteration(SWFAppContext* app_context, ASObject* o, SwapVector* path_stack);
 
-bool detectCycle(SWFAppContext* app_context, ASObject* o, SwapVector* path_stack, SwapVector* cycles)
+bool detectCycle(SWFAppContext* app_context, ASObject* o, SwapVector* path_stack)
 {
 	if (o == (ASObject*) path_stack->data[0])
 	{
@@ -47,7 +49,7 @@ bool detectCycle(SWFAppContext* app_context, ASObject* o, SwapVector* path_stack
 			SVEC_PUSH(cycle, path_stack->data[i]);
 		}
 		
-		SVEC_PUSH(cycles, cycle);
+		SVEC_PUSH(&app_context->cycles, cycle);
 		
 		return true;
 	}
@@ -57,10 +59,10 @@ bool detectCycle(SWFAppContext* app_context, ASObject* o, SwapVector* path_stack
 		return false;
 	}
 	
-	return traverseIteration(app_context, o, path_stack, cycles);
+	return traverseIteration(app_context, o, path_stack);
 }
 
-bool traverseIteration(SWFAppContext* app_context, ASObject* o, SwapVector* path_stack, SwapVector* cycles)
+bool traverseIteration(SWFAppContext* app_context, ASObject* o, SwapVector* path_stack)
 {
 	SVEC_PUSH(path_stack, o);
 	
@@ -77,7 +79,7 @@ bool traverseIteration(SWFAppContext* app_context, ASObject* o, SwapVector* path
 			continue;
 		}
 		
-		cycle_found |= detectCycle(app_context, neighbor, path_stack, cycles);
+		cycle_found |= detectCycle(app_context, neighbor, path_stack);
 	}
 	
 	SVEC_POP(path_stack);
@@ -93,37 +95,37 @@ bool traverseIteration(SWFAppContext* app_context, ASObject* o, SwapVector* path
 	return false;
 }
 
-void johnson(SWFAppContext* app_context, SwapVector* objs, SwapVector* cycles)
+void johnson(SWFAppContext* app_context)
 {
 	SwapVector path_stack;
 	SVEC_INIT(&path_stack);
 	
-	for (size_t i = 0; i < objs->length; ++i)
+	for (size_t i = 0; i < app_context->reachable.length; ++i)
 	{
-		for (size_t j = 0; j < objs->length; ++j)
+		for (size_t j = 0; j < app_context->reachable.length; ++j)
 		{
-			ASObject* o = (ASObject*) objs->data[j];
+			ASObject* o = (ASObject*) app_context->reachable.data[j];
 			
 			o->blocked = false;
 			SVEC_CLEAR(&o->blocked_list);
 		}
 		
-		ASObject* o = (ASObject*) objs->data[i];
+		ASObject* o = (ASObject*) app_context->reachable.data[i];
 		
-		(void) traverseIteration(app_context, o, &path_stack, cycles);
+		(void) traverseIteration(app_context, o, &path_stack);
 		o->used = true;
 	}
 	
-	for (size_t i = 0; i < objs->length; ++i)
+	for (size_t i = 0; i < app_context->reachable.length; ++i)
 	{
-		ASObject* o = (ASObject*) objs->data[i];
+		ASObject* o = (ASObject*) app_context->reachable.data[i];
 		o->used = false;
 	}
 	
 	SVEC_RELEASE(&path_stack);
 }
 
-void pushObjReachable(SWFAppContext* app_context, ASObject* this, ASProperty* p, SwapVector* v)
+void pushObjReachable(SWFAppContext* app_context, ASObject* this, ASProperty* p)
 {
 	ASObject* neighbor = (ASObject*) p->value.value;
 	
@@ -134,12 +136,12 @@ void pushObjReachable(SWFAppContext* app_context, ASObject* this, ASProperty* p,
 		SVEC_PUSH(&this->neighbors, neighbor);
 		if (!reached)
 		{
-			SVEC_PUSH(v, neighbor);
+			SVEC_PUSH(&app_context->reachable, neighbor);
 		}
 	}
 }
 
-void pushObjsReachable(SWFAppContext* app_context, ASObject* this, SwapVector* nodes)
+void pushObjsReachable(SWFAppContext* app_context, ASObject* this)
 {
 	rbtree* t = &this->t;
 	
@@ -158,7 +160,7 @@ void pushObjsReachable(SWFAppContext* app_context, ASObject* this, SwapVector* n
 		
 		SVEC_POP(&node_stack);
 		
-		pushObjReachable(app_context, this, (ASProperty*) node, nodes);
+		pushObjReachable(app_context, this, (ASProperty*) node);
 		
 		if (node->right)
 		{
@@ -174,31 +176,31 @@ void pushObjsReachable(SWFAppContext* app_context, ASObject* this, SwapVector* n
 	SVEC_RELEASE(&node_stack);
 }
 
-void getReachable(SWFAppContext* app_context, ASObject* o, SwapVector* reachable)
+void getReachable(SWFAppContext* app_context, ASObject* o)
 {
-	SVEC_PUSH(reachable, o);
+	SVEC_PUSH(&app_context->reachable, o);
 	o->reached = true;
 	
 	size_t obj_i = 0;
 	
-	while (obj_i < reachable->length)
+	while (obj_i < app_context->reachable.length)
 	{
-		ASObject* this = (ASObject*) reachable->data[obj_i];
+		ASObject* this = (ASObject*) app_context->reachable.data[obj_i];
 		
 		SVEC_CLEAR(&this->neighbors);
 		
 		OBJ_LOCK_READ(this,
 		{
-			pushObjsReachable(app_context, this, reachable);
+			pushObjsReachable(app_context, this);
 			this->temp_rc = this->refcount;
 		});
 		
 		obj_i += 1;
 	}
 	
-	for (size_t i = 0; i < reachable->length; ++i)
+	for (size_t i = 0; i < app_context->reachable.length; ++i)
 	{
-		ASObject* this = (ASObject*) reachable->data[i];
+		ASObject* this = (ASObject*) app_context->reachable.data[i];
 		this->reached = false;
 	}
 }
@@ -238,36 +240,38 @@ u32 countObjs(SwapVector* v, ASObject* o)
 recomp_rwlock_t object_queue_lock;
 rbtree object_free_queue;
 
-void attemptFree(SWFAppContext* app_context, ASObject* o);
+bool attemptFree(SWFAppContext* app_context, ASObject* o);
 
-void freeObject(SWFAppContext* app_context, ASObject* o, SwapVector* reachable)
+void freeObject(SWFAppContext* app_context, ASObject* o)
 {
 	o->freed = true;
 	
-	for (size_t i = 0; i < o->neighbors.length; ++i)
+	size_t length = o->neighbors.length;
+	
+	ASObject** neighbors = HALLOC(length*sizeof(ASObject*));
+	memcpy(neighbors, o->neighbors.arena, length*sizeof(ASObject*));
+	
+	for (size_t i = 0; i < length; ++i)
 	{
-		ASObject* r = (ASObject*) o->neighbors.data[i];
+		ASObject* r = neighbors[i];
 		
-		if (!r->freed)
+		if (r->freed || attemptFree(app_context, r))
 		{
-			attemptFree(app_context, r);
+			continue;
 		}
+		
+		LOCK_WRITE(object_queue_lock,
+		{
+			rbtree_insert_u64(app_context, &object_free_queue, (u64) r);
+		});
+		
+		OBJ_LOCK_WRITE(r,
+		{
+			r->refcount -= 1;
+		});
 	}
 	
-	// TODO: maybe this can be moved above the call to attemptFree,
-	//		 and then don't consider objects with freed set to be reachable?
-	for (size_t i = 0; i < o->neighbors.length; ++i)
-	{
-		ASObject* neighbor = (ASObject*) o->neighbors.data[i];
-		
-		if (!neighbor->freed)
-		{
-			OBJ_LOCK_WRITE(neighbor,
-			{
-				neighbor->refcount -= 1;
-			});
-		}
-	}
+	FREE(neighbors);
 	
 	destroyObject(app_context, o);
 	FREE(o);
@@ -298,47 +302,45 @@ ASObject* findBackRef(SwapVector* v, ASObject* ref)
 	return NULL;
 }
 
-bool subRCTest(SWFAppContext* app_context, ASObject* o, SwapVector* reachable)
+bool subRCTest(SWFAppContext* app_context, ASObject* o)
 {
-	SwapVector objects_to_test;
-	SwapVector cycles;
+	johnson(app_context);
 	
-	SVEC_INIT(&objects_to_test);
-	SVEC_INIT(&cycles);
+	SVEC_PUSH(&app_context->objects_to_test, o);
 	
-	johnson(app_context, reachable, &cycles);
-	
-	SVEC_PUSH(&objects_to_test, o);
-	
-	for (size_t i = 0; i < cycles.length; ++i)
+	for (size_t i = 0; i < app_context->cycles.length; ++i)
 	{
-		SwapVector* cycle = (SwapVector*) cycles.data[i];
+		SwapVector* cycle = (SwapVector*) app_context->cycles.data[i];
+		
+		if (!containsObj(cycle, o))
+		{
+			continue;
+		}
 		
 		for (size_t j = 0; j < cycle->length; ++j)
 		{
 			ASObject* this = (ASObject*) cycle->data[j];
 			
-			if (!containsObj(&objects_to_test, this))
+			if (!containsObj(&app_context->objects_to_test, this))
 			{
-				SVEC_PUSH(&objects_to_test, this);
+				SVEC_PUSH(&app_context->objects_to_test, this);
 			}
 		}
 	}
 	
 	bool pass_test = true;
 	
-	SwapVector objects_subbed;
-	SVEC_INIT(&objects_subbed);
-	
-	for (size_t i = 0; i < objects_to_test.length; ++i)
+	for (size_t i = 0; i < app_context->objects_to_test.length; ++i)
 	{
-		ASObject* test = (ASObject*) objects_to_test.data[i];
+		ASObject* test = (ASObject*) app_context->objects_to_test.data[i];
 		
 		// TODO: should find backrefs from cycles here (see below TODO)
 		
-		for (size_t j = 0; j < cycles.length; ++j)
+		SVEC_CLEAR(&app_context->objects_subbed);
+		
+		for (size_t j = 0; j < app_context->cycles.length; ++j)
 		{
-			SwapVector* cycle = (SwapVector*) cycles.data[j];
+			SwapVector* cycle = (SwapVector*) app_context->cycles.data[j];
 			
 			// TODO: preprocess to find all backrefs to remove objects_subbed
 			ASObject* backref = findBackRef(cycle, test);
@@ -347,9 +349,9 @@ bool subRCTest(SWFAppContext* app_context, ASObject* o, SwapVector* reachable)
 			{
 				u32 num_refs = countObjs(&backref->neighbors, test);
 				
-				if (!containsObj(&objects_subbed, backref) && num_refs > 0)
+				if (!containsObj(&app_context->objects_subbed, backref) && num_refs > 0)
 				{
-					SVEC_PUSH(&objects_subbed, backref);
+					SVEC_PUSH(&app_context->objects_subbed, backref);
 					test->temp_rc -= num_refs;
 				}
 			}
@@ -360,25 +362,24 @@ bool subRCTest(SWFAppContext* app_context, ASObject* o, SwapVector* reachable)
 			pass_test = false;
 			break;
 		}
-		
-		SVEC_CLEAR(&objects_subbed);
 	}
 	
-	SVEC_RELEASE(&objects_subbed);
+	SVEC_CLEAR(&app_context->objects_to_test);
 	
-	for (size_t i = 0; i < cycles.length; ++i)
+	for (size_t i = 0; i < app_context->cycles.length; ++i)
 	{
-		SwapVector* cycle = (SwapVector*) cycles.data[i];
+		SwapVector* cycle = (SwapVector*) app_context->cycles.data[i];
 		
 		SVEC_RELEASE(cycle);
+		FREE(cycle);
 	}
 	
-	SVEC_RELEASE(&cycles);
+	SVEC_CLEAR(&app_context->cycles);
 	
 	return pass_test;
 }
 
-void attemptFree(SWFAppContext* app_context, ASObject* o)
+bool attemptFree(SWFAppContext* app_context, ASObject* o)
 {
 	u32 rc;
 	
@@ -387,70 +388,78 @@ void attemptFree(SWFAppContext* app_context, ASObject* o)
 		rc = o->refcount;
 	});
 	
-	SwapVector reachable;
-	SVEC_INIT(&reachable);
-	getReachable(app_context, o, &reachable);
+	SVEC_CLEAR(&app_context->reachable);
+	
+	getReachable(app_context, o);
 	
 	if (rc == 0)
 	{
-		freeObject(app_context, o, &reachable);
+		freeObject(app_context, o);
+		return true;
 	}
 	
-	else
+	if (subRCTest(app_context, o))
 	{
-		if (subRCTest(app_context, o, &reachable))
-		{
-			freeObject(app_context, o, &reachable);
-		}
+		freeObject(app_context, o);
+		return true;
 	}
 	
-	SVEC_RELEASE(&reachable);
+	return false;
 }
 
 recomp_thread_t free_thread_handle;
 
 DECLARE_RUNTIME_THREAD_FUNC(freeThread)
 {
+	SVEC_INIT(&app_context->reachable);
+	SVEC_INIT(&app_context->objects_to_test);
+	SVEC_INIT(&app_context->cycles);
+	SVEC_INIT(&app_context->objects_subbed);
+	
 	while (true)
 	{
-		if (bad_poll)
-		{
-			break;
-		}
+		size_t length;
 		
-		for (int i = 0; i < 100; ++i)
+		LOCK_READ(object_queue_lock,
 		{
-			size_t length = 0;
+			length = object_free_queue.length;
+		});
+		
+		if (length == 0)
+		{
+			bool stop;
 			
 			LOCK_READ(object_queue_lock,
 			{
-				length = object_free_queue.length;
+				stop = app_context->stop_free;
 			});
 			
-			if (length > 0)
-			{
-				objnode* n;
-				
-				LOCK_WRITE(object_queue_lock,
-				{
-					n = (objnode*) rbtree_pop_root(&object_free_queue);
-				});
-				
-				ASObject* o = (ASObject*) n->key;
-				
-				attemptFree(app_context, o);
-				
-				FREE(n);
-			}
-			
-			else
+			if (stop)
 			{
 				break;
 			}
+			
+			continue;
 		}
 		
-		recomp_sleep(16);
+		objnode* n;
+		
+		LOCK_WRITE(object_queue_lock,
+		{
+			n = (objnode*) rbtree_pop_root(&object_free_queue);
+		});
+		
+		ASObject* o = (ASObject*) n->key;
+		
+		attemptFree(app_context, o);
+		
+		FREE(n);
 	}
+	
+	SVEC_RELEASE(&app_context->reachable);
+	SVEC_RELEASE(&app_context->objects_to_test);
+	SVEC_RELEASE(&app_context->cycles);
+	SVEC_RELEASE(&app_context->objects_subbed);
 	
 	thread_exit();
 	

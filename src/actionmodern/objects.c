@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <signal.h>
 #include <assert.h>
 
 #include <initial_strings_decls.h>
@@ -10,11 +11,13 @@
 
 #include <objects.h>
 
+extern recomp_rwlock_t object_queue_lock;
+
 u32 next_id = 0;
 
 ASObject* allocObjectCommon(SWFAppContext* app_context)
 {
-	ASObject* obj = (ASObject*) HALLOC(sizeof(ASObject));
+	ASObject* obj = HALLOC(sizeof(ASObject));
 	
 	obj->id = next_id;
 	next_id += 1;
@@ -29,6 +32,11 @@ ASObject* allocObjectCommon(SWFAppContext* app_context)
 	SVEC_INIT(&obj->neighbors);
 	SVEC_INIT(&obj->blocked_list);
 	obj->temp_rc = 0;
+	
+	//~ LOCK_WRITE(object_queue_lock,
+	//~ {
+		//~ SVEC_PUSH(&app_context->active_objects, obj);
+	//~ });
 	
 	return obj;
 }
@@ -67,7 +75,6 @@ void retainObject(ASObject* obj)
 }
 
 extern rbtree object_free_queue;
-extern recomp_rwlock_t object_queue_lock;
 
 void queueObjectFreeCheck(SWFAppContext* app_context, ASObject* obj)
 {
@@ -90,7 +97,7 @@ void releaseObject(SWFAppContext* app_context, ASObject* obj)
 {
 	obj->refcount--;
 	
-	if (obj != _global)
+	if (obj != _global || app_context->global_free_override)
 	{
 		// queue object for free check
 		queueObjectFreeCheck(app_context, obj);
@@ -112,6 +119,18 @@ void destroyObject(SWFAppContext* app_context, ASObject* obj)
 	
 	SVEC_RELEASE(&obj->neighbors);
 	SVEC_RELEASE(&obj->blocked_list);
+	
+	//~ LOCK_WRITE(object_queue_lock,
+	//~ {
+		//~ for (size_t i = 0; i < app_context->active_objects.length; ++i)
+		//~ {
+			//~ if ((ASObject*) app_context->active_objects.data[i] == obj)
+			//~ {
+				//~ SVEC_REMOVE(&app_context->active_objects, i);
+				//~ break;
+			//~ }
+		//~ }
+	//~ });
 }
 
 /**

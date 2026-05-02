@@ -1,6 +1,6 @@
 #pragma once
 
-#include <swf.h>
+#include <context.h>
 
 #define HALLOC(s) heap_alloc(app_context, s);
 #define FREE(p) heap_free(app_context, p);
