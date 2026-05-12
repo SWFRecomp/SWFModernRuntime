@@ -2,13 +2,11 @@
 
 #include <swf.h>
 #include <tag.h>
+#include <MovieClip.h>
 #include <flashbang.h>
 #include <utils.h>
 
 extern FlashbangContext* context;
-
-size_t dictionary_capacity = INITIAL_DICTIONARY_CAPACITY;
-size_t display_list_capacity = INITIAL_DISPLAYLIST_CAPACITY;
 
 void tagSetBackgroundColor(u8 red, u8 green, u8 blue)
 {
@@ -19,24 +17,27 @@ void tagShowFrame(SWFAppContext* app_context)
 {
 	flashbang_open_pass(context);
 	
-	for (size_t i = 1; i <= max_depth; ++i)
+	for (size_t i = 1; i <= app_context->max_depth; ++i)
 	{
-		DisplayObject* obj = &display_list[i];
+		ASObject* disp_obj = MC_EXTDATA_OF(app_context->_root, children)[i];
 		
-		if (obj->char_id == 0)
+		u32 char_id = MC_EXTDATA_OF(disp_obj, char_id);
+		u32 transform_id = MC_EXTDATA_OF(disp_obj, transform_id);
+		
+		if (char_id == 0)
 		{
 			continue;
 		}
 		
-		Character* ch = &dictionary[obj->char_id];
+		Character* ch = &dictionary[char_id];
 		
 		switch (ch->type)
 		{
 			case CHAR_TYPE_SHAPE:
-				flashbang_draw_shape(context, ch->shape_offset, ch->size, obj->transform_id);
+				flashbang_draw_shape(context, ch->shape_offset, ch->size, transform_id);
 				break;
 			case CHAR_TYPE_TEXT:
-				flashbang_upload_extra_transform_id(context, obj->transform_id);
+				flashbang_upload_extra_transform_id(context, transform_id);
 				flashbang_upload_cxform_id(context, ch->cxform_id);
 				for (u32 j = 0; j < ch->text_size; ++j)
 				{
@@ -52,7 +53,7 @@ void tagShowFrame(SWFAppContext* app_context)
 
 void tagDefineShape(SWFAppContext* app_context, CharacterType type, u32 char_id, u32 shape_offset, u32 shape_size)
 {
-	ENSURE_SIZE(dictionary, char_id, dictionary_capacity, sizeof(Character));
+	ENSURE_SIZE(dictionary, char_id, app_context->dictionary_capacity, sizeof(Character));
 	
 	dictionary[char_id].type = type;
 	dictionary[char_id].shape_offset = shape_offset;
@@ -61,7 +62,7 @@ void tagDefineShape(SWFAppContext* app_context, CharacterType type, u32 char_id,
 
 void tagDefineText(SWFAppContext* app_context, u32 char_id, u32 text_start, u32 text_size, u32 transform_start, u32 cxform_id)
 {
-	ENSURE_SIZE(dictionary, char_id, dictionary_capacity, sizeof(Character));
+	ENSURE_SIZE(dictionary, char_id, app_context->dictionary_capacity, sizeof(Character));
 	
 	dictionary[char_id].type = CHAR_TYPE_TEXT;
 	dictionary[char_id].text_start = text_start;
@@ -72,15 +73,7 @@ void tagDefineText(SWFAppContext* app_context, u32 char_id, u32 text_start, u32 
 
 void tagPlaceObject2(SWFAppContext* app_context, u32 depth, u32 char_id, u32 transform_id)
 {
-	ENSURE_SIZE(display_list, depth, display_list_capacity, sizeof(DisplayObject));
-	
-	display_list[depth].char_id = char_id;
-	display_list[depth].transform_id = transform_id;
-	
-	if (depth > max_depth)
-	{
-		max_depth = depth;
-	}
+	MovieClip_placeObject2_internal(app_context, app_context->_root, depth, char_id, transform_id);
 }
 
 void defineBitmap(u32 offset, u32 size, u32 width, u32 height)

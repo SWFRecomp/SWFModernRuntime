@@ -21,10 +21,11 @@ ASObject* allocObjectCommon(SWFAppContext* app_context)
 	
 	obj->id = next_id;
 	next_id += 1;
+	
 	rbtree_init(&obj->t, sizeof(ASProperty));
 	obj->refcount = 0;
-	obj->extra_data = NULL;
 	rwlock_init(&obj->lock);
+	obj->extra_data = NULL;
 	obj->reached = false;
 	obj->used = false;
 	obj->blocked = false;
@@ -52,12 +53,12 @@ ASObject* allocObject(SWFAppContext* app_context)
 	
 	ActionVar proto_var;
 	proto_var.type = ACTION_STACK_VALUE_OBJECT;
-	proto_var.object = (ASObject*) app_context->object_prototype;
+	proto_var.object = (ASObject*) app_context->Object_prototype;
 	setProperty(app_context, obj, STR_ID_PROTO, NULL, 0, &proto_var);
 	
 	ActionVar constructor_var;
 	constructor_var.type = ACTION_STACK_VALUE_OBJECT;
-	constructor_var.object = app_context->object_constructor;
+	constructor_var.object = app_context->Object_constructor;
 	setProperty(app_context, obj, STR_ID_CONSTRUCTOR, NULL, 0, &constructor_var);
 	
 	return obj;

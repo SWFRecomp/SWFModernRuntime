@@ -5,7 +5,8 @@
 #include <rb_tree.h>
 
 #include <common.h>
-#include <swf.h>
+#include <context.h>
+#include <rbtree_struct.h>
 
 #define RBT_GET_OR_INS(t, s, c) rbtree_get_or_insert(app_context, t, s, c)
 #define RBT_GET_OR_INS_U64(t, s) rbtree_get_or_insert_u64(app_context, t, s)
@@ -16,13 +17,6 @@
  *
  * Wrapper around red-black tree.
  */
-
-typedef struct
-{
-	struct rb_tree t;
-	size_t length;
-	size_t struct_size;
-} rbtree;
 
 typedef struct
 {

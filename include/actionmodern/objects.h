@@ -2,6 +2,7 @@
 
 #include <common.h>
 #include <swf.h>
+#include <object_struct.h>
 #include <variables.h>
 #include <utils.h>
 
@@ -44,22 +45,6 @@
 
 // Flags for DontEnum properties (internal/built-in properties)
 #define PROPERTY_FLAGS_DONTENUM (PROPERTY_FLAG_WRITABLE | PROPERTY_FLAG_CONFIGURABLE)
-
-typedef struct
-{
-	u32 id;
-	rbtree t;
-	u32 refcount;
-	void* extra_data;
-	recomp_rwlock_t lock;
-	bool reached;
-	bool used;
-	bool blocked;
-	bool freed;
-	SwapVector neighbors;
-	SwapVector blocked_list;
-	u32 temp_rc;
-} ASObject;
 
 typedef struct
 {

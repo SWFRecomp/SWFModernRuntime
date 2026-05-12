@@ -38,7 +38,7 @@ typedef struct
 		f32 f32;
 		f64 f64;
 		bool b;
-		void* object;
+		ASObject* object;
 	};
 } ActionVar;
 

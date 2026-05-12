@@ -34,11 +34,11 @@ void initActions(SWFAppContext* app_context)
 {
 	SVEC_INIT(&app_context->active_objects);
 	
-	app_context->object_prototype = allocObjectCommon(app_context);
-	app_context->object_constructor = allocObjectCommon(app_context);
+	app_context->Object_prototype = allocObjectCommon(app_context);
+	app_context->Object_constructor = allocObjectCommon(app_context);
 	
-	retainObject(app_context->object_prototype);
-	retainObject(app_context->object_constructor);
+	retainObject(app_context->Object_prototype);
+	retainObject(app_context->Object_constructor);
 	
 	start_time = get_elapsed_ms();
 	
@@ -95,7 +95,7 @@ void initActions(SWFAppContext* app_context)
 		
 		else
 		{
-			v.object = app_context->object_constructor;
+			v.object = app_context->Object_constructor;
 		}
 		
 		Function_init_object(app_context, v.object);
@@ -120,7 +120,7 @@ void initActions(SWFAppContext* app_context)
 			
 			else
 			{
-				proto_var.object = app_context->object_prototype;
+				proto_var.object = app_context->Object_prototype;
 			}
 			
 			setProperty(app_context, v.object, STR_ID_PROTOTYPE, NULL, 0, &proto_var);
@@ -1861,6 +1861,13 @@ void actionGetVariable(SWFAppContext* app_context)
 			return;
 		}
 		
+		case STR_ID_ROOT:
+		{
+			PUSH_OBJ(app_context->_root);
+			
+			return;
+		}
+		
 		default:
 		{
 			// Constant string - use scope object (O(lg(n)))
@@ -2421,7 +2428,12 @@ void actionTypeOf(SWFAppContext* app_context)
 	{
 		case ACTION_STACK_VALUE_F32:
 		case ACTION_STACK_VALUE_F64:
+		case ACTION_STACK_VALUE_INT:
 			type_str = "number";
+			break;
+			
+		case ACTION_STACK_VALUE_BOOLEAN:
+			type_str = "boolean";
 			break;
 			
 		case ACTION_STACK_VALUE_STRING:

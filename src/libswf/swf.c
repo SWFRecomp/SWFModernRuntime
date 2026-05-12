@@ -14,9 +14,6 @@ ActionVar* temp_val;
 
 Character* dictionary = NULL;
 
-DisplayObject* display_list = NULL;
-size_t max_depth = 0;
-
 FlashbangContext* context;
 
 void tagMain(SWFAppContext* app_context)
@@ -76,7 +73,9 @@ void swfStart(SWFAppContext* app_context)
 	flashbang_init(context, app_context);
 	
 	dictionary = HALLOC(INITIAL_DICTIONARY_CAPACITY*sizeof(Character));
-	display_list = HALLOC(INITIAL_DISPLAYLIST_CAPACITY*sizeof(DisplayObject));
+	
+	app_context->dictionary_capacity = INITIAL_DICTIONARY_CAPACITY;
+	app_context->max_depth = 0;
 	
 	STACK = (char*) HALLOC(INITIAL_STACK_SIZE);
 	SP = INITIAL_SP;
@@ -92,6 +91,8 @@ void swfStart(SWFAppContext* app_context)
 	
 	tagInit(app_context);
 	
+	
+	
 	tagMain(app_context);
 	
 	freeMap(app_context);
@@ -100,7 +101,6 @@ void swfStart(SWFAppContext* app_context)
 	FREE(STACK);
 	
 	FREE(dictionary);
-	FREE(display_list);
 	
 	flashbang_release(context, app_context);
 	

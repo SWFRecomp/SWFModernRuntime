@@ -49,6 +49,7 @@ else()
         ${PROJECT_SOURCE_DIR}/src/libswf/swf.c
         ${PROJECT_SOURCE_DIR}/src/libswf/tag.c
         ${PROJECT_SOURCE_DIR}/src/flashbang/flashbang.c
+        ${PROJECT_SOURCE_DIR}/src/flashbang/triangulation.c
     )
 endif()
 
@@ -64,6 +65,7 @@ endif()
 
 set(RENAME_ZCONF OFF)
 
+add_subdirectory(${PROJECT_SOURCE_DIR}/lib/libtess2)
 add_subdirectory(${PROJECT_SOURCE_DIR}/lib/zlib)
 add_subdirectory(${PROJECT_SOURCE_DIR}/lib/lzma)
 
@@ -71,6 +73,7 @@ if(NOT NO_GRAPHICS)
     add_subdirectory(${PROJECT_SOURCE_DIR}/lib/SDL3)
     
     target_link_libraries(${PROJECT_NAME} PUBLIC
+        libtess2
         zlibstatic
         lzma
         SDL3::SDL3
@@ -78,6 +81,7 @@ if(NOT NO_GRAPHICS)
     )
 else()
     target_link_libraries(${PROJECT_NAME} PUBLIC
+        libtess2
         zlibstatic
         lzma
         $<$<PLATFORM_ID:Linux>:m>
@@ -99,6 +103,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${PROJECT_SOURCE_DIR}/include/libswf
     ${PROJECT_SOURCE_DIR}/include/flashbang
     ${PROJECT_SOURCE_DIR}/include/memory
+    ${PROJECT_SOURCE_DIR}/lib/libtess2/Include
     ${PROJECT_SOURCE_DIR}/lib/c-hashmap
     ${PROJECT_SOURCE_DIR}/lib/rbtree
     ${PROJECT_SOURCE_DIR}/lib/o1heap/o1heap

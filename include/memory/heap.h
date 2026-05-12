@@ -3,6 +3,7 @@
 #include <context.h>
 
 #define HALLOC(s) heap_alloc(app_context, s);
+#define HREALLOC(p, s) heap_realloc(app_context, p, s);
 #define FREE(p) heap_free(app_context, p);
 
 /**
@@ -27,6 +28,16 @@ void heap_init(SWFAppContext* app_context, size_t size);
  * @return Pointer to allocated memory, or NULL on failure
  */
 void* heap_alloc(SWFAppContext* app_context, size_t size);
+
+/**
+ * Allocate memory from the heap, copying memory from an old ptr and freeing it
+ *
+ * @param app_context Main app context
+ * @param ptr Old ptr to copy and free
+ * @param size Number of bytes to allocate
+ * @return Pointer to allocated memory, or NULL on failure
+ */
+void* heap_realloc(SWFAppContext* app_context, void* ptr, size_t size);
 
 /**
  * Free memory allocated by heap_alloc() or heap_calloc()

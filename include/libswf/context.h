@@ -1,5 +1,6 @@
 #pragma once
 
+#include <object_struct.h>
 #include <swap_vector.h>
 #include <utils_lock.h>
 
@@ -21,6 +22,9 @@ typedef struct SWFAppContext
 	u8 version;
 	
 	frame_func* frame_funcs;
+	
+	size_t dictionary_capacity;
+	size_t max_depth;
 	
 	char** str_table;
 	u32* str_len_table;
@@ -46,8 +50,12 @@ typedef struct SWFAppContext
 	
 	size_t max_string_id;
 	
-	void* object_prototype;
-	void* object_constructor;
+	ASObject* _root;
+	
+	ASObject* Object_prototype;
+	ASObject* Object_constructor;
+	
+	ASObject* MovieClip_constructor;
 	
 	size_t bitmap_count;
 	size_t bitmap_highest_w;

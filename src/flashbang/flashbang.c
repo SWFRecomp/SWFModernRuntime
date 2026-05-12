@@ -4,6 +4,7 @@
 
 #include <common.h>
 #include <flashbang.h>
+#include <triangulation.h>
 #include <heap.h>
 #include <utils.h>
 
@@ -643,6 +644,8 @@ void flashbang_init(FlashbangContext* context, SWFAppContext* app_context)
 	SDL_ReleaseGPUTransferBuffer(context->device, gradient_transfer_buffer);
 	SDL_ReleaseGPUTransferBuffer(context->device, cxform_transfer_buffer);
 	SDL_ReleaseGPUTransferBuffer(context->device, dummy_transfer_buffer);
+	
+	triInit(app_context);
 }
 
 int flashbang_poll()
