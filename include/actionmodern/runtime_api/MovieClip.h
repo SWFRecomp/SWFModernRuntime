@@ -16,5 +16,10 @@ typedef struct
 	bool _visible;
 } MovieClipData;
 
+void MovieClip_new(SWFAppContext* app_context, ASObject* this, u32 num_args);
+
 ASObject* MovieClip_create(SWFAppContext* app_context);
 void MovieClip_placeObject2_internal(SWFAppContext* app_context, ASObject* this, u32 depth, u32 char_id, u32 transform_id);
+
+void MovieClip_createTextField(SWFAppContext* app_context, ASObject* this, u32 num_args);
+void MovieClip_createEmptyMovieClip(SWFAppContext* app_context, ASObject* this, u32 num_args);

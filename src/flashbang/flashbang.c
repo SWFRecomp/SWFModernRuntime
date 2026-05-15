@@ -937,31 +937,32 @@ void flashbang_close_pass(FlashbangContext* context)
 	Uint32 width, height;
 	SDL_WaitAndAcquireGPUSwapchainTexture(context->command_buffer, context->window, &swapchain_texture, &width, &height);
 	
-	assert(swapchain_texture != NULL);
-	
-	SDL_GPUBlitInfo blit_info = {0};
-	blit_info.source.texture = context->resolve_texture;
-	blit_info.source.mip_level = 0;
-	blit_info.source.layer_or_depth_plane = 0;
-	blit_info.source.x = 0;
-	blit_info.source.y = 0;
-	blit_info.source.w = context->width;
-	blit_info.source.h = context->height;
-	
-	blit_info.destination.texture = swapchain_texture;
-	blit_info.destination.mip_level = 0;
-	blit_info.destination.layer_or_depth_plane = 0;
-	blit_info.destination.x = 0;
-	blit_info.destination.y = 0;
-	blit_info.destination.w = width;
-	blit_info.destination.h = height;
-	
-	blit_info.load_op = SDL_GPU_LOADOP_DONT_CARE;
-	blit_info.flip_mode = SDL_FLIP_NONE;
-	blit_info.filter = SDL_GPU_FILTER_LINEAR;
-	blit_info.cycle = false;
-	
-	SDL_BlitGPUTexture(context->command_buffer, &blit_info);
+	if (LIKELY(swapchain_texture != NULL))
+	{
+		SDL_GPUBlitInfo blit_info = {0};
+		blit_info.source.texture = context->resolve_texture;
+		blit_info.source.mip_level = 0;
+		blit_info.source.layer_or_depth_plane = 0;
+		blit_info.source.x = 0;
+		blit_info.source.y = 0;
+		blit_info.source.w = context->width;
+		blit_info.source.h = context->height;
+		
+		blit_info.destination.texture = swapchain_texture;
+		blit_info.destination.mip_level = 0;
+		blit_info.destination.layer_or_depth_plane = 0;
+		blit_info.destination.x = 0;
+		blit_info.destination.y = 0;
+		blit_info.destination.w = width;
+		blit_info.destination.h = height;
+		
+		blit_info.load_op = SDL_GPU_LOADOP_DONT_CARE;
+		blit_info.flip_mode = SDL_FLIP_NONE;
+		blit_info.filter = SDL_GPU_FILTER_LINEAR;
+		blit_info.cycle = false;
+		
+		SDL_BlitGPUTexture(context->command_buffer, &blit_info);
+	}
 	
 	// submit the command buffer
 	SDL_SubmitGPUCommandBuffer(context->command_buffer);

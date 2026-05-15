@@ -55,7 +55,14 @@ typedef struct SWFAppContext
 	ASObject* Object_prototype;
 	ASObject* Object_constructor;
 	
+	ASObject* Function_constructor;
+	
+	ASObject* MovieClip_prototype;
 	ASObject* MovieClip_constructor;
+	
+	size_t exported_chars_count;
+	u16* exported_char_ids;
+	u32* exported_string_ids;
 	
 	size_t bitmap_count;
 	size_t bitmap_highest_w;

@@ -57,4 +57,6 @@ extern Character* dictionary;
 extern DisplayObject* display_list;
 extern size_t max_depth;
 
+u16 swfGetExportedChar(SWFAppContext* app_context, u32 string_id);
+
 void swfStart(SWFAppContext* app_context);

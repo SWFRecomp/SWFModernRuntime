@@ -34,11 +34,18 @@ void initActions(SWFAppContext* app_context)
 {
 	SVEC_INIT(&app_context->active_objects);
 	
+	rwlock_init(&object_queue_lock);
+	rbtree_init(&object_free_queue, sizeof(objnode));
+	
 	app_context->Object_prototype = allocObjectCommon(app_context);
 	app_context->Object_constructor = allocObjectCommon(app_context);
-	
 	retainObject(app_context->Object_prototype);
 	retainObject(app_context->Object_constructor);
+	
+	app_context->Function_constructor = allocObject(app_context);
+	
+	app_context->MovieClip_prototype = allocObject(app_context);
+	app_context->MovieClip_constructor = allocObject(app_context);
 	
 	start_time = get_elapsed_ms();
 	
@@ -88,17 +95,44 @@ void initActions(SWFAppContext* app_context)
 		ActionVar v;
 		v.type = ACTION_STACK_VALUE_OBJECT;
 		
-		if (runtime_funcs[i].func_string_id != STR_ID_OBJECT)
+		switch (runtime_funcs[i].func_string_id)
 		{
-			v.object = allocObject(app_context);
+			case STR_ID_OBJECT:
+			{
+				v.object = app_context->Object_constructor;
+				
+				v.object->extra_data = HALLOC(sizeof(FunctionData));
+				
+				break;
+			}
+			
+			case STR_ID_FUNCTION:
+			{
+				v.object = app_context->Function_constructor;
+				
+				v.object->extra_data = HALLOC(sizeof(FunctionData));
+				
+				break;
+			}
+			
+			case STR_ID_MOVIECLIP:
+			{
+				v.object = app_context->MovieClip_constructor;
+				
+				Function_init_object(app_context, v.object);
+				
+				break;
+			}
+			
+			default:
+			{
+				v.object = allocObject(app_context);
+				
+				Function_init_object(app_context, v.object);
+				
+				break;
+			}
 		}
-		
-		else
-		{
-			v.object = app_context->Object_constructor;
-		}
-		
-		Function_init_object(app_context, v.object);
 		
 		Function_set_members(app_context, v.object,
 							 FUNC_TYPE_3,
@@ -113,14 +147,28 @@ void initActions(SWFAppContext* app_context)
 			ActionVar proto_var;
 			proto_var.type = ACTION_STACK_VALUE_OBJECT;
 			
-			if (runtime_funcs[i].func_string_id != STR_ID_OBJECT)
+			switch (runtime_funcs[i].func_string_id)
 			{
-				proto_var.object = allocObject(app_context);
-			}
-			
-			else
-			{
-				proto_var.object = app_context->Object_prototype;
+				case STR_ID_OBJECT:
+				{
+					proto_var.object = app_context->Object_prototype;
+					
+					break;
+				}
+				
+				case STR_ID_MOVIECLIP:
+				{
+					proto_var.object = app_context->MovieClip_prototype;
+					
+					break;
+				}
+				
+				default:
+				{
+					proto_var.object = allocObject(app_context);
+					
+					break;
+				}
 			}
 			
 			setProperty(app_context, v.object, STR_ID_PROTOTYPE, NULL, 0, &proto_var);
@@ -168,8 +216,58 @@ void initActions(SWFAppContext* app_context)
 		setProperty(app_context, prototype, runtime_meths[i].func_string_id, NULL, 0, &v);
 	}
 	
-	rwlock_init(&object_queue_lock);
-	rbtree_init(&object_free_queue, sizeof(objnode));
+	// instantiate initial objects (for packages)
+	
+	ASObject* flash = allocObject(app_context);
+	ActionVar flash_v;
+	flash_v.type = ACTION_STACK_VALUE_OBJECT;
+	flash_v.object = flash;
+	setProperty(app_context, _global, STR_ID_FLASH, NULL, 0, &flash_v);
+	
+	ASObject* display = allocObject(app_context);
+	ActionVar display_v;
+	display_v.type = ACTION_STACK_VALUE_OBJECT;
+	display_v.object = display;
+	setProperty(app_context, flash, STR_ID_DISPLAY, NULL, 0, &display_v);
+	
+	ASObject* bitmapdata = allocObject(app_context);
+	
+	Function_init_object(app_context, bitmapdata);
+	
+	Function_set_members(app_context, bitmapdata,
+						 FUNC_TYPE_3,
+						 (action_func) BitmapData_new,
+						 NULL,
+						 0,
+						 0,
+						 STR_ID_BITMAP_DATA);
+	
+	ActionVar proto_var;
+	proto_var.type = ACTION_STACK_VALUE_OBJECT;
+	proto_var.object = allocObject(app_context);
+	setProperty(app_context, bitmapdata, STR_ID_PROTOTYPE, NULL, 0, &proto_var);
+	
+	ActionVar bitmapdata_v;
+	bitmapdata_v.type = ACTION_STACK_VALUE_OBJECT;
+	bitmapdata_v.object = bitmapdata;
+	setProperty(app_context, display, STR_ID_BITMAP_DATA, NULL, 0, &bitmapdata_v);
+	
+	ASObject* loadbitmap = allocObject(app_context);
+	
+	Function_init_object(app_context, loadbitmap);
+	
+	Function_set_members(app_context, loadbitmap,
+						 FUNC_TYPE_3,
+						 (action_func) BitmapData_loadBitmap,
+						 NULL,
+						 0,
+						 0,
+						 STR_ID_LOAD_BITMAP);
+	
+	ActionVar loadbitmap_v;
+	loadbitmap_v.type = ACTION_STACK_VALUE_OBJECT;
+	loadbitmap_v.object = loadbitmap;
+	setProperty(app_context, bitmapdata, STR_ID_LOAD_BITMAP, NULL, 0, &loadbitmap_v);
 	
 	for (int i = 0; i < sizeof(static_initializers)/sizeof(action_runtime_func); ++i)
 	{
@@ -190,6 +288,14 @@ void initActions(SWFAppContext* app_context)
 	
 	app_context->stop_free = false;
 	app_context->global_free_override = false;
+	
+	app_context->_root = MovieClip_create(app_context);
+	
+	ActionVar root_v;
+	root_v.type = ACTION_STACK_VALUE_OBJECT;
+	root_v.object = app_context->_root;
+	
+	setProperty(app_context, scope_chain[1], STR_ID_THIS, NULL, 0, &root_v);
 	
 	thread_start(app_context, freeThread, &free_thread_handle);
 }
@@ -1933,7 +2039,15 @@ void actionSetVariable(SWFAppContext* app_context)
 		
 		case STR_ID_GLOBAL:
 		{
-			setProperty(app_context, _global, string_id, var_name, var_name_len, &value);
+			EXC("can't set _global\n");
+			
+			// sue me
+			goto release_value;
+		}
+		
+		case STR_ID_ROOT:
+		{
+			EXC("can't set _root\n");
 			
 			// sue me
 			goto release_value;
@@ -3613,8 +3727,14 @@ void actionCallMethod(SWFAppContext* app_context)
 	
 	else
 	{
+		ActionVar ctor_name_var;
+		getPropertyVar(this, STR_ID_CONSTRUCTOR, NULL, 0, &ctor_name_var);
+		
+		u32 ctor_name_id = Function_get_func_name_string_id(app_context, ctor_name_var.object);
+		
 		// Function not found - throw
-		EXC_ARG("Function not found: %s\n", func_name);
+		fprintf(stderr, "Method of %s not found: %s\n", app_context->str_table[ctor_name_id], func_name);
+		THROW;
 	}
 	
 	release:

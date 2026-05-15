@@ -16,6 +16,22 @@ Character* dictionary = NULL;
 
 FlashbangContext* context;
 
+u16 swfGetExportedChar(SWFAppContext* app_context, u32 string_id)
+{
+	u16 char_id = 0;
+	
+	for (size_t i = 0; i < app_context->exported_chars_count; ++i)
+	{
+		if (app_context->exported_string_ids[i] == string_id)
+		{
+			char_id = app_context->exported_char_ids[i];
+			break;
+		}
+	}
+	
+	return char_id;
+}
+
 void tagMain(SWFAppContext* app_context)
 {
 	frame_func* frame_funcs = app_context->frame_funcs;
@@ -90,8 +106,6 @@ void swfStart(SWFAppContext* app_context)
 	initMap();
 	
 	tagInit(app_context);
-	
-	
 	
 	tagMain(app_context);
 	
