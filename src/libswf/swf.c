@@ -1,4 +1,4 @@
-#include <swf.h>
+#include <context.h>
 #include <tag.h>
 #include <action.h>
 #include <variables.h>
@@ -13,8 +13,6 @@ int manual_next_frame;
 ActionVar* temp_val;
 
 Character* dictionary = NULL;
-
-FlashbangContext* context;
 
 u16 swfGetExportedChar(SWFAppContext* app_context, u32 string_id)
 {
@@ -60,33 +58,35 @@ void swfStart(SWFAppContext* app_context)
 	heap_init(app_context, HEAP_SIZE);
 	
 	FlashbangContext c;
-	context = &c;
+	app_context->fbc = &c;
 	
-	context->width = app_context->width;
-	context->height = app_context->height;
+	c.width = app_context->width;
+	c.height = app_context->height;
 	
-	context->stage_to_ndc = app_context->stage_to_ndc;
+	c.stage_to_ndc = app_context->stage_to_ndc;
 	
-	context->bitmap_count = app_context->bitmap_count;
-	context->bitmap_highest_w = app_context->bitmap_highest_w;
-	context->bitmap_highest_h = app_context->bitmap_highest_h;
+	c.bitmap_count = app_context->bitmap_count;
+	c.bitmap_highest_w = app_context->bitmap_highest_w;
+	c.bitmap_highest_h = app_context->bitmap_highest_h;
 	
-	context->shape_data = app_context->shape_data;
-	context->shape_data_size = app_context->shape_data_size;
-	context->transform_data = app_context->transform_data;
-	context->transform_data_size = app_context->transform_data_size;
-	context->color_data = app_context->color_data;
-	context->color_data_size = app_context->color_data_size;
-	context->uninv_mat_data = app_context->uninv_mat_data;
-	context->uninv_mat_data_size = app_context->uninv_mat_data_size;
-	context->gradient_data = app_context->gradient_data;
-	context->gradient_data_size = app_context->gradient_data_size;
-	context->bitmap_data = app_context->bitmap_data;
-	context->bitmap_data_size = app_context->bitmap_data_size;
-	context->cxform_data = app_context->cxform_data;
-	context->cxform_data_size = app_context->cxform_data_size;
+	c.shape_data_exists = app_context->shape_data_exists;
 	
-	flashbang_init(context, app_context);
+	c.shape_data = app_context->shape_data;
+	c.shape_data_size = app_context->shape_data_size;
+	c.transform_data = app_context->transform_data;
+	c.transform_data_size = app_context->transform_data_size;
+	c.color_data = app_context->color_data;
+	c.color_data_size = app_context->color_data_size;
+	c.uninv_mat_data = app_context->uninv_mat_data;
+	c.uninv_mat_data_size = app_context->uninv_mat_data_size;
+	c.gradient_data = app_context->gradient_data;
+	c.gradient_data_size = app_context->gradient_data_size;
+	c.bitmap_data = app_context->bitmap_data;
+	c.bitmap_data_size = app_context->bitmap_data_size;
+	c.cxform_data = app_context->cxform_data;
+	c.cxform_data_size = app_context->cxform_data_size;
+	
+	flashbang_init(&c, app_context);
 	
 	dictionary = HALLOC(INITIAL_DICTIONARY_CAPACITY*sizeof(Character));
 	
@@ -116,7 +116,7 @@ void swfStart(SWFAppContext* app_context)
 	
 	FREE(dictionary);
 	
-	flashbang_release(context, app_context);
+	flashbang_release(&c, app_context);
 	
 	heap_shutdown(app_context);
 }

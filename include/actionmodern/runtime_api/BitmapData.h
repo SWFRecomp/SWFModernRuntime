@@ -2,8 +2,13 @@
 
 #include <recomp.h>
 
+#define BM_EXTDATA_OF(o, member) (((BitmapData*) o->extra_data)->member)
+
 typedef struct
 {
+	u32 width;
+	u32 height;
+	
 	u32 char_id;
 } BitmapData;
 

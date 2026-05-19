@@ -33,6 +33,7 @@ RuntimeFunc runtime_meths[] =
 	{STR_ID_STRING, STR_ID_VALUE_OF, String_valueOf, false},
 	{STR_ID_ARRAY, STR_ID_PUSH, Array_push, false},
 	{STR_ID_ARRAY, STR_ID_POP, Array_pop, false},
+	{STR_ID_MOVIECLIP, STR_ID_ATTACH_BITMAP, MovieClip_attachBitmap, false},
 	{STR_ID_MOVIECLIP, STR_ID_CREATE_EMPTY_MOVIECLIP, MovieClip_createEmptyMovieClip, false},
 };
 

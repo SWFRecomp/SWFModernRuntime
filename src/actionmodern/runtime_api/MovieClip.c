@@ -1,6 +1,7 @@
 #include <math.h>
 
 #include <MovieClip.h>
+#include <BitmapData.h>
 
 #include <heap.h>
 
@@ -30,19 +31,49 @@ ASObject* MovieClip_create(SWFAppContext* app_context)
 	
 	this->extra_data = HALLOC(sizeof(MovieClipData));
 	
+	EXTDATA(char_id) = 0;
+	
+	EXTDATA(has_tris) = false;
+	EXTDATA(bitmap_at) = 0;
+	
 	size_t capacity = 8;
 	
 	EXTDATA(children) = HALLOC(capacity*sizeof(ASObject*));
 	EXTDATA(display_list_capacity) = capacity;
 	
+	for (size_t i = 0; i < capacity; ++i)
+	{
+		EXTDATA(children)[i] = NULL;
+	}
+	
 	return this;
+}
+
+void MovieClip_setChild_internal(SWFAppContext* app_context, ASObject* this, u32 depth, ASObject* new_child)
+{
+	ASObject* old_child = EXTDATA(children)[depth];
+	
+	if (old_child != NULL)
+	{
+		OBJ_LOCK_WRITE(old_child,
+		{
+			releaseObject(app_context, old_child);
+		});
+	}
+	
+	EXTDATA(children)[depth] = new_child;
+	
+	OBJ_LOCK_WRITE(new_child,
+	{
+		retainObject(new_child);
+	});
 }
 
 void MovieClip_placeObject2_internal(SWFAppContext* app_context, ASObject* this, u32 depth, u32 char_id, u32 transform_id)
 {
 	ENSURE_SIZE_FAR(EXTDATA(children), depth, EXTDATA(display_list_capacity), sizeof(ASObject*));
 	
-	EXTDATA(children)[depth] = MovieClip_create(app_context);
+	MovieClip_setChild_internal(app_context, this, depth, MovieClip_create(app_context));
 	
 	EXTDATA_OF(EXTDATA(children)[depth], char_id) = char_id;
 	EXTDATA_OF(EXTDATA(children)[depth], transform_id) = transform_id;
@@ -51,6 +82,31 @@ void MovieClip_placeObject2_internal(SWFAppContext* app_context, ASObject* this,
 	{
 		app_context->max_depth = depth;
 	}
+}
+
+void MovieClip_attachBitmap(SWFAppContext* app_context, ASObject* this, u32 num_args)
+{
+	ActionVar bitmap_v;
+	popVar(app_context, &bitmap_v);
+	ActionVar depth_v;
+	popVar(app_context, &depth_v);
+	
+	ASObject* bitmap = bitmap_v.object;
+	
+	releaseObjectVar(app_context, &depth_v);
+	toNumber(app_context, &depth_v);
+	popVar(app_context, &depth_v);
+	
+	u32 depth = (u32) depth_v.f64;
+	MovieClip_setChild_internal(app_context, this, depth, bitmap);
+	EXTDATA(bitmap_at) = depth;
+	
+	releaseObjectVar(app_context, &depth_v);
+	releaseObjectVar(app_context, &bitmap_v);
+	
+	DISCARD_ARGS(num_args - 2);
+	
+	RETURN_VOID();
 }
 
 ASObject* MovieClip_createTextField_internal(SWFAppContext* app_context, ASObject* this, ActionVar* name_v)
@@ -89,6 +145,19 @@ ASObject* MovieClip_createEmptyMovieClip_internal(SWFAppContext* app_context, AS
 	mc_v.object = mc;
 	
 	setProperty(app_context, this, name_v->string_id, NULL, 0, &mc_v);
+	
+	releaseObjectVar(app_context, depth_v);
+	toNumber(app_context, depth_v);
+	popVar(app_context, depth_v);
+	
+	u32 depth = (u32) depth_v->f64;
+	
+	if (app_context->max_depth < depth)
+	{
+		app_context->max_depth = depth;
+	}
+	
+	MovieClip_setChild_internal(app_context, this, depth, mc);
 	
 	return mc;
 }

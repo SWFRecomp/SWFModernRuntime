@@ -641,12 +641,21 @@ void toNumber(SWFAppContext* app_context, ActionVar* v)
 {
 	if (IS_OBJ_P(v))
 	{
-		UNIMPLEMENTED("ToNumber on an Object");
+		//~ UNIMPLEMENTED("ToNumber on an Object");
+		
+		// TODO: implement real ToNumber ECMA-262 3rd Edition algorithm
+		toPrimitive(app_context, v->object);
+		popVar(app_context, v);
 	}
 	
 	f64 num = toNumberCommon(app_context, v);
 	
 	PUSH_F64(num);
+	
+	if (UNLIKELY(IS_OBJ_P(v)))
+	{
+		releaseObjectVar(app_context, v);
+	}
 }
 
 void toInteger(SWFAppContext* app_context, ActionVar* v)
@@ -3165,15 +3174,15 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v,
 {
 	ASObject* func_obj = func_v->object;
 	
-	scope_top_obj += 1;
-	
-	scope_chain[scope_top_obj] = allocObject(app_context);
-	retainObject(scope_chain[scope_top_obj]);
-	
 	switch (Function_get_func_type(app_context, func_obj))
 	{
 		case FUNC_TYPE_1:
 		{
+			scope_top_obj += 1;
+			
+			scope_chain[scope_top_obj] = allocObject(app_context);
+			retainObject(scope_chain[scope_top_obj]);
+			
 			scope_registers[scope_top_obj] = HALLOC(4*sizeof(ActionVar));
 			
 			ActionVar* regs = scope_registers[scope_top_obj];
@@ -3222,11 +3231,23 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v,
 			}
 			
 			FREE(regs);
+			
+			OBJ_LOCK_WRITE(scope_chain[scope_top_obj],
+			{
+				releaseObject(app_context, scope_chain[scope_top_obj]);
+			});
+			
+			scope_top_obj -= 1;
 			break;
 		}
 		
 		case FUNC_TYPE_2:
 		{
+			scope_top_obj += 1;
+			
+			scope_chain[scope_top_obj] = allocObject(app_context);
+			retainObject(scope_chain[scope_top_obj]);
+			
 			u8 reg_count = Function_get_reg_count(app_context, func_obj);
 			u16 flags = Function_get_flags(app_context, func_obj);
 			
@@ -3325,6 +3346,13 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v,
 			}
 			
 			FREE(regs);
+			
+			OBJ_LOCK_WRITE(scope_chain[scope_top_obj],
+			{
+				releaseObject(app_context, scope_chain[scope_top_obj]);
+			});
+			
+			scope_top_obj -= 1;
 			break;
 		}
 		
@@ -3336,13 +3364,6 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v,
 			break;
 		}
 	}
-	
-	OBJ_LOCK_WRITE(scope_chain[scope_top_obj],
-	{
-		releaseObject(app_context, scope_chain[scope_top_obj]);
-	});
-	
-	scope_top_obj -= 1;
 }
 
 void getAndCallMethod(SWFAppContext* app_context, ASObject* this, u32 method_name, u32 num_args)
