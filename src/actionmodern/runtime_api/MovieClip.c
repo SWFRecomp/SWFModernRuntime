@@ -36,6 +36,11 @@ ASObject* MovieClip_create(SWFAppContext* app_context)
 	EXTDATA(has_tris) = false;
 	EXTDATA(bitmap_at) = 0;
 	
+	EXTDATA(_x) = 0.0;
+	EXTDATA(_y) = 0.0;
+	EXTDATA(_xscale) = 100.0;
+	EXTDATA(_yscale) = 100.0;
+	
 	size_t capacity = 8;
 	
 	EXTDATA(children) = HALLOC(capacity*sizeof(ASObject*));
@@ -177,4 +182,94 @@ void MovieClip_createEmptyMovieClip(SWFAppContext* app_context, ASObject* this, 
 	DISCARD_ARGS(num_args - 2);
 	
 	PUSH_OBJ(mc);
+}
+
+bool MovieClip_getMember(SWFAppContext* app_context, ASObject* this, u32 string_id, ActionVar* out_v)
+{
+	switch (string_id)
+	{
+		case STR_ID__X:
+		{
+			out_v->type = ACTION_STACK_VALUE_F64;
+			out_v->f64 = EXTDATA(_x);
+			
+			break;
+		}
+		
+		case STR_ID__Y:
+		{
+			out_v->type = ACTION_STACK_VALUE_F64;
+			out_v->f64 = EXTDATA(_y);
+			
+			break;
+		}
+		
+		case STR_ID__XSCALE:
+		{
+			out_v->type = ACTION_STACK_VALUE_F64;
+			out_v->f64 = EXTDATA(_xscale);
+			
+			break;
+		}
+		
+		case STR_ID__YSCALE:
+		{
+			out_v->type = ACTION_STACK_VALUE_F64;
+			out_v->f64 = EXTDATA(_yscale);
+			
+			break;
+		}
+		
+		default:
+		{
+			return false;
+		}
+	}
+	
+	return true;
+}
+
+bool MovieClip_setMember(SWFAppContext* app_context, ASObject* this, u32 string_id, ActionVar* v)
+{
+	switch (string_id)
+	{
+		case STR_ID__X:
+		{
+			convertNumericToNumber(app_context, v);
+			EXTDATA(_x) = v->f64;
+			
+			break;
+		}
+		
+		case STR_ID__Y:
+		{
+			convertNumericToNumber(app_context, v);
+			EXTDATA(_y) = v->f64;
+			
+			break;
+		}
+		
+		case STR_ID__XSCALE:
+		{
+			convertNumericToNumber(app_context, v);
+			EXTDATA(_xscale) = v->f64;
+			
+			break;
+		}
+		
+		case STR_ID__YSCALE:
+		{
+			convertNumericToNumber(app_context, v);
+			EXTDATA(_yscale) = v->f64;
+			
+			break;
+		}
+		
+		default:
+		{
+			return false;
+		}
+	}
+	
+	return true;
 }

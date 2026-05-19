@@ -144,6 +144,8 @@ void releaseObjectVar(SWFAppContext* app_context, ActionVar* var);
 void peekVar(SWFAppContext* app_context, ActionVar* var);
 void popVar(SWFAppContext* app_context, ActionVar* var);
 
+void convertNumericToNumber(SWFAppContext* app_context, ActionVar* v);
+
 void toNumber(SWFAppContext* app_context, ActionVar* v);
 void toPrimitive(SWFAppContext* app_context, ASObject* this);
 void toString(SWFAppContext* app_context, ActionVar* v);

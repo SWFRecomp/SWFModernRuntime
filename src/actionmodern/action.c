@@ -2893,6 +2893,16 @@ void actionSetMember(SWFAppContext* app_context)
 				break;
 			}
 			
+			case STR_ID_MOVIECLIP:
+			{
+				if (MovieClip_setMember(app_context, obj, prop_name_var.string_id, &value_var))
+				{
+					break;
+				}
+				
+				// fallthrough
+			}
+			
 			default:
 			{
 				if (UNLIKELY(IS_NUM_T(prop_name_var.type)))
@@ -3107,6 +3117,19 @@ void actionGetMember(SWFAppContext* app_context)
 					PUSH_VAR(Array_getElement(app_context, obj, i));
 					
 					special_object = true;
+					
+					break;
+				}
+				
+				case STR_ID_MOVIECLIP:
+				{
+					ActionVar v;
+					special_object = MovieClip_getMember(app_context, obj, prop_name_var.string_id, &v);
+					
+					if (special_object)
+					{
+						PUSH_VAR(&v);
+					}
 					
 					break;
 				}
