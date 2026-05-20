@@ -62,8 +62,10 @@ void BitmapData_loadBitmap(SWFAppContext* app_context, ASObject* this, u32 num_a
 	bitmap->extra_data = HALLOC(sizeof(BitmapData));
 	EXTDATA_OF(bitmap, char_id) = char_id;
 	
-	EXTDATA_OF(bitmap, width) = FBC->bitmap_sizes[0];
-	EXTDATA_OF(bitmap, height) = FBC->bitmap_sizes[1];
+	u16 bitmap_id = swfGetBitmapId(app_context, char_id);
+	
+	EXTDATA_OF(bitmap, width) = FBC->bitmap_sizes[2*bitmap_id];
+	EXTDATA_OF(bitmap, height) = FBC->bitmap_sizes[2*bitmap_id + 1];
 	
 	PUSH_OBJ(bitmap);
 }

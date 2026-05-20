@@ -119,41 +119,8 @@ void tagShowFrame(SWFAppContext* app_context)
 				f32 xscale = (float) (MC_EXTDATA_OF(disp_obj, _xscale)/100.0f);
 				f32 yscale = (float) (MC_EXTDATA_OF(disp_obj, _yscale)/100.0f);
 				
-				VAL(float, &tris[0]) = 0.0f;
-				VAL(float, &tris[1]) = (float) (20*BM_EXTDATA_OF(bitmap, height));
-				tris[2] = 0x41;
-				tris[3] = 0x0;
-				
-				VAL(float, &tris[4]) = (float) (20*BM_EXTDATA_OF(bitmap, width));
-				VAL(float, &tris[5]) = 0.0f;
-				tris[6] = 0x41;
-				tris[7] = 0x0;
-				
-				VAL(float, &tris[8]) = 0.0f;
-				VAL(float, &tris[9]) = 0.0f;
-				tris[10] = 0x41;
-				tris[11] = 0x0;
-				
-				VAL(float, &tris[12]) = 0.0f;
-				VAL(float, &tris[13]) = (float) (20*BM_EXTDATA_OF(bitmap, height));
-				tris[14] = 0x41;
-				tris[15] = 0x0;
-				
-				VAL(float, &tris[16]) = (float) (20*BM_EXTDATA_OF(bitmap, width));
-				VAL(float, &tris[17]) = 0.0f;
-				tris[18] = 0x41;
-				tris[19] = 0x0;
-				
-				VAL(float, &tris[20]) = (float) (20*BM_EXTDATA_OF(bitmap, width));
-				VAL(float, &tris[21]) = (float) (20*BM_EXTDATA_OF(bitmap, height));
-				tris[22] = 0x41;
-				tris[23] = 0x0;
-				
 				u32 vertex_count = 6;
 				flashbang_open_vertex_transfer(app_context->fbc, vertex_count, 1);
-				
-				u32 vertex_offset = flashbang_allocate_vertices(app_context->fbc, vertex_count);
-				flashbang_upload_vertices(app_context->fbc, tris, vertex_offset, vertex_count);
 				
 				temp_mat_data[0] = 20.0f;
 				temp_mat_data[5] = 20.0f;
@@ -163,6 +130,43 @@ void tagShowFrame(SWFAppContext* app_context)
 				
 				u32 uninv_offset = flashbang_allocate_uninv(app_context->fbc);
 				flashbang_upload_uninv(app_context->fbc, temp_mat_data, uninv_offset);
+				
+				u32 uninv_id = uninv_offset/(16*sizeof(float));
+				
+				// TODO: change 0x41 to 0x43
+				
+				VAL(float, &tris[0]) = 0.0f;
+				VAL(float, &tris[1]) = (float) (20*BM_EXTDATA_OF(bitmap, height));
+				tris[2] = 0x41;
+				tris[3] = uninv_id << 16;
+				
+				VAL(float, &tris[4]) = (float) (20*BM_EXTDATA_OF(bitmap, width));
+				VAL(float, &tris[5]) = 0.0f;
+				tris[6] = 0x41;
+				tris[7] = uninv_id << 16;
+				
+				VAL(float, &tris[8]) = 0.0f;
+				VAL(float, &tris[9]) = 0.0f;
+				tris[10] = 0x41;
+				tris[11] = uninv_id << 16;
+				
+				VAL(float, &tris[12]) = 0.0f;
+				VAL(float, &tris[13]) = (float) (20*BM_EXTDATA_OF(bitmap, height));
+				tris[14] = 0x41;
+				tris[15] = uninv_id << 16;
+				
+				VAL(float, &tris[16]) = (float) (20*BM_EXTDATA_OF(bitmap, width));
+				VAL(float, &tris[17]) = 0.0f;
+				tris[18] = 0x41;
+				tris[19] = uninv_id << 16;
+				
+				VAL(float, &tris[20]) = (float) (20*BM_EXTDATA_OF(bitmap, width));
+				VAL(float, &tris[21]) = (float) (20*BM_EXTDATA_OF(bitmap, height));
+				tris[22] = 0x41;
+				tris[23] = uninv_id << 16;
+				
+				u32 vertex_offset = flashbang_allocate_vertices(app_context->fbc, vertex_count);
+				flashbang_upload_vertices(app_context->fbc, tris, vertex_offset, vertex_count);
 				
 				flashbang_close_vertex_transfer(app_context->fbc);
 				

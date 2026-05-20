@@ -70,6 +70,9 @@ typedef struct SWFAppContext
 	size_t bitmap_highest_w;
 	size_t bitmap_highest_h;
 	
+	u16* bitmap_char_ids;
+	u16* bitmap_ids;
+	
 	bool shape_data_exists;
 	
 	char* shape_data;
