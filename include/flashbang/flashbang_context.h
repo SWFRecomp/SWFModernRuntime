@@ -79,9 +79,6 @@ typedef struct
 	void* bitmap_tex_array;
 	void* bitmap_sampler;
 	
-	void* msaa_texture;
-	void* resolve_texture;
-	
 	void* graphics_pipeline;
 	void* inv_pipeline;
 	

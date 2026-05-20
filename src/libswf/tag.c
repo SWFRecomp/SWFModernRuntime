@@ -7,13 +7,6 @@
 #include <flashbang.h>
 #include <utils.h>
 
-void tagSetBackgroundColor(SWFAppContext* app_context, u8 red, u8 green, u8 blue)
-{
-	flashbang_set_window_background(app_context->fbc, red, green, blue);
-}
-
-u32 last_ms = 0;
-
 typedef struct
 {
 	u32 offset;
@@ -45,6 +38,11 @@ float temp_mat_data[16] =
 	0.0f,
 	1.0f,
 };
+
+void tagSetBackgroundColor(SWFAppContext* app_context, u8 red, u8 green, u8 blue)
+{
+	flashbang_set_window_background(app_context->fbc, red, green, blue);
+}
 
 void tagShowFrame(SWFAppContext* app_context)
 {

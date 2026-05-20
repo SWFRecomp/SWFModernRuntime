@@ -355,26 +355,6 @@ void flashbang_init(FlashbangContext* context, SWFAppContext* app_context)
 	// create the pipeline
 	context->graphics_pipeline = SDL_CreateGPUGraphicsPipeline(context->device, &pipeline_info);
 	
-	texture_info.type = SDL_GPU_TEXTURETYPE_2D;
-	texture_info.format = SDL_GetGPUSwapchainTextureFormat(context->device, context->window);
-	texture_info.usage = SDL_GPU_TEXTUREUSAGE_COLOR_TARGET | SDL_GPU_TEXTUREUSAGE_SAMPLER;
-	texture_info.sample_count = sample_count;
-	texture_info.width = context->width;
-	texture_info.height = context->height;
-	texture_info.layer_count_or_depth = 1;
-	texture_info.num_levels = 1;
-	context->msaa_texture = SDL_CreateGPUTexture(context->device, &texture_info);
-	
-	texture_info.type = SDL_GPU_TEXTURETYPE_2D;
-	texture_info.format = SDL_GetGPUSwapchainTextureFormat(context->device, context->window);
-	texture_info.usage = SDL_GPU_TEXTUREUSAGE_COLOR_TARGET | SDL_GPU_TEXTUREUSAGE_SAMPLER;
-	texture_info.sample_count = SDL_GPU_SAMPLECOUNT_1;
-	texture_info.width = context->width;
-	texture_info.height = context->height;
-	texture_info.layer_count_or_depth = 1;
-	texture_info.num_levels = 1;
-	context->resolve_texture = SDL_CreateGPUTexture(context->device, &texture_info);
-	
 	// we don't need to store the shaders after creating the pipeline
 	SDL_ReleaseGPUShader(context->device, vertex_shader);
 	SDL_ReleaseGPUShader(context->device, fragment_shader);
@@ -699,14 +679,14 @@ void flashbang_upload_bitmap(FlashbangContext* context, size_t offset, size_t si
 {
 	u32* buffer = (u32*) SDL_MapGPUTransferBuffer(context->device, context->bitmap_transfer, 0);
 	
-	size_t bitmap_global_size = (context->bitmap_highest_w + 1)*(context->bitmap_highest_h + 1);
+	size_t bitmap_global_size = (context->bitmap_highest_w)*(context->bitmap_highest_h);
 	size_t current_buffer_offset = bitmap_global_size*context->current_bitmap;
 	
-	for (size_t y = 0; y < height + 1; ++y)
+	for (size_t y = 0; y < height; ++y)
 	{
-		for (size_t x = 0; x < width + 1; ++x)
+		for (size_t x = 0; x < width; ++x)
 		{
-			size_t buffer_pixel = current_buffer_offset + y*(context->bitmap_highest_w + 1) + x;
+			size_t buffer_pixel = current_buffer_offset + y*(context->bitmap_highest_w) + x;
 			size_t bitmap_pixel = y*width + x;
 			
 			if (x == width)
@@ -716,13 +696,13 @@ void flashbang_upload_bitmap(FlashbangContext* context, size_t offset, size_t si
 					break;
 				}
 				
-				buffer[buffer_pixel] = ((u32*) context->bitmap_data)[bitmap_pixel - 1];
+				buffer[buffer_pixel] = ((u32*) context->bitmap_data)[bitmap_pixel];
 				break;
 			}
 			
 			else if (y == height)
 			{
-				buffer[buffer_pixel - context->bitmap_highest_w - 1] = ((u32*) context->bitmap_data)[bitmap_pixel - width];
+				buffer[buffer_pixel - context->bitmap_highest_w] = ((u32*) context->bitmap_data)[bitmap_pixel - width];
 				continue;
 			}
 			
@@ -755,8 +735,8 @@ void flashbang_finalize_bitmaps(FlashbangContext* context)
 	texture_info.type = SDL_GPU_TEXTURETYPE_2D_ARRAY;
 	texture_info.format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM;
 	texture_info.usage = SDL_GPU_TEXTUREUSAGE_SAMPLER;
-	texture_info.width = (Uint32) (context->bitmap_highest_w + 1);
-	texture_info.height = (Uint32) (context->bitmap_highest_h + 1);
+	texture_info.width = (Uint32) (context->bitmap_highest_w);
+	texture_info.height = (Uint32) (context->bitmap_highest_h);
 	texture_info.layer_count_or_depth = (Uint32) context->bitmap_count;
 	texture_info.num_levels = 1;
 	texture_info.sample_count = SDL_GPU_SAMPLECOUNT_1;
@@ -765,9 +745,9 @@ void flashbang_finalize_bitmaps(FlashbangContext* context)
 	
 	SDL_GPUSamplerCreateInfo sampler_create_info = {0};
 	
-	sampler_create_info.min_filter = SDL_GPU_FILTER_LINEAR;
-	sampler_create_info.mag_filter = SDL_GPU_FILTER_LINEAR;
-	sampler_create_info.mipmap_mode = SDL_GPU_SAMPLERMIPMAPMODE_LINEAR;
+	sampler_create_info.min_filter = SDL_GPU_FILTER_NEAREST;
+	sampler_create_info.mag_filter = SDL_GPU_FILTER_NEAREST;
+	sampler_create_info.mipmap_mode = SDL_GPU_SAMPLERMIPMAPMODE_NEAREST;
 	sampler_create_info.address_mode_u = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
 	sampler_create_info.address_mode_v = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
 	sampler_create_info.address_mode_w = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
@@ -791,7 +771,7 @@ void flashbang_finalize_bitmaps(FlashbangContext* context)
 	// start a copy pass
 	SDL_GPUCopyPass* copy_pass = SDL_BeginGPUCopyPass(context->command_buffer);
 	
-	size_t bitmap_size = 4*(context->bitmap_highest_w + 1)*(context->bitmap_highest_h + 1);
+	size_t bitmap_size = 4*(context->bitmap_highest_w)*(context->bitmap_highest_h);
 	
 	for (size_t i = 0; i < context->bitmap_count; ++i)
 	{
@@ -810,8 +790,8 @@ void flashbang_finalize_bitmaps(FlashbangContext* context)
 		texture_region.x = 0;
 		texture_region.y = 0;
 		texture_region.z = 0;
-		texture_region.w = (Uint32) (context->bitmap_highest_w + 1);
-		texture_region.h = (Uint32) (context->bitmap_highest_h + 1);
+		texture_region.w = (Uint32) (context->bitmap_highest_w);
+		texture_region.h = (Uint32) (context->bitmap_highest_h);
 		texture_region.d = 1;
 		
 		// upload a bitmap
@@ -847,6 +827,11 @@ void flashbang_open_pass(FlashbangContext* context, SWFAppContext* app_context)
 	
 	assert(context->command_buffer != NULL);
 	
+	// get the swapchain texture
+	SDL_GPUTexture* swapchainTexture;
+	Uint32 width, height;
+	SDL_WaitAndAcquireGPUSwapchainTexture(context->command_buffer, context->window, &swapchainTexture, &width, &height);
+	
 	// create the color target
 	SDL_GPUColorTargetInfo colorTargetInfo = {0};
 	colorTargetInfo.clear_color.r = context->red/255.0f;
@@ -854,9 +839,8 @@ void flashbang_open_pass(FlashbangContext* context, SWFAppContext* app_context)
 	colorTargetInfo.clear_color.b = context->blue/255.0f;
 	colorTargetInfo.clear_color.a = 255/255.0f;
 	colorTargetInfo.load_op = SDL_GPU_LOADOP_CLEAR;
-	colorTargetInfo.store_op = SDL_GPU_STOREOP_RESOLVE;
-	colorTargetInfo.texture = context->msaa_texture;
-	colorTargetInfo.resolve_texture = context->resolve_texture;
+	colorTargetInfo.store_op = SDL_GPU_STOREOP_STORE;
+	colorTargetInfo.texture = swapchainTexture;
 	
 	// begin a render pass
 	context->render_pass = SDL_BeginGPURenderPass(context->command_buffer, &colorTargetInfo, 1, NULL);
@@ -1158,38 +1142,6 @@ void flashbang_close_pass(FlashbangContext* context, SWFAppContext* app_context)
 	// end the render pass
 	SDL_EndGPURenderPass(context->render_pass);
 	
-	// get the swapchain texture
-	SDL_GPUTexture* swapchain_texture;
-	Uint32 width, height;
-	SDL_WaitAndAcquireGPUSwapchainTexture(context->command_buffer, context->window, &swapchain_texture, &width, &height);
-	
-	if (LIKELY(swapchain_texture != NULL))
-	{
-		SDL_GPUBlitInfo blit_info = {0};
-		blit_info.source.texture = context->resolve_texture;
-		blit_info.source.mip_level = 0;
-		blit_info.source.layer_or_depth_plane = 0;
-		blit_info.source.x = 0;
-		blit_info.source.y = 0;
-		blit_info.source.w = context->width;
-		blit_info.source.h = context->height;
-		
-		blit_info.destination.texture = swapchain_texture;
-		blit_info.destination.mip_level = 0;
-		blit_info.destination.layer_or_depth_plane = 0;
-		blit_info.destination.x = 0;
-		blit_info.destination.y = 0;
-		blit_info.destination.w = width;
-		blit_info.destination.h = height;
-		
-		blit_info.load_op = SDL_GPU_LOADOP_DONT_CARE;
-		blit_info.flip_mode = SDL_FLIP_NONE;
-		blit_info.filter = SDL_GPU_FILTER_LINEAR;
-		blit_info.cycle = false;
-		
-		SDL_BlitGPUTexture(context->command_buffer, &blit_info);
-	}
-	
 	// submit the command buffer
 	SDL_SubmitGPUCommandBuffer(context->command_buffer);
 	
@@ -1259,8 +1211,6 @@ void flashbang_release(FlashbangContext* context, SWFAppContext* app_context)
 	
 	// destroy other textures
 	SDL_ReleaseGPUTexture(context->device, context->dummy_tex);
-	SDL_ReleaseGPUTexture(context->device, context->msaa_texture);
-	SDL_ReleaseGPUTexture(context->device, context->resolve_texture);
 	
 	// destroy other samplers
 	SDL_ReleaseGPUSampler(context->device, context->dummy_sampler);
