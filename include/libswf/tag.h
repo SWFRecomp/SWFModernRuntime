@@ -3,6 +3,47 @@
 #include <common.h>
 #include <swf.h>
 
+typedef struct
+{
+	u32 offset;
+	u32 count;
+	u32* tris;
+	
+	bool free_after;
+} VertexTask;
+
+typedef struct
+{
+	u32 offset;
+	
+	f32 x;
+	f32 y;
+	
+	f32 xscale;
+	f32 yscale;
+} UninvTask;
+
+typedef struct
+{
+	bool has_extra_transform_id;
+	u32 extra_transform_id;
+	
+	bool has_extra_cxform_id;
+	u32 extra_cxform_id;
+	
+	bool has_extra_transform;
+	
+	f32 x;
+	f32 y;
+	
+	f32 xscale;
+	f32 yscale;
+	
+	u32 offset;
+	u32 count;
+	u32 transform_id;
+} DrawTask;
+
 // Core tag functions - always available
 void tagInit(SWFAppContext* app_context);
 void tagSetBackgroundColor(SWFAppContext* app_context, u8 red, u8 green, u8 blue);

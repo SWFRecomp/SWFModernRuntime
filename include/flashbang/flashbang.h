@@ -3,6 +3,9 @@
 #include <context.h>
 #include <flashbang_context.h>
 
+extern const float identity[16];
+extern const float identity_cxform[20];
+
 void flashbang_init(FlashbangContext* context, SWFAppContext* app_context);
 int flashbang_poll();
 void flashbang_set_window_background(FlashbangContext* context, u8 r, u8 g, u8 b);

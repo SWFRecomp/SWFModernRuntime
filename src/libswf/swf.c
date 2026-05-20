@@ -121,9 +121,17 @@ void swfStart(SWFAppContext* app_context)
 	initActions(app_context);
 	initMap();
 	
+	SVEC_SIZED_INIT(&app_context->vertex_tasks, sizeof(VertexTask));
+	SVEC_SIZED_INIT(&app_context->uninv_tasks, sizeof(UninvTask));
+	SVEC_SIZED_INIT(&app_context->draw_tasks, sizeof(DrawTask));
+	
 	tagInit(app_context);
 	
 	tagMain(app_context);
+	
+	SVEC_RELEASE(&app_context->vertex_tasks);
+	SVEC_RELEASE(&app_context->uninv_tasks);
+	SVEC_RELEASE(&app_context->draw_tasks);
 	
 	freeMap(app_context);
 	freeActions(app_context);

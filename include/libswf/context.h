@@ -52,6 +52,14 @@ typedef struct SWFAppContext
 	
 	ASObject* _root;
 	
+	u32 frame_vertices;
+	
+	SwapVector vertex_tasks;
+	SwapVector uninv_tasks;
+	SwapVector draw_tasks;
+	
+	size_t frame_vertex_count;
+	
 	ASObject* Object_prototype;
 	ASObject* Object_constructor;
 	

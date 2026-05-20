@@ -5,19 +5,8 @@
 #include <MovieClip.h>
 #include <BitmapData.h>
 #include <flashbang.h>
+#include <heap.h>
 #include <utils.h>
-
-typedef struct
-{
-	u32 offset;
-	u32 vertex_count;
-	u32* tris;
-} VertexTask;
-
-//~ typedef struct
-//~ {
-	
-//~ } UninvTask;
 
 float temp_mat_data[16] =
 {
@@ -46,14 +35,7 @@ void tagSetBackgroundColor(SWFAppContext* app_context, u8 red, u8 green, u8 blue
 
 void tagShowFrame(SWFAppContext* app_context)
 {
-	//~ SwapVector vertex_tasks;
-	//~ SwapVector uninv_tasks;
-	//~ SwapVector draw_tasks;
-	//~ SVEC_SIZED_INIT(&vertex_tasks, sizeof(VertexTask));
-	//~ SVEC_SIZED_INIT(&uninv_tasks);
-	//~ SVEC_SIZED_INIT(&draw_tasks);
-	
-	flashbang_open_pass(app_context->fbc, app_context);
+	app_context->frame_vertex_count = 0;
 	
 	for (size_t i = 1; i <= app_context->max_depth; ++i)
 	{
@@ -75,15 +57,38 @@ void tagShowFrame(SWFAppContext* app_context)
 			switch (ch->type)
 			{
 				case CHAR_TYPE_SHAPE:
-					flashbang_draw_shape(app_context->fbc, ch->shape_offset, ch->size, transform_id);
+					SVEC_BUMP(&app_context->draw_tasks);
+					
+					DrawTask* dt = SVEC_GET_TOP(&app_context->draw_tasks, DrawTask);
+					
+					dt->has_extra_transform_id = false;
+					dt->has_extra_cxform_id = false;
+					dt->has_extra_transform = false;
+					
+					dt->offset = ch->shape_offset;
+					dt->count = ch->size;
+					dt->transform_id = transform_id;
 					break;
 				case CHAR_TYPE_TEXT:
-					flashbang_upload_extra_transform_id(app_context->fbc, transform_id);
-					flashbang_upload_cxform_id(app_context->fbc, ch->cxform_id);
 					for (u32 j = 0; j < ch->text_size; ++j)
 					{
+						SVEC_BUMP(&app_context->draw_tasks);
+						
+						DrawTask* dt = SVEC_GET_TOP(&app_context->draw_tasks, DrawTask);
+						
+						dt->has_extra_transform_id = true;
+						dt->extra_transform_id = transform_id;
+						
+						dt->has_extra_cxform_id = true;
+						dt->extra_cxform_id = ch->cxform_id;
+						
+						dt->has_extra_transform = false;
+						
 						u32 glyph_index = 2*app_context->text_data[ch->text_start + j];
-						flashbang_draw_shape(app_context->fbc, app_context->glyph_data[glyph_index], app_context->glyph_data[glyph_index + 1], ch->transform_start + j);
+						
+						dt->offset = app_context->glyph_data[glyph_index];
+						dt->count = app_context->glyph_data[glyph_index + 1];
+						dt->transform_id = ch->transform_start + j;
 					}
 					break;
 			}
@@ -93,16 +98,32 @@ void tagShowFrame(SWFAppContext* app_context)
 		{
 			if (MC_EXTDATA_OF(disp_obj, has_tris))
 			{
+				SVEC_BUMP(&app_context->vertex_tasks);
+				
+				VertexTask* vt = SVEC_GET_TOP(&app_context->vertex_tasks, VertexTask);
+				
 				u32 vertex_count = 3*MC_EXTDATA_OF(disp_obj, tri_count);
-				
-				flashbang_open_vertex_transfer(app_context->fbc, vertex_count, 1);
-				
 				u32 vertex_offset = flashbang_allocate_vertices(app_context->fbc, vertex_count);
-				flashbang_upload_vertices(app_context->fbc, MC_EXTDATA_OF(disp_obj, tris), vertex_offset, vertex_count);
 				
-				flashbang_close_vertex_transfer(app_context->fbc);
+				app_context->frame_vertex_count += vertex_count;
 				
-				flashbang_draw_shape(app_context->fbc, 0, vertex_count, 0);
+				vt->count = vertex_count;
+				vt->offset = vertex_offset;
+				vt->tris = MC_EXTDATA_OF(disp_obj, tris);
+				
+				vt->free_after = false;
+				
+				SVEC_BUMP(&app_context->draw_tasks);
+				
+				DrawTask* dt = SVEC_GET_TOP(&app_context->draw_tasks, DrawTask);
+				
+				dt->has_extra_transform_id = false;
+				dt->has_extra_cxform_id = false;
+				dt->has_extra_transform = false;
+				
+				dt->offset = vertex_offset;
+				dt->count = vertex_count;
+				dt->transform_id = 0;
 			}
 			
 			u32 bitmap_at = MC_EXTDATA_OF(disp_obj, bitmap_at);
@@ -111,26 +132,9 @@ void tagShowFrame(SWFAppContext* app_context)
 			{
 				ASObject* bitmap = MC_EXTDATA_OF(disp_obj, children)[bitmap_at];
 				
-				u32 tris[6*4];
-				
-				f32 x = (float) (20.0f*MC_EXTDATA_OF(disp_obj, _x));
-				f32 y = (float) (20.0f*MC_EXTDATA_OF(disp_obj, _y));
-				
-				f32 xscale = (float) (MC_EXTDATA_OF(disp_obj, _xscale)/100.0f);
-				f32 yscale = (float) (MC_EXTDATA_OF(disp_obj, _yscale)/100.0f);
-				
-				u32 vertex_count = 6;
-				flashbang_open_vertex_transfer(app_context->fbc, vertex_count, 1);
-				
-				temp_mat_data[0] = 20.0f;
-				temp_mat_data[5] = 20.0f;
-				
-				temp_mat_data[12] = 0.0f;
-				temp_mat_data[13] = 0.0f;
+				u32* tris = HALLOC(6*4*sizeof(float));
 				
 				u32 uninv_offset = flashbang_allocate_uninv(app_context->fbc);
-				flashbang_upload_uninv(app_context->fbc, temp_mat_data, uninv_offset);
-				
 				u32 uninv_id = uninv_offset/(16*sizeof(float));
 				
 				// TODO: change 0x41 to 0x43
@@ -165,25 +169,127 @@ void tagShowFrame(SWFAppContext* app_context)
 				tris[22] = 0x41;
 				tris[23] = uninv_id << 16;
 				
+				SVEC_BUMP(&app_context->draw_tasks);
+				
+				DrawTask* dt = SVEC_GET_TOP(&app_context->draw_tasks, DrawTask);
+				
+				dt->has_extra_transform_id = false;
+				dt->has_extra_cxform_id = false;
+				
+				dt->has_extra_transform = true;
+				
+				dt->x = (f32) (20.0f*MC_EXTDATA_OF(disp_obj, _x));
+				dt->y = (f32) (20.0f*MC_EXTDATA_OF(disp_obj, _y));
+				
+				dt->xscale = (f32) (MC_EXTDATA_OF(disp_obj, _xscale)/100.0f);
+				dt->yscale = (f32) (MC_EXTDATA_OF(disp_obj, _yscale)/100.0f);
+				
+				SVEC_BUMP(&app_context->vertex_tasks);
+				
+				VertexTask* vt = SVEC_GET_TOP(&app_context->vertex_tasks, VertexTask);
+				
+				u32 vertex_count = 6;
+				app_context->frame_vertex_count += vertex_count;
+				vt->count = vertex_count;
+				
 				u32 vertex_offset = flashbang_allocate_vertices(app_context->fbc, vertex_count);
-				flashbang_upload_vertices(app_context->fbc, tris, vertex_offset, vertex_count);
+				vt->offset = vertex_offset;
 				
-				flashbang_close_vertex_transfer(app_context->fbc);
+				dt->count = vertex_count;
+				dt->offset = vertex_offset;
+				dt->transform_id = 0;
 				
-				temp_mat_data[0] = xscale;
-				temp_mat_data[5] = yscale;
+				vt->tris = tris;
 				
-				temp_mat_data[12] = x;
-				temp_mat_data[13] = y;
+				vt->free_after = true;
 				
-				flashbang_upload_extra_transform(app_context->fbc, temp_mat_data);
+				SVEC_BUMP(&app_context->uninv_tasks);
 				
-				flashbang_draw_shape(app_context->fbc, 0, vertex_count, 0);
+				UninvTask* ut = SVEC_GET_TOP(&app_context->uninv_tasks, UninvTask);
+				
+				ut->offset = uninv_offset;
+				
+				ut->x = 0.0f;
+				ut->y = 0.0f;
+				
+				ut->xscale = 20.0f;
+				ut->yscale = 20.0f;
 			}
 		}
 	}
 	
+	flashbang_open_pass(app_context->fbc, app_context);
+	
+	if (app_context->vertex_tasks.length > 0)
+	{
+		flashbang_open_vertex_transfer(app_context->fbc, app_context->frame_vertex_count, app_context->uninv_tasks.length);
+		
+		for (size_t i = 0; i < app_context->vertex_tasks.length; ++i)
+		{
+			VertexTask* vt = SVEC_GET(&app_context->vertex_tasks, VertexTask, i);
+			
+			flashbang_upload_vertices(app_context->fbc, vt->tris, vt->offset, vt->count);
+			
+			bool free_after = vt->free_after;
+			
+			if (free_after)
+			{
+				FREE(vt->tris);
+			}
+		}
+		
+		for (size_t i = 0; i < app_context->uninv_tasks.length; ++i)
+		{
+			UninvTask* ut = SVEC_GET(&app_context->uninv_tasks, UninvTask, i);
+			
+			u32 offset = ut->offset;
+			
+			temp_mat_data[0] = ut->xscale;
+			temp_mat_data[5] = ut->yscale;
+			
+			temp_mat_data[12] = ut->x;
+			temp_mat_data[13] = ut->y;
+			
+			flashbang_upload_uninv(app_context->fbc, temp_mat_data, offset);
+		}
+		
+		flashbang_close_vertex_transfer(app_context->fbc);
+	}
+	
+	for (size_t i = 0; i < app_context->draw_tasks.length; ++i)
+	{
+		DrawTask* t = SVEC_GET(&app_context->draw_tasks, DrawTask, i);
+		
+		u32 extra_transform_id = t->has_extra_transform_id ? t->extra_transform_id : 0;
+		flashbang_upload_extra_transform_id(app_context->fbc, extra_transform_id);
+		
+		u32 extra_cxform_id = t->has_extra_cxform_id ? t->extra_cxform_id : 0;
+		flashbang_upload_cxform_id(app_context->fbc, extra_cxform_id);
+		
+		if (t->has_extra_transform)
+		{
+			temp_mat_data[0] = t->xscale;
+			temp_mat_data[5] = t->yscale;
+			
+			temp_mat_data[12] = t->x;
+			temp_mat_data[13] = t->y;
+			
+			flashbang_upload_extra_transform(app_context->fbc, temp_mat_data);
+		}
+		
+		else
+		{
+			flashbang_upload_extra_transform(app_context->fbc, (float*) identity);
+		}
+		
+		flashbang_draw_shape(app_context->fbc, t->offset, t->count, t->transform_id);
+	}
+	
 	flashbang_close_pass(app_context->fbc, app_context);
+	
+	SVEC_CLEAR(&app_context->vertex_tasks);
+	SVEC_CLEAR(&app_context->uninv_tasks);
+	SVEC_CLEAR(&app_context->draw_tasks);
 }
 
 void tagDefineShape(SWFAppContext* app_context, CharacterType type, u32 char_id, u32 shape_offset, u32 shape_size)

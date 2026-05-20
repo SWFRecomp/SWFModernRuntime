@@ -5,10 +5,13 @@
 
 #include <common.h>
 
+#define SVEC_GET(v, t, i) ((t*) (((t*) ((v)->data)) + i))
+#define SVEC_GET_TOP(v, t) ((t*) (((t*) ((v)->data)) + ((v)->length - 1)))
+
 #define SVEC_INIT(v) svec_init(app_context, v)
 #define SVEC_SIZED_INIT(v, s) svec_sized_init(app_context, v, s)
 #define SVEC_PUSH(v, x) svec_push(app_context, v, (uintptr_t) x)
-#define SVEC_BUMP(v, x) svec_bump(app_context, v)
+#define SVEC_BUMP(v) svec_bump(app_context, v)
 #define SVEC_REMOVE(v, i) svec_remove(v, i)
 #define SVEC_POP(v) svec_pop(v)
 #define SVEC_CLEAR(v) svec_clear(v)

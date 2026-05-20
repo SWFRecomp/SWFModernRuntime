@@ -1028,10 +1028,14 @@ void flashbang_open_vertex_transfer(FlashbangContext* context, size_t total_vert
 	size_t uninv_upload_size = 16*sizeof(u32)*total_uninv_count;
 	
 	flashbang_ensure_size_far_vertex(context, (u32) (context->current_vertex_offset + vertex_upload_size));
-	flashbang_ensure_size_far_uninv(context, (u32) (context->current_uninv_offset + uninv_upload_size));
 	
 	context->vertex_buffer_mapped = (char*) SDL_MapGPUTransferBuffer(context->device, context->vertex_transfer_buffer, 0);
-	context->uninv_buffer_mapped = (char*) SDL_MapGPUTransferBuffer(context->device, context->uninv_transfer_buffer, 0);
+	
+	if (total_uninv_count != 0)
+	{
+		flashbang_ensure_size_far_uninv(context, (u32) (context->current_uninv_offset + uninv_upload_size));
+		context->uninv_buffer_mapped = (char*) SDL_MapGPUTransferBuffer(context->device, context->uninv_transfer_buffer, 0);
+	}
 	
 	context->uninvs_uploading_count = total_uninv_count;
 }
@@ -1066,20 +1070,24 @@ void flashbang_close_vertex_transfer(FlashbangContext* context)
 	// upload vertices
 	SDL_UploadToGPUBuffer(context->copy_pass, &location, &region, false);
 	
-	// where is the data
-	location.transfer_buffer = context->uninv_transfer_buffer;
-	location.offset = 0; // start from the beginning
-	
-	// where to upload the data
-	region.buffer = context->uninv_mat_buffer;
-	region.size = (Uint32) (context->current_uninv_offset - UNINV_SIZE); // size of the data in bytes
-	region.offset = (Uint32) UNINV_SIZE; // begin writing from after the existing matrix data
-	
-	// upload matrices
-	SDL_UploadToGPUBuffer(context->copy_pass, &location, &region, false);
-	
 	SDL_UnmapGPUTransferBuffer(context->device, context->vertex_transfer_buffer);
-	SDL_UnmapGPUTransferBuffer(context->device, context->uninv_transfer_buffer);
+	
+	if (context->uninvs_uploading_count > 0)
+	{
+		// where is the data
+		location.transfer_buffer = context->uninv_transfer_buffer;
+		location.offset = 0; // start from the beginning
+		
+		// where to upload the data
+		region.buffer = context->uninv_mat_buffer;
+		region.size = (Uint32) (context->current_uninv_offset - UNINV_SIZE); // size of the data in bytes
+		region.offset = (Uint32) UNINV_SIZE; // begin writing from after the existing matrix data
+		
+		// upload matrices
+		SDL_UploadToGPUBuffer(context->copy_pass, &location, &region, false);
+		
+		SDL_UnmapGPUTransferBuffer(context->device, context->uninv_transfer_buffer);
+	}
 	
 	// end the copy pass
 	SDL_EndGPUCopyPass(context->copy_pass);
