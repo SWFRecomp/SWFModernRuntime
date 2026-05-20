@@ -36,6 +36,7 @@ ASObject* MovieClip_create(SWFAppContext* app_context)
 	EXTDATA(has_tris) = false;
 	EXTDATA(bitmap_at) = 0;
 	
+	EXTDATA(_rotation) = 0.0;
 	EXTDATA(_x) = 0.0;
 	EXTDATA(_y) = 0.0;
 	EXTDATA(_xscale) = 100.0;
@@ -189,6 +190,14 @@ bool MovieClip_getMember(SWFAppContext* app_context, ASObject* this, u32 string_
 {
 	switch (string_id)
 	{
+		case STR_ID__ROTATION:
+		{
+			out_v->type = ACTION_STACK_VALUE_F64;
+			out_v->f64 = EXTDATA(_rotation);
+			
+			break;
+		}
+		
 		case STR_ID__X:
 		{
 			out_v->type = ACTION_STACK_VALUE_F64;
@@ -234,6 +243,14 @@ bool MovieClip_setMember(SWFAppContext* app_context, ASObject* this, u32 string_
 {
 	switch (string_id)
 	{
+		case STR_ID__ROTATION:
+		{
+			convertNumericToNumber(app_context, v);
+			EXTDATA(_rotation) = v->f64;
+			
+			break;
+		}
+		
 		case STR_ID__X:
 		{
 			convertNumericToNumber(app_context, v);

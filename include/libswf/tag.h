@@ -36,6 +36,8 @@ typedef struct
 	f32 x;
 	f32 y;
 	
+	f32 rotation;
+	
 	f32 xscale;
 	f32 yscale;
 	

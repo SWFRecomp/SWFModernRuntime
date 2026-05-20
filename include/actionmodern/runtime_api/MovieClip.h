@@ -18,6 +18,7 @@ typedef struct
 	
 	u32 bitmap_at;
 	
+	f64 _rotation;
 	f64 _x;
 	f64 _y;
 	f64 _xscale;

@@ -1,5 +1,8 @@
 #ifndef NO_GRAPHICS
 
+#define _USE_MATH_DEFINES
+#include <math.h>
+
 #include <swf.h>
 #include <tag.h>
 #include <MovieClip.h>
@@ -188,6 +191,9 @@ void tagShowFrame(SWFAppContext* app_context)
 				dt->x = (f32) (20.0f*MC_EXTDATA_OF(disp_obj, _x));
 				dt->y = (f32) (20.0f*MC_EXTDATA_OF(disp_obj, _y));
 				
+				f32 rotation = (f32) (MC_EXTDATA_OF(disp_obj, _rotation)*M_PI/180.0);
+				dt->rotation = rotation;
+				
 				dt->xscale = (f32) (MC_EXTDATA_OF(disp_obj, _xscale)/100.0f);
 				dt->yscale = (f32) (MC_EXTDATA_OF(disp_obj, _yscale)/100.0f);
 				
@@ -252,6 +258,8 @@ void tagShowFrame(SWFAppContext* app_context)
 			u32 offset = ut->offset;
 			
 			temp_mat_data[0] = ut->xscale;
+			temp_mat_data[1] = 0.0f;
+			temp_mat_data[4] = 0.0f;
 			temp_mat_data[5] = ut->yscale;
 			
 			temp_mat_data[12] = ut->x;
@@ -275,8 +283,10 @@ void tagShowFrame(SWFAppContext* app_context)
 		
 		if (t->has_extra_transform)
 		{
-			temp_mat_data[0] = t->xscale;
-			temp_mat_data[5] = t->yscale;
+			temp_mat_data[0] = cosf(t->rotation)*t->xscale;
+			temp_mat_data[1] = sinf(t->rotation)*t->yscale;
+			temp_mat_data[4] = -sinf(t->rotation)*t->xscale;
+			temp_mat_data[5] = cosf(t->rotation)*t->yscale;
 			
 			temp_mat_data[12] = t->x;
 			temp_mat_data[13] = t->y;
