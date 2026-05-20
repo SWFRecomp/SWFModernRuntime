@@ -41,6 +41,11 @@ void tagShowFrame(SWFAppContext* app_context)
 	{
 		ASObject* disp_obj = MC_EXTDATA_OF(app_context->_root, children)[i];
 		
+		if (disp_obj == NULL)
+		{
+			continue;
+		}
+		
 		u32 char_id = MC_EXTDATA_OF(disp_obj, char_id);
 		
 		if (char_id != 0)
@@ -137,37 +142,39 @@ void tagShowFrame(SWFAppContext* app_context)
 				u32 uninv_offset = flashbang_allocate_uninv(app_context->fbc);
 				u32 uninv_id = uninv_offset/(16*sizeof(float));
 				
+				u32 bitmap_id = BM_EXTDATA_OF(bitmap, bitmap_id);
+				
 				// TODO: change 0x41 to 0x43
 				
 				VAL(float, &tris[0]) = 0.0f;
 				VAL(float, &tris[1]) = (float) (20*BM_EXTDATA_OF(bitmap, height));
 				tris[2] = 0x41;
-				tris[3] = uninv_id << 16;
+				tris[3] = (uninv_id << 16) | bitmap_id;
 				
 				VAL(float, &tris[4]) = (float) (20*BM_EXTDATA_OF(bitmap, width));
 				VAL(float, &tris[5]) = 0.0f;
 				tris[6] = 0x41;
-				tris[7] = uninv_id << 16;
+				tris[7] = (uninv_id << 16) | bitmap_id;
 				
 				VAL(float, &tris[8]) = 0.0f;
 				VAL(float, &tris[9]) = 0.0f;
 				tris[10] = 0x41;
-				tris[11] = uninv_id << 16;
+				tris[11] = (uninv_id << 16) | bitmap_id;
 				
 				VAL(float, &tris[12]) = 0.0f;
 				VAL(float, &tris[13]) = (float) (20*BM_EXTDATA_OF(bitmap, height));
 				tris[14] = 0x41;
-				tris[15] = uninv_id << 16;
+				tris[15] = (uninv_id << 16) | bitmap_id;
 				
 				VAL(float, &tris[16]) = (float) (20*BM_EXTDATA_OF(bitmap, width));
 				VAL(float, &tris[17]) = 0.0f;
 				tris[18] = 0x41;
-				tris[19] = uninv_id << 16;
+				tris[19] = (uninv_id << 16) | bitmap_id;
 				
 				VAL(float, &tris[20]) = (float) (20*BM_EXTDATA_OF(bitmap, width));
 				VAL(float, &tris[21]) = (float) (20*BM_EXTDATA_OF(bitmap, height));
 				tris[22] = 0x41;
-				tris[23] = uninv_id << 16;
+				tris[23] = (uninv_id << 16) | bitmap_id;
 				
 				SVEC_BUMP(&app_context->draw_tasks);
 				

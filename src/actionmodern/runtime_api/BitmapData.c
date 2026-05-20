@@ -63,6 +63,7 @@ void BitmapData_loadBitmap(SWFAppContext* app_context, ASObject* this, u32 num_a
 	EXTDATA_OF(bitmap, char_id) = char_id;
 	
 	u16 bitmap_id = swfGetBitmapId(app_context, char_id);
+	EXTDATA_OF(bitmap, bitmap_id) = bitmap_id;
 	
 	EXTDATA_OF(bitmap, width) = FBC->bitmap_sizes[2*bitmap_id];
 	EXTDATA_OF(bitmap, height) = FBC->bitmap_sizes[2*bitmap_id + 1];

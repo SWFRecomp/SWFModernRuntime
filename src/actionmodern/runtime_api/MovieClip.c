@@ -103,6 +103,7 @@ void MovieClip_attachBitmap(SWFAppContext* app_context, ASObject* this, u32 num_
 	popVar(app_context, &depth_v);
 	
 	u32 depth = (u32) depth_v.f64;
+	ENSURE_SIZE_FAR(EXTDATA(children), depth, EXTDATA(display_list_capacity), sizeof(ASObject*));
 	MovieClip_setChild_internal(app_context, this, depth, bitmap);
 	EXTDATA(bitmap_at) = depth;
 	

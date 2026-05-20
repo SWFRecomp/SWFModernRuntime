@@ -101,7 +101,7 @@ void flashbang_init(FlashbangContext* context, SWFAppContext* app_context)
 	SDL_GPUTransferBuffer* cxform_transfer_buffer;
 	SDL_GPUTransferBuffer* dummy_transfer_buffer;
 	
-	context->allocated_vertex_size = context->shape_data_size + 6*4*sizeof(u32);
+	context->allocated_vertex_size = context->shape_data_size;
 	
 	// create the vertex buffer
 	SDL_GPUBufferCreateInfo bufferInfo = {0};
@@ -687,7 +687,7 @@ void flashbang_upload_bitmap(FlashbangContext* context, size_t offset, size_t si
 		for (size_t x = 0; x < width; ++x)
 		{
 			size_t buffer_pixel = current_buffer_offset + y*(context->bitmap_highest_w) + x;
-			size_t bitmap_pixel = y*width + x;
+			size_t bitmap_pixel = offset/4 + y*width + x;
 			
 			if (x == width)
 			{
@@ -903,7 +903,7 @@ u32 flashbang_allocate_vertices(FlashbangContext* context, u32 num_verts)
 	
 	context->current_vertex_offset += 4*sizeof(u32)*num_verts;
 	
-	return this_offset;
+	return this_offset/(4*sizeof(u32));
 }
 
 u32 flashbang_allocate_uninv(FlashbangContext* context)
@@ -1025,7 +1025,6 @@ void flashbang_open_vertex_transfer(FlashbangContext* context, size_t total_vert
 	context->copy_pass = SDL_BeginGPUCopyPass(context->command_buffer);
 	
 	size_t vertex_upload_size = 4*sizeof(u32)*total_vertex_count;
-	size_t uninv_upload_size = 16*sizeof(u32)*total_uninv_count;
 	
 	flashbang_ensure_size_far_vertex(context, (u32) (context->current_vertex_offset + vertex_upload_size));
 	
@@ -1033,6 +1032,7 @@ void flashbang_open_vertex_transfer(FlashbangContext* context, size_t total_vert
 	
 	if (total_uninv_count != 0)
 	{
+		size_t uninv_upload_size = 16*sizeof(u32)*total_uninv_count;
 		flashbang_ensure_size_far_uninv(context, (u32) (context->current_uninv_offset + uninv_upload_size));
 		context->uninv_buffer_mapped = (char*) SDL_MapGPUTransferBuffer(context->device, context->uninv_transfer_buffer, 0);
 	}
@@ -1040,8 +1040,9 @@ void flashbang_open_vertex_transfer(FlashbangContext* context, size_t total_vert
 	context->uninvs_uploading_count = total_uninv_count;
 }
 
-void flashbang_upload_vertices(FlashbangContext* context, u32* data, u32 upload_offset, u32 vertex_count)
+void flashbang_upload_vertices(FlashbangContext* context, u32* data, u32 vertex_offset, u32 vertex_count)
 {
+	size_t upload_offset = 4*sizeof(u32)*vertex_offset;
 	size_t upload_size = 4*sizeof(u32)*vertex_count;
 	
 	memcpy(context->vertex_buffer_mapped + upload_offset, data, upload_size);

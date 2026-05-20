@@ -32,11 +32,11 @@ u16 swfGetExportedChar(SWFAppContext* app_context, u32 string_id)
 
 u16 swfGetBitmapId(SWFAppContext* app_context, u32 char_id)
 {
-	u16 bitmap_id = 0;
+	u16 bitmap_id = 0xFFFF;
 	
 	for (size_t i = 0; i < app_context->bitmap_count; ++i)
 	{
-		if (app_context->bitmap_char_ids[i] == bitmap_id)
+		if (app_context->bitmap_char_ids[i] == char_id)
 		{
 			bitmap_id = app_context->bitmap_ids[i];
 			break;
