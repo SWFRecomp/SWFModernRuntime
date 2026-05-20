@@ -40,13 +40,31 @@ void tagShowFrame(SWFAppContext* app_context)
 {
 	app_context->frame_vertex_count = 0;
 	
-	for (size_t i = 1; i <= app_context->max_depth; ++i)
+	SwapVector* stack = &app_context->movieclip_stack;
+	ASObject* root = app_context->_root;
+	
+	SVEC_PUSH(stack, root);
+	
+	while (stack->length > 0)
 	{
-		ASObject* disp_obj = MC_EXTDATA_OF(app_context->_root, children)[i];
+		ASObject* disp_obj = (ASObject*) SVEC_TOP(stack);
+		SVEC_POP(stack);
 		
 		if (disp_obj == NULL)
 		{
 			continue;
+		}
+		
+		size_t max_depth = MC_EXTDATA_OF(disp_obj, max_depth);
+		
+		for (size_t i = max_depth; i >= 1; --i)
+		{
+			if (MC_EXTDATA_OF(disp_obj, bitmap_at) == i)
+			{
+				continue;
+			}
+			
+			SVEC_PUSH(stack, MC_EXTDATA_OF(disp_obj, children)[i]);
 		}
 		
 		u32 char_id = MC_EXTDATA_OF(disp_obj, char_id);
@@ -54,11 +72,6 @@ void tagShowFrame(SWFAppContext* app_context)
 		if (char_id != 0)
 		{
 			u32 transform_id = MC_EXTDATA_OF(disp_obj, transform_id);
-			
-			if (char_id == 0)
-			{
-				continue;
-			}
 			
 			Character* ch = &dictionary[char_id];
 			
@@ -188,14 +201,13 @@ void tagShowFrame(SWFAppContext* app_context)
 				
 				dt->has_extra_transform = true;
 				
-				dt->x = (f32) (20.0f*MC_EXTDATA_OF(disp_obj, _x));
-				dt->y = (f32) (20.0f*MC_EXTDATA_OF(disp_obj, _y));
+				dt->x = (f32) (20.0f*MovieClip_getTotalX(app_context, disp_obj));
+				dt->y = (f32) (20.0f*MovieClip_getTotalY(app_context, disp_obj));
 				
-				f32 rotation = (f32) (MC_EXTDATA_OF(disp_obj, _rotation)*M_PI/180.0);
-				dt->rotation = rotation;
+				dt->rotation = (f32) (MovieClip_getTotalRotation(app_context, disp_obj)*M_PI/180.0);
 				
-				dt->xscale = (f32) (MC_EXTDATA_OF(disp_obj, _xscale)/100.0f);
-				dt->yscale = (f32) (MC_EXTDATA_OF(disp_obj, _yscale)/100.0f);
+				dt->xscale = (f32) (MovieClip_getTotalXScale(app_context, disp_obj)/100.0f);
+				dt->yscale = (f32) (MovieClip_getTotalYScale(app_context, disp_obj)/100.0f);
 				
 				SVEC_BUMP(&app_context->vertex_tasks);
 				
@@ -307,6 +319,8 @@ void tagShowFrame(SWFAppContext* app_context)
 	SVEC_CLEAR(&app_context->vertex_tasks);
 	SVEC_CLEAR(&app_context->uninv_tasks);
 	SVEC_CLEAR(&app_context->draw_tasks);
+	
+	SVEC_CLEAR(&app_context->movieclip_stack);
 }
 
 void tagDefineShape(SWFAppContext* app_context, CharacterType type, u32 char_id, u32 shape_offset, u32 shape_size)

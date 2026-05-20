@@ -36,6 +36,7 @@ ASObject* MovieClip_create(SWFAppContext* app_context)
 	EXTDATA(has_tris) = false;
 	EXTDATA(bitmap_at) = 0;
 	
+	EXTDATA(_parent) = NULL;
 	EXTDATA(_rotation) = 0.0;
 	EXTDATA(_x) = 0.0;
 	EXTDATA(_y) = 0.0;
@@ -45,6 +46,7 @@ ASObject* MovieClip_create(SWFAppContext* app_context)
 	size_t capacity = 8;
 	
 	EXTDATA(children) = HALLOC(capacity*sizeof(ASObject*));
+	EXTDATA(max_depth) = 0;
 	EXTDATA(display_list_capacity) = capacity;
 	
 	for (size_t i = 0; i < capacity; ++i)
@@ -53,6 +55,81 @@ ASObject* MovieClip_create(SWFAppContext* app_context)
 	}
 	
 	return this;
+}
+
+f64 MovieClip_getTotalX(SWFAppContext* app_context, ASObject* this)
+{
+	ASObject* current = EXTDATA(_parent);
+	
+	f64 x = EXTDATA(_x);
+	
+	while (current != NULL)
+	{
+		x += EXTDATA_OF(current, _x);
+		current = EXTDATA_OF(current, _parent);
+	}
+	
+	return x;
+}
+
+f64 MovieClip_getTotalY(SWFAppContext* app_context, ASObject* this)
+{
+	ASObject* current = EXTDATA(_parent);
+	
+	f64 y = EXTDATA(_y);
+	
+	while (current != NULL)
+	{
+		y += EXTDATA_OF(current, _y);
+		current = EXTDATA_OF(current, _parent);
+	}
+	
+	return y;
+}
+
+f64 MovieClip_getTotalRotation(SWFAppContext* app_context, ASObject* this)
+{
+	ASObject* current = EXTDATA(_parent);
+	
+	f64 rotation = EXTDATA(_rotation);
+	
+	while (current != NULL)
+	{
+		rotation += EXTDATA_OF(current, _rotation);
+		current = EXTDATA_OF(current, _parent);
+	}
+	
+	return rotation;
+}
+
+f64 MovieClip_getTotalXScale(SWFAppContext* app_context, ASObject* this)
+{
+	ASObject* current = EXTDATA(_parent);
+	
+	f64 xscale = EXTDATA(_xscale);
+	
+	while (current != NULL)
+	{
+		xscale *= EXTDATA_OF(current, _xscale)/100.0;
+		current = EXTDATA_OF(current, _parent);
+	}
+	
+	return xscale;
+}
+
+f64 MovieClip_getTotalYScale(SWFAppContext* app_context, ASObject* this)
+{
+	ASObject* current = EXTDATA(_parent);
+	
+	f64 yscale = EXTDATA(_yscale);
+	
+	while (current != NULL)
+	{
+		yscale *= EXTDATA_OF(current, _yscale)/100.0;
+		current = EXTDATA_OF(current, _parent);
+	}
+	
+	return yscale;
 }
 
 void MovieClip_setChild_internal(SWFAppContext* app_context, ASObject* this, u32 depth, ASObject* new_child)
@@ -73,6 +150,23 @@ void MovieClip_setChild_internal(SWFAppContext* app_context, ASObject* this, u32
 	{
 		retainObject(new_child);
 	});
+	
+	ASObject* old_parent = EXTDATA_OF(new_child, _parent);
+	
+	if (old_parent != NULL)
+	{
+		OBJ_LOCK_WRITE(old_parent,
+		{
+			releaseObject(app_context, old_parent);
+		});
+	}
+	
+	EXTDATA_OF(new_child, _parent) = this;
+	
+	OBJ_LOCK_WRITE(this,
+	{
+		retainObject(this);
+	});
 }
 
 void MovieClip_placeObject2_internal(SWFAppContext* app_context, ASObject* this, u32 depth, u32 char_id, u32 transform_id)
@@ -84,9 +178,9 @@ void MovieClip_placeObject2_internal(SWFAppContext* app_context, ASObject* this,
 	EXTDATA_OF(EXTDATA(children)[depth], char_id) = char_id;
 	EXTDATA_OF(EXTDATA(children)[depth], transform_id) = transform_id;
 	
-	if (depth > app_context->max_depth)
+	if (depth > EXTDATA(max_depth))
 	{
-		app_context->max_depth = depth;
+		EXTDATA(max_depth) = depth;
 	}
 }
 
@@ -159,9 +253,9 @@ ASObject* MovieClip_createEmptyMovieClip_internal(SWFAppContext* app_context, AS
 	
 	u32 depth = (u32) depth_v->f64;
 	
-	if (app_context->max_depth < depth)
+	if (depth > EXTDATA(max_depth))
 	{
-		app_context->max_depth = depth;
+		EXTDATA(max_depth) = depth;
 	}
 	
 	MovieClip_setChild_internal(app_context, this, depth, mc);
@@ -190,6 +284,14 @@ bool MovieClip_getMember(SWFAppContext* app_context, ASObject* this, u32 string_
 {
 	switch (string_id)
 	{
+		case STR_ID__PARENT:
+		{
+			out_v->type = ACTION_STACK_VALUE_OBJECT;
+			out_v->object = EXTDATA(_parent);
+			
+			break;
+		}
+		
 		case STR_ID__ROTATION:
 		{
 			out_v->type = ACTION_STACK_VALUE_F64;
@@ -243,6 +345,13 @@ bool MovieClip_setMember(SWFAppContext* app_context, ASObject* this, u32 string_
 {
 	switch (string_id)
 	{
+		case STR_ID__PARENT:
+		{
+			EXTDATA(_parent) = v->object;
+			
+			break;
+		}
+		
 		case STR_ID__ROTATION:
 		{
 			convertNumericToNumber(app_context, v);

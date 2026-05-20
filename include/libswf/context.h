@@ -24,7 +24,6 @@ typedef struct SWFAppContext
 	frame_func* frame_funcs;
 	
 	size_t dictionary_capacity;
-	size_t max_depth;
 	
 	char** str_table;
 	u32* str_len_table;
@@ -57,6 +56,8 @@ typedef struct SWFAppContext
 	SwapVector vertex_tasks;
 	SwapVector uninv_tasks;
 	SwapVector draw_tasks;
+	
+	SwapVector movieclip_stack;
 	
 	size_t frame_vertex_count;
 	

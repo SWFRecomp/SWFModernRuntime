@@ -107,7 +107,6 @@ void swfStart(SWFAppContext* app_context)
 	dictionary = HALLOC(INITIAL_DICTIONARY_CAPACITY*sizeof(Character));
 	
 	app_context->dictionary_capacity = INITIAL_DICTIONARY_CAPACITY;
-	app_context->max_depth = 0;
 	
 	STACK = (char*) HALLOC(INITIAL_STACK_SIZE);
 	SP = INITIAL_SP;
@@ -125,6 +124,8 @@ void swfStart(SWFAppContext* app_context)
 	SVEC_SIZED_INIT(&app_context->uninv_tasks, sizeof(UninvTask));
 	SVEC_SIZED_INIT(&app_context->draw_tasks, sizeof(DrawTask));
 	
+	SVEC_INIT(&app_context->movieclip_stack);
+	
 	tagInit(app_context);
 	
 	tagMain(app_context);
@@ -132,6 +133,8 @@ void swfStart(SWFAppContext* app_context)
 	SVEC_RELEASE(&app_context->vertex_tasks);
 	SVEC_RELEASE(&app_context->uninv_tasks);
 	SVEC_RELEASE(&app_context->draw_tasks);
+	
+	SVEC_RELEASE(&app_context->movieclip_stack);
 	
 	freeMap(app_context);
 	freeActions(app_context);

@@ -6,11 +6,13 @@
 
 typedef struct
 {
+	u16 char_id;
+	ASObject* _parent;
+	
+	u16 bitmap_id;
+	
 	u32 width;
 	u32 height;
-	
-	u16 char_id;
-	u16 bitmap_id;
 } BitmapData;
 
 void BitmapData_new(SWFAppContext* app_context, ASObject* this, u32 num_args);

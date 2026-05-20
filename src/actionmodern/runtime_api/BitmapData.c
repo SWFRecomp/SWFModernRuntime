@@ -38,9 +38,11 @@ void BitmapData_new(SWFAppContext* app_context, ASObject* this, u32 num_args)
 	
 	this->extra_data = HALLOC(sizeof(BitmapData));
 	
+	EXTDATA(char_id) = 0;
+	EXTDATA(_parent) = NULL;
+	
 	EXTDATA(width) = 0;
 	EXTDATA(height) = 0;
-	EXTDATA(char_id) = 0;
 	
 	RETURN_VOID();
 }

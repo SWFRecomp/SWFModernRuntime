@@ -6,11 +6,14 @@
 
 typedef struct
 {
+	u16 char_id;
+	ASObject* _parent;
+	size_t max_depth;
+	
+	u32 transform_id;
+	
 	ASObject** children;
 	size_t display_list_capacity;
-	
-	u32 char_id;
-	u32 transform_id;
 	
 	bool has_tris;
 	u32 tri_count;
@@ -31,6 +34,11 @@ typedef struct
 void MovieClip_new(SWFAppContext* app_context, ASObject* this, u32 num_args);
 
 ASObject* MovieClip_create(SWFAppContext* app_context);
+f64 MovieClip_getTotalX(SWFAppContext* app_context, ASObject* this);
+f64 MovieClip_getTotalY(SWFAppContext* app_context, ASObject* this);
+f64 MovieClip_getTotalRotation(SWFAppContext* app_context, ASObject* this);
+f64 MovieClip_getTotalXScale(SWFAppContext* app_context, ASObject* this);
+f64 MovieClip_getTotalYScale(SWFAppContext* app_context, ASObject* this);
 void MovieClip_placeObject2_internal(SWFAppContext* app_context, ASObject* this, u32 depth, u32 char_id, u32 transform_id);
 
 void MovieClip_attachBitmap(SWFAppContext* app_context, ASObject* this, u32 num_args);
