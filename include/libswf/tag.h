@@ -15,13 +15,20 @@ typedef struct
 typedef struct
 {
 	u32 offset;
+} UninvTask;
+
+typedef struct
+{
+	u32 offset;
 	
 	f32 x;
 	f32 y;
 	
+	f32 rotation;
+	
 	f32 xscale;
 	f32 yscale;
-} UninvTask;
+} MultTask;
 
 typedef struct
 {

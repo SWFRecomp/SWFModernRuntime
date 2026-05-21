@@ -14,7 +14,7 @@ void flashbang_finalize_bitmaps(FlashbangContext* context);
 void flashbang_open_pass(FlashbangContext* context, SWFAppContext* app_context);
 u32 flashbang_allocate_vertices(FlashbangContext* context, u32 num_verts);
 u32 flashbang_allocate_uninv(FlashbangContext* context);
-void flashbang_open_vertex_transfer(FlashbangContext* context, size_t total_vertex_count, size_t total_uninv_count);
+void flashbang_open_vertex_transfer(FlashbangContext* context, size_t total_vertex_count, size_t total_uninv_count, size_t total_transform_count);
 void flashbang_upload_vertices(FlashbangContext* context, u32* data, u32 upload_offset, u32 vertex_count);
 void flashbang_upload_uninv(FlashbangContext* context, float* uninv, u32 offset);
 void flashbang_close_vertex_transfer(FlashbangContext* context);

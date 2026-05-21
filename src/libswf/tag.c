@@ -247,7 +247,7 @@ void tagShowFrame(SWFAppContext* app_context)
 	
 	if (app_context->vertex_tasks.length > 0)
 	{
-		flashbang_open_vertex_transfer(app_context->fbc, app_context->frame_vertex_count, app_context->uninv_tasks.length);
+		flashbang_open_vertex_transfer(app_context->fbc, app_context->frame_vertex_count, app_context->uninv_tasks.length, 0);
 		
 		for (size_t i = 0; i < app_context->vertex_tasks.length; ++i)
 		{
@@ -318,6 +318,7 @@ void tagShowFrame(SWFAppContext* app_context)
 	
 	SVEC_CLEAR(&app_context->vertex_tasks);
 	SVEC_CLEAR(&app_context->uninv_tasks);
+	SVEC_CLEAR(&app_context->mult_tasks);
 	SVEC_CLEAR(&app_context->draw_tasks);
 	
 	SVEC_CLEAR(&app_context->movieclip_stack);

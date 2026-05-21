@@ -55,7 +55,18 @@ typedef struct
 	char* uninv_buffer_mapped;
 	
 	void* uninv_buffer_to_free;
+	void* uninv_transfer_buffer_to_free;
 	void* inv_buffer_to_free;
+	
+	size_t allocated_transform_size;
+	size_t allocated_transform_transfer_size;
+	size_t current_transform_offset;
+	size_t transform_uploading_count;
+	void* transform_transfer_buffer;
+	char* transform_transfer_mapped;
+	
+	void* transform_buffer_to_free;
+	void* transform_transfer_buffer_to_free;
 	
 	void* window;
 	void* device;
@@ -81,6 +92,7 @@ typedef struct
 	
 	void* graphics_pipeline;
 	void* inv_pipeline;
+	void* mult_pipeline;
 	
 	void* command_buffer;
 	void* render_pass;

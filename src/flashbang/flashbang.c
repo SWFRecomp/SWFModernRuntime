@@ -12,6 +12,7 @@
 
 #define SHAPE_DATA_SIZE (context->shape_data_exists ? context->shape_data_size : 0)
 #define UNINV_SIZE (context->uninv_mat_data_size != 4 ? context->uninv_mat_data_size : 0)
+#define TRANSFORM_SIZE (context->transform_data_size)
 
 int once = 0;
 
@@ -63,6 +64,7 @@ void flashbang_reset_currents(FlashbangContext* context, SWFAppContext* app_cont
 {
 	context->current_vertex_offset = SHAPE_DATA_SIZE;
 	context->current_uninv_offset = UNINV_SIZE;
+	context->current_transform_offset = TRANSFORM_SIZE;
 }
 
 void flashbang_init(FlashbangContext* context, SWFAppContext* app_context)
@@ -109,9 +111,13 @@ void flashbang_init(FlashbangContext* context, SWFAppContext* app_context)
 	bufferInfo.usage = SDL_GPU_BUFFERUSAGE_VERTEX;
 	context->vertex_buffer = SDL_CreateGPUBuffer(context->device, &bufferInfo);
 	
+	context->allocated_transform_size = context->transform_data_size;
+	
 	// create a storage buffer for transform matrices
-	bufferInfo.size = (Uint32) context->transform_data_size;
-	bufferInfo.usage = SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ;
+	bufferInfo.size = (Uint32) context->allocated_transform_size;
+	bufferInfo.usage = SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ |
+					   SDL_GPU_BUFFERUSAGE_COMPUTE_STORAGE_READ |
+					   SDL_GPU_BUFFERUSAGE_COMPUTE_STORAGE_WRITE;
 	context->xform_buffer = SDL_CreateGPUBuffer(context->device, &bufferInfo);
 	
 	// create a storage buffer for colors
@@ -253,6 +259,30 @@ void flashbang_init(FlashbangContext* context, SWFAppContext* app_context)
 	
 	// free the file
 	SDL_free(compute_code);
+	
+	// load the compute shader code
+	size_t multiply_code_size;
+	void* multiply_code = SDL_LoadFile("shaders/multiply.spv", &multiply_code_size);
+	
+	// create the compute pipeline
+	compute_pipeline_info.code = (Uint8*) multiply_code; //convert to an array of bytes
+	compute_pipeline_info.code_size = multiply_code_size;
+	compute_pipeline_info.entrypoint = "main";
+	compute_pipeline_info.format = SDL_GPU_SHADERFORMAT_SPIRV; // loading .spv shaders
+	compute_pipeline_info.num_samplers = 0;
+	compute_pipeline_info.num_readonly_storage_buffers = 0;
+	compute_pipeline_info.num_readonly_storage_textures = 0;
+	compute_pipeline_info.num_readwrite_storage_buffers = 1;
+	compute_pipeline_info.num_readwrite_storage_textures = 0;
+	compute_pipeline_info.num_uniform_buffers = 2;
+	compute_pipeline_info.threadcount_x = 64;
+	compute_pipeline_info.threadcount_y = 1;
+	compute_pipeline_info.threadcount_z = 1;
+	
+	context->mult_pipeline = SDL_CreateGPUComputePipeline(context->device, &compute_pipeline_info);
+	
+	// free the file
+	SDL_free(multiply_code);
 	
 	// load the vertex shader code
 	size_t vertex_code_size;
@@ -915,6 +945,15 @@ u32 flashbang_allocate_uninv(FlashbangContext* context)
 	return this_offset;
 }
 
+u32 flashbang_allocate_transform(FlashbangContext* context)
+{
+	u32 this_offset = (u32) context->current_transform_offset;
+	
+	context->current_transform_offset += 16*sizeof(float);
+	
+	return this_offset;
+}
+
 void flashbang_ensure_size_far_vertex(FlashbangContext* context, u32 size)
 {
 	if (UNLIKELY(context->allocated_vertex_size == 0))
@@ -1006,6 +1045,8 @@ void flashbang_ensure_size_far_uninv(FlashbangContext* context, u32 size)
 	
 	SDL_CopyGPUBufferToBuffer(context->copy_pass, &old, &new, (Uint32) context->uninv_mat_data_size, false);
 	
+	context->uninv_transfer_buffer_to_free = context->uninv_transfer_buffer;
+	
 	// create a transfer buffer to upload to the uninv buffer
 	SDL_GPUTransferBufferCreateInfo transfer_info = {0};
 	transfer_info.size = (Uint32) context->allocated_uninv_size;
@@ -1019,7 +1060,52 @@ void flashbang_ensure_size_far_uninv(FlashbangContext* context, u32 size)
 	context->inv_mat_buffer = new_inv_buffer;
 }
 
-void flashbang_open_vertex_transfer(FlashbangContext* context, size_t total_vertex_count, size_t total_uninv_count)
+void flashbang_ensure_size_far_transform(FlashbangContext* context, u32 size)
+{
+	size_t old_allocated_size = context->allocated_transform_size;
+	
+	if (LIKELY(old_allocated_size >= size))
+	{
+		return;
+	}
+	
+	while (context->allocated_transform_size < size)
+	{
+		context->allocated_transform_size <<= 1;
+	}
+	
+	SDL_GPUBufferCreateInfo bufferInfo = {0};
+	
+	// create a new transform buffer
+	bufferInfo.size = (Uint32) context->allocated_transform_size;
+	bufferInfo.usage = SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ |
+					   SDL_GPU_BUFFERUSAGE_COMPUTE_STORAGE_READ |
+					   SDL_GPU_BUFFERUSAGE_COMPUTE_STORAGE_WRITE;
+	SDL_GPUBuffer* new_transform_buffer = SDL_CreateGPUBuffer(context->device, &bufferInfo);
+	
+	SDL_GPUBufferLocation old = {0};
+	old.buffer = context->xform_buffer;
+	old.offset = 0;
+	
+	SDL_GPUBufferLocation new = {0};
+	new.buffer = new_transform_buffer;
+	new.offset = 0;
+	
+	SDL_CopyGPUBufferToBuffer(context->copy_pass, &old, &new, (Uint32) context->transform_data_size, false);
+	
+	context->transform_transfer_buffer_to_free = context->transform_transfer_buffer;
+	
+	// create a transfer buffer to upload to the transform buffer
+	SDL_GPUTransferBufferCreateInfo transfer_info = {0};
+	transfer_info.size = (Uint32) context->allocated_transform_size;
+	transfer_info.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
+	context->transform_transfer_buffer = SDL_CreateGPUTransferBuffer(context->device, &transfer_info);
+	
+	context->transform_buffer_to_free = context->xform_buffer;
+	context->xform_buffer = new_transform_buffer;
+}
+
+void flashbang_open_vertex_transfer(FlashbangContext* context, size_t total_vertex_count, size_t total_uninv_count, size_t total_transform_count)
 {
 	// start a copy pass
 	context->copy_pass = SDL_BeginGPUCopyPass(context->command_buffer);
@@ -1037,7 +1123,15 @@ void flashbang_open_vertex_transfer(FlashbangContext* context, size_t total_vert
 		context->uninv_buffer_mapped = (char*) SDL_MapGPUTransferBuffer(context->device, context->uninv_transfer_buffer, 0);
 	}
 	
+	if (total_transform_count != 0)
+	{
+		size_t transform_upload_size = 16*sizeof(u32)*total_transform_count;
+		flashbang_ensure_size_far_transform(context, (u32) (context->current_transform_offset + transform_upload_size));
+		context->transform_buffer_mapped = (char*) SDL_MapGPUTransferBuffer(context->device, context->transform_transfer_buffer, 0);
+	}
+	
 	context->uninvs_uploading_count = total_uninv_count;
+	context->transform_uploading_count = total_transform_count;
 }
 
 void flashbang_upload_vertices(FlashbangContext* context, u32* data, u32 vertex_offset, u32 vertex_count)
@@ -1053,6 +1147,13 @@ void flashbang_upload_uninv(FlashbangContext* context, float* uninv, u32 offset)
 	size_t upload_size = 16*sizeof(float);
 	
 	memcpy(context->uninv_buffer_mapped + offset - UNINV_SIZE, uninv, upload_size);
+}
+
+void flashbang_upload_transform(FlashbangContext* context, float* transform, u32 offset)
+{
+	size_t upload_size = 16*sizeof(float);
+	
+	memcpy(context->transform_transfer_mapped + offset - TRANSFORM_SIZE, transform, upload_size);
 }
 
 void flashbang_close_vertex_transfer(FlashbangContext* context)
@@ -1090,6 +1191,23 @@ void flashbang_close_vertex_transfer(FlashbangContext* context)
 		SDL_UnmapGPUTransferBuffer(context->device, context->uninv_transfer_buffer);
 	}
 	
+	if (context->transform_uploading_count > 0)
+	{
+		// where is the data
+		location.transfer_buffer = context->transform_transfer_buffer;
+		location.offset = 0; // start from the beginning
+		
+		// where to upload the data
+		region.buffer = context->xform_buffer;
+		region.size = (Uint32) (context->current_transform_offset - TRANSFORM_SIZE); // size of the data in bytes
+		region.offset = (Uint32) TRANSFORM_SIZE; // begin writing from after the existing matrix data
+		
+		// upload matrices
+		SDL_UploadToGPUBuffer(context->copy_pass, &location, &region, false);
+		
+		SDL_UnmapGPUTransferBuffer(context->device, context->transform_transfer_buffer);
+	}
+	
 	// end the copy pass
 	SDL_EndGPUCopyPass(context->copy_pass);
 	
@@ -1107,6 +1225,23 @@ void flashbang_close_vertex_transfer(FlashbangContext* context)
 		SDL_BindGPUComputePipeline(compute_pass, context->inv_pipeline);
 		SDL_BindGPUComputeStorageBuffers(compute_pass, 0, (SDL_GPUBuffer**) &context->uninv_mat_buffer, 1);
 		SDL_DispatchGPUCompute(compute_pass, (Uint32) (context->uninvs_uploading_count/64 + 1), 1, 1); // "we have ceil at home"
+		SDL_EndGPUComputePass(compute_pass);
+	}
+	
+	if (context->transform_uploading_count > 0)
+	{
+		SDL_GPUStorageBufferReadWriteBinding compute_buffer_bindings[1] = {0};
+		
+		compute_buffer_bindings[0].buffer = context->xform_buffer;
+		compute_buffer_bindings[0].cycle = false;
+		
+		u32 start_offset = (u32) TRANSFORM_SIZE/(16*sizeof(float));
+		SDL_PushGPUComputeUniformData(context->command_buffer, 0, &start_offset, sizeof(u32));
+		SDL_PushGPUComputeUniformData(context->command_buffer, 1, &context->transform_uploading_count, sizeof(u32));
+		
+		SDL_GPUComputePass* compute_pass = SDL_BeginGPUComputePass(context->command_buffer, NULL, 0, compute_buffer_bindings, 1);
+		SDL_BindGPUComputePipeline(compute_pass, context->mult_pipeline);
+		SDL_DispatchGPUCompute(compute_pass, (Uint32) (context->transform_uploading_count/64 + 1), 1, 1); // "we have ceil at home"
 		SDL_EndGPUComputePass(compute_pass);
 	}
 }
@@ -1176,10 +1311,28 @@ void flashbang_close_pass(FlashbangContext* context, SWFAppContext* app_context)
 		context->uninv_buffer_to_free = NULL;
 	}
 	
+	if (context->uninv_transfer_buffer_to_free != NULL)
+	{
+		SDL_ReleaseGPUBuffer(context->device, context->uninv_transfer_buffer_to_free);
+		context->uninv_transfer_buffer_to_free = NULL;
+	}
+	
 	if (context->inv_buffer_to_free != NULL)
 	{
 		SDL_ReleaseGPUTransferBuffer(context->device, context->inv_buffer_to_free);
 		context->inv_buffer_to_free = NULL;
+	}
+	
+	if (context->transform_buffer_to_free != NULL)
+	{
+		SDL_ReleaseGPUBuffer(context->device, context->transform_transfer_buffer);
+		context->transform_buffer_to_free = NULL;
+	}
+	
+	if (context->transform_transfer_buffer_to_free != NULL)
+	{
+		SDL_ReleaseGPUTransferBuffer(context->device, context->transform_transfer_buffer_to_free);
+		context->transform_transfer_buffer_to_free = NULL;
 	}
 }
 
@@ -1190,10 +1343,12 @@ void flashbang_release(FlashbangContext* context, SWFAppContext* app_context)
 	// release the pipelines
 	SDL_ReleaseGPUGraphicsPipeline(context->device, context->graphics_pipeline);
 	SDL_ReleaseGPUComputePipeline(context->device, context->inv_pipeline);
+	SDL_ReleaseGPUComputePipeline(context->device, context->mult_pipeline);
 	
 	// destroy the buffers
 	SDL_ReleaseGPUBuffer(context->device, context->vertex_buffer);
 	SDL_ReleaseGPUBuffer(context->device, context->xform_buffer);
+	SDL_ReleaseGPUBuffer(context->device, context->transform_transfer_buffer);
 	SDL_ReleaseGPUBuffer(context->device, context->color_buffer);
 	SDL_ReleaseGPUBuffer(context->device, context->uninv_mat_buffer);
 	SDL_ReleaseGPUBuffer(context->device, context->inv_mat_buffer);

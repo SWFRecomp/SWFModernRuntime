@@ -122,6 +122,7 @@ void swfStart(SWFAppContext* app_context)
 	
 	SVEC_SIZED_INIT(&app_context->vertex_tasks, sizeof(VertexTask));
 	SVEC_SIZED_INIT(&app_context->uninv_tasks, sizeof(UninvTask));
+	SVEC_SIZED_INIT(&app_context->mult_tasks, sizeof(MultTask));
 	SVEC_SIZED_INIT(&app_context->draw_tasks, sizeof(DrawTask));
 	
 	SVEC_INIT(&app_context->movieclip_stack);
@@ -132,6 +133,7 @@ void swfStart(SWFAppContext* app_context)
 	
 	SVEC_RELEASE(&app_context->vertex_tasks);
 	SVEC_RELEASE(&app_context->uninv_tasks);
+	SVEC_RELEASE(&app_context->mult_tasks);
 	SVEC_RELEASE(&app_context->draw_tasks);
 	
 	SVEC_RELEASE(&app_context->movieclip_stack);

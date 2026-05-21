@@ -55,6 +55,7 @@ typedef struct SWFAppContext
 	
 	SwapVector vertex_tasks;
 	SwapVector uninv_tasks;
+	SwapVector mult_tasks;
 	SwapVector draw_tasks;
 	
 	SwapVector movieclip_stack;
