@@ -1,8 +1,5 @@
 #ifndef NO_GRAPHICS
 
-#define _USE_MATH_DEFINES
-#include <math.h>
-
 #include <swf.h>
 #include <tag.h>
 #include <MovieClip.h>
@@ -201,13 +198,7 @@ void tagShowFrame(SWFAppContext* app_context)
 				
 				dt->has_extra_transform = true;
 				
-				dt->x = (f32) (20.0f*MovieClip_getTotalX(app_context, disp_obj));
-				dt->y = (f32) (20.0f*MovieClip_getTotalY(app_context, disp_obj));
-				
-				dt->rotation = (f32) (MovieClip_getTotalRotation(app_context, disp_obj)*M_PI/180.0);
-				
-				dt->xscale = (f32) (MovieClip_getTotalXScale(app_context, disp_obj)/100.0f);
-				dt->yscale = (f32) (MovieClip_getTotalYScale(app_context, disp_obj)/100.0f);
+				dt->obj = disp_obj;
 				
 				SVEC_BUMP(&app_context->vertex_tasks);
 				
@@ -231,14 +222,7 @@ void tagShowFrame(SWFAppContext* app_context)
 				SVEC_BUMP(&app_context->uninv_tasks);
 				
 				UninvTask* ut = SVEC_GET_TOP(&app_context->uninv_tasks, UninvTask);
-				
 				ut->offset = uninv_offset;
-				
-				ut->x = 0.0f;
-				ut->y = 0.0f;
-				
-				ut->xscale = 20.0f;
-				ut->yscale = 20.0f;
 			}
 		}
 	}
@@ -269,13 +253,13 @@ void tagShowFrame(SWFAppContext* app_context)
 			
 			u32 offset = ut->offset;
 			
-			temp_mat_data[0] = ut->xscale;
+			temp_mat_data[0] = 20.0f;
 			temp_mat_data[1] = 0.0f;
 			temp_mat_data[4] = 0.0f;
-			temp_mat_data[5] = ut->yscale;
+			temp_mat_data[5] = 20.0f;
 			
-			temp_mat_data[12] = ut->x;
-			temp_mat_data[13] = ut->y;
+			temp_mat_data[12] = 0.0f;
+			temp_mat_data[13] = 0.0f;
 			
 			flashbang_upload_uninv(app_context->fbc, temp_mat_data, offset);
 		}
@@ -295,14 +279,7 @@ void tagShowFrame(SWFAppContext* app_context)
 		
 		if (t->has_extra_transform)
 		{
-			temp_mat_data[0] = cosf(t->rotation)*t->xscale;
-			temp_mat_data[1] = sinf(t->rotation)*t->yscale;
-			temp_mat_data[4] = -sinf(t->rotation)*t->xscale;
-			temp_mat_data[5] = cosf(t->rotation)*t->yscale;
-			
-			temp_mat_data[12] = t->x;
-			temp_mat_data[13] = t->y;
-			
+			MovieClip_applyTransformsParents(app_context, t->obj, temp_mat_data);
 			flashbang_upload_extra_transform(app_context->fbc, temp_mat_data);
 		}
 		

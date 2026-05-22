@@ -15,12 +15,6 @@ typedef struct
 typedef struct
 {
 	u32 offset;
-	
-	f32 x;
-	f32 y;
-	
-	f32 xscale;
-	f32 yscale;
 } UninvTask;
 
 typedef struct
@@ -32,14 +26,7 @@ typedef struct
 	u32 extra_cxform_id;
 	
 	bool has_extra_transform;
-	
-	f32 x;
-	f32 y;
-	
-	f32 rotation;
-	
-	f32 xscale;
-	f32 yscale;
+	ASObject* obj;
 	
 	u32 offset;
 	u32 count;

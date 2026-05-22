@@ -1,3 +1,4 @@
+#define _USE_MATH_DEFINES
 #include <math.h>
 
 #include <MovieClip.h>
@@ -9,6 +10,8 @@
 
 #define EXTDATA(member) (((MovieClipData*) this->extra_data)->member)
 #define EXTDATA_OF(o, member) (((MovieClipData*) o->extra_data)->member)
+
+#define RAD(r) (r*M_PI/180.0)
 
 void MovieClip_new(SWFAppContext* app_context, ASObject* this, u32 num_args)
 {
@@ -57,79 +60,80 @@ ASObject* MovieClip_create(SWFAppContext* app_context)
 	return this;
 }
 
-f64 MovieClip_getTotalX(SWFAppContext* app_context, ASObject* this)
+void MovieClip_applyTransformsParents(SWFAppContext* app_context, ASObject* this, f32 mat[16])
 {
 	ASObject* current = EXTDATA(_parent);
 	
-	f64 x = EXTDATA(_x);
+	SwapVector parent_chain;
 	
-	while (current != NULL)
+	SVEC_INIT(&parent_chain);
+	SVEC_PUSH(&parent_chain, this);
+	
+	while (current != app_context->_root)
 	{
-		x += EXTDATA_OF(current, _x);
+		SVEC_PUSH(&parent_chain, current);
+		
 		current = EXTDATA_OF(current, _parent);
 	}
 	
-	return x;
-}
-
-f64 MovieClip_getTotalY(SWFAppContext* app_context, ASObject* this)
-{
-	ASObject* current = EXTDATA(_parent);
+	current = (ASObject*) SVEC_TOP(&parent_chain);
 	
-	f64 y = EXTDATA(_y);
+	f32 x = (f32) (20.0f*EXTDATA_OF(current, _x));
+	f32 y = (f32) (20.0f*EXTDATA_OF(current, _y));
+	f32 r = (f32) EXTDATA_OF(current, _rotation);
+	f32 sx = (f32) EXTDATA_OF(current, _xscale)/100.0f;
+	f32 sy = (f32) EXTDATA_OF(current, _yscale)/100.0f;
 	
-	while (current != NULL)
+	f32 t[6];
+	f32 m[6];
+	
+	mat[0] = cosf((f32) RAD(r))*sx;
+	mat[1] = sinf((f32) RAD(r))*sx;
+	mat[4] = -sinf((f32) RAD(r))*sy;
+	mat[5] = cosf((f32) RAD(r))*sy;
+	
+	mat[12] = x;
+	mat[13] = y;
+	
+	SVEC_POP(&parent_chain);
+	
+	for (s64 i = parent_chain.length - 1; i >= 0; --i)
 	{
-		y += EXTDATA_OF(current, _y);
-		current = EXTDATA_OF(current, _parent);
+		m[0] = mat[0];
+		m[1] = mat[1];
+		m[2] = mat[4];
+		m[3] = mat[5];
+		m[4] = mat[12];
+		m[5] = mat[13];
+		
+		current = (ASObject*) parent_chain.data[i];
+		
+		x = (f32) (20.0f*EXTDATA_OF(current, _x));
+		y = (f32) (20.0f*EXTDATA_OF(current, _y));
+		r = (f32) EXTDATA_OF(current, _rotation);
+		sx = (f32) EXTDATA_OF(current, _xscale)/100.0f;
+		sy = (f32) EXTDATA_OF(current, _yscale)/100.0f;
+		
+		// row-major because i'm a disgusting pagan
+		t[0] = cosf((f32) RAD(r))*sx;
+		t[1] = -sinf((f32) RAD(r))*sy;
+		t[2] = sinf((f32) RAD(r))*sx;
+		t[3] = cosf((f32) RAD(r))*sy;
+		
+		// just kidding
+		t[4] = x;
+		t[5] = y;
+		
+		mat[0] = m[0]*t[0] + m[2]*t[2];
+		mat[1] = m[1]*t[0] + m[3]*t[2];
+		mat[4] = m[0]*t[1] + m[2]*t[3];
+		mat[5] = m[1]*t[1] + m[3]*t[3];
+		
+		mat[12] = m[0]*t[4] + m[2]*t[5] + m[4];
+		mat[13] = m[1]*t[4] + m[3]*t[5] + m[5];
 	}
 	
-	return y;
-}
-
-f64 MovieClip_getTotalRotation(SWFAppContext* app_context, ASObject* this)
-{
-	ASObject* current = EXTDATA(_parent);
-	
-	f64 rotation = EXTDATA(_rotation);
-	
-	while (current != NULL)
-	{
-		rotation += EXTDATA_OF(current, _rotation);
-		current = EXTDATA_OF(current, _parent);
-	}
-	
-	return rotation;
-}
-
-f64 MovieClip_getTotalXScale(SWFAppContext* app_context, ASObject* this)
-{
-	ASObject* current = EXTDATA(_parent);
-	
-	f64 xscale = EXTDATA(_xscale);
-	
-	while (current != NULL)
-	{
-		xscale *= EXTDATA_OF(current, _xscale)/100.0;
-		current = EXTDATA_OF(current, _parent);
-	}
-	
-	return xscale;
-}
-
-f64 MovieClip_getTotalYScale(SWFAppContext* app_context, ASObject* this)
-{
-	ASObject* current = EXTDATA(_parent);
-	
-	f64 yscale = EXTDATA(_yscale);
-	
-	while (current != NULL)
-	{
-		yscale *= EXTDATA_OF(current, _yscale)/100.0;
-		current = EXTDATA_OF(current, _parent);
-	}
-	
-	return yscale;
+	SVEC_RELEASE(&parent_chain);
 }
 
 void MovieClip_setChild_internal(SWFAppContext* app_context, ASObject* this, u32 depth, ASObject* new_child)
