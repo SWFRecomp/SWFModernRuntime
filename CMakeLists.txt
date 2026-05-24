@@ -66,24 +66,18 @@ endif()
 set(RENAME_ZCONF OFF)
 
 add_subdirectory(${PROJECT_SOURCE_DIR}/lib/libtess2)
-add_subdirectory(${PROJECT_SOURCE_DIR}/lib/zlib)
-add_subdirectory(${PROJECT_SOURCE_DIR}/lib/lzma)
 
 if(NOT NO_GRAPHICS)
     add_subdirectory(${PROJECT_SOURCE_DIR}/lib/SDL3)
     
     target_link_libraries(${PROJECT_NAME} PUBLIC
         libtess2
-        zlibstatic
-        lzma
         SDL3::SDL3
         $<$<PLATFORM_ID:Linux>:m>
     )
 else()
     target_link_libraries(${PROJECT_NAME} PUBLIC
         libtess2
-        zlibstatic
-        lzma
         $<$<PLATFORM_ID:Linux>:m>
     )
 endif()
@@ -109,8 +103,6 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${PROJECT_SOURCE_DIR}/lib/rbtree
     ${PROJECT_SOURCE_DIR}/lib/o1heap/o1heap
     ${PROJECT_SOURCE_DIR}/lib/SDL3/include
-    zlib
-    lzma/liblzma/api
 )
 
 if(NOT NO_GRAPHICS)
