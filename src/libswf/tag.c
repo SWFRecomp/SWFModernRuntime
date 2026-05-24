@@ -2,6 +2,7 @@
 
 #include <swf.h>
 #include <tag.h>
+#include <initial_strings_decls.h>
 #include <MovieClip.h>
 #include <BitmapData.h>
 #include <flashbang.h>
@@ -51,6 +52,8 @@ void tagShowFrame(SWFAppContext* app_context)
 		{
 			continue;
 		}
+		
+		getAndCallMethodIfExists(app_context, disp_obj, STR_ID_ON_ENTER_FRAME, 0);
 		
 		size_t max_depth = MC_EXTDATA_OF(disp_obj, max_depth);
 		

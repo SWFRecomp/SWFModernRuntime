@@ -1479,12 +1479,12 @@ void actionEquals2(SWFAppContext* app_context)
 		goto release;
 	}
 	
+	PUSH_BOOL(false);
+	
 	release:
 	
 	releaseObjectVar(app_context, &a);
 	releaseObjectVar(app_context, &b);
-	
-	PUSH_BOOL(false);
 }
 
 void actionLess(SWFAppContext* app_context)
@@ -1590,12 +1590,12 @@ void actionLess2(SWFAppContext* app_context)
 		goto release;
 	}
 	
+	PUSH_BOOL(b.f64 < a.f64);
+	
 	release:
 	
 	releaseObjectVar(app_context, &a);
 	releaseObjectVar(app_context, &b);
-	
-	PUSH_BOOL(b.f64 < a.f64);
 }
 
 void actionAnd(SWFAppContext* app_context)
@@ -2181,6 +2181,12 @@ void actionTrace(SWFAppContext* app_context)
 		case ACTION_STACK_VALUE_UNDEFINED:
 		{
 			printf("undefined\n");
+			break;
+		}
+		
+		case ACTION_STACK_VALUE_BOOLEAN:
+		{
+			printf("%s\n", v.b ? "true" : "false");
 			break;
 		}
 		
@@ -3201,14 +3207,15 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v,
 	{
 		case FUNC_TYPE_1:
 		{
-			scope_top_obj += 1;
+			// can't change scope_top_obj yet, or popVar will break on registers
+			u32 this_scope = scope_top_obj + 1;
 			
-			scope_chain[scope_top_obj] = allocObject(app_context);
-			retainObject(scope_chain[scope_top_obj]);
+			scope_chain[this_scope] = allocObject(app_context);
+			retainObject(scope_chain[this_scope]);
 			
-			scope_registers[scope_top_obj] = HALLOC(4*sizeof(ActionVar));
+			scope_registers[this_scope] = HALLOC(4*sizeof(ActionVar));
 			
-			ActionVar* regs = scope_registers[scope_top_obj];
+			ActionVar* regs = scope_registers[this_scope];
 			
 			for (u8 i = 0; i < 4; ++i)
 			{
@@ -3221,7 +3228,7 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v,
 				this_v.type = ACTION_STACK_VALUE_OBJECT;
 				this_v.object = this;
 				
-				setPropertyInThisScope(app_context, STR_ID_THIS, NULL, 0, &this_v);
+				setProperty(app_context, scope_chain[this_scope], STR_ID_THIS, NULL, 0, &this_v);
 			}
 			
 			u32* args = Function_get_args(app_context, func_obj);
@@ -3233,10 +3240,12 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v,
 				{
 					ActionVar v;
 					popVar(app_context, &v);
-					setPropertyInThisScope(app_context, args[i], NULL, 0, &v);
+					setProperty(app_context, scope_chain[this_scope], args[i], NULL, 0, &v);
 					releaseObjectVar(app_context, &v);
 				}
 			}
+			
+			scope_top_obj = this_scope;
 			
 			Function_get_func(app_context, func_obj)(app_context);
 			
@@ -3266,17 +3275,18 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v,
 		
 		case FUNC_TYPE_2:
 		{
-			scope_top_obj += 1;
+			// can't change scope_top_obj yet, or popVar will break on registers
+			u32 this_scope = scope_top_obj + 1;
 			
-			scope_chain[scope_top_obj] = allocObject(app_context);
-			retainObject(scope_chain[scope_top_obj]);
+			scope_chain[this_scope] = allocObject(app_context);
+			retainObject(scope_chain[this_scope]);
 			
 			u8 reg_count = Function_get_reg_count(app_context, func_obj);
 			u16 flags = Function_get_flags(app_context, func_obj);
 			
-			scope_registers[scope_top_obj] = HALLOC((reg_count + 1)*sizeof(ActionVar));
+			scope_registers[this_scope] = HALLOC((reg_count + 1)*sizeof(ActionVar));
 			
-			ActionVar* regs = scope_registers[scope_top_obj];
+			ActionVar* regs = scope_registers[this_scope];
 			
 			for (u8 i = 0; i < reg_count + 1; ++i)
 			{
@@ -3296,7 +3306,7 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v,
 					{
 						ActionVar v;
 						popVar(app_context, &v);
-						setPropertyInThisScope(app_context, arg->string_id, NULL, 0, &v);
+						setProperty(app_context, scope_chain[this_scope], arg->string_id, NULL, 0, &v);
 						releaseObjectVar(app_context, &v);
 					}
 					
@@ -3350,7 +3360,7 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v,
 				this_v.type = ACTION_STACK_VALUE_OBJECT;
 				this_v.object = this;
 				
-				setPropertyInThisScope(app_context, STR_ID_THIS, NULL, 0, &this_v);
+				setProperty(app_context, scope_chain[this_scope], STR_ID_THIS, NULL, 0, &this_v);
 				
 				if (flags & FUNC_FLAG_PRELOAD_THIS)
 				{
@@ -3376,6 +3386,8 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v,
 					retainObject(_global);
 				});
 			}
+			
+			scope_top_obj = this_scope;
 			
 			Function_get_func(app_context, func_obj)(app_context);
 			
