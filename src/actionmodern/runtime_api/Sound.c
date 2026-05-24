@@ -55,7 +55,8 @@ void Sound_loadSound(SWFAppContext* app_context, ASObject* this, u32 num_args)
 	EXTDATA(stream_id) = flashbang_create_audio_stream(FBC, app_context);
 	
 	PUSH_BOOL(true);
-	getAndCallMethod(app_context, this, STR_ID_ON_LOAD, 1);
+	getAndCallMethodIfExists(app_context, this, STR_ID_ON_LOAD, 1);
+	POP();
 	
 	return_void:
 	

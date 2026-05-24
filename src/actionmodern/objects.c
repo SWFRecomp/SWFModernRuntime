@@ -9,6 +9,7 @@
 #include <utils.h>
 #include <swap_vector.h>
 
+#include <action.h>
 #include <objects.h>
 
 extern recomp_rwlock_t object_queue_lock;
@@ -105,11 +106,14 @@ void releaseObject(SWFAppContext* app_context, ASObject* obj)
 	}
 }
 
-void getAndCallMethodIfExists(SWFAppContext* app_context, ASObject* this, u32 method_name, u32 num_args);
+bool getAndCallMethodIfExists(SWFAppContext* app_context, ASObject* this, u32 method_name, u32 num_args);
 
 void destroyObject(SWFAppContext* app_context, ASObject* obj)
 {
-	getAndCallMethodIfExists(app_context, obj, STR_ID_DESTROY, 0);
+	if (getAndCallMethodIfExists(app_context, obj, STR_ID_DESTROY, 0))
+	{
+		POP();
+	}
 	
 	while (obj->t.length > 0)
 	{

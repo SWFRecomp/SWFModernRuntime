@@ -17,3 +17,5 @@ typedef struct
 
 void BitmapData_new(SWFAppContext* app_context, ASObject* this, u32 num_args);
 void BitmapData_loadBitmap(SWFAppContext* app_context, ASObject* this, u32 num_args);
+
+bool BitmapData_getMember(SWFAppContext* app_context, ASObject* this, u32 string_id, ActionVar* out_v);

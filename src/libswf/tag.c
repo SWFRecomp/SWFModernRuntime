@@ -53,7 +53,10 @@ void tagShowFrame(SWFAppContext* app_context)
 			continue;
 		}
 		
-		getAndCallMethodIfExists(app_context, disp_obj, STR_ID_ON_ENTER_FRAME, 0);
+		if (getAndCallMethodIfExists(app_context, disp_obj, STR_ID_ON_ENTER_FRAME, 0))
+		{
+			POP();
+		}
 		
 		size_t max_depth = MC_EXTDATA_OF(disp_obj, max_depth);
 		

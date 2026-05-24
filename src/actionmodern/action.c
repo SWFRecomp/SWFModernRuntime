@@ -47,6 +47,8 @@ void initActions(SWFAppContext* app_context)
 	app_context->MovieClip_prototype = allocObject(app_context);
 	app_context->MovieClip_constructor = allocObject(app_context);
 	
+	app_context->BitmapData_prototype = allocObject(app_context);
+	
 	start_time = get_elapsed_ms();
 	
 	for (u32 i = 0; i < 2; ++i)
@@ -242,9 +244,11 @@ void initActions(SWFAppContext* app_context)
 						 0,
 						 STR_ID_BITMAP_DATA);
 	
+	app_context->BitmapData_constructor = bitmapdata;
+	
 	ActionVar proto_var;
 	proto_var.type = ACTION_STACK_VALUE_OBJECT;
-	proto_var.object = allocObject(app_context);
+	proto_var.object = app_context->BitmapData_prototype;
 	setProperty(app_context, bitmapdata, STR_ID_PROTOTYPE, NULL, 0, &proto_var);
 	
 	ActionVar bitmapdata_v;
@@ -3139,6 +3143,19 @@ void actionGetMember(SWFAppContext* app_context)
 					
 					break;
 				}
+				
+				case STR_ID_BITMAP_DATA:
+				{
+					ActionVar v;
+					special_object = BitmapData_getMember(app_context, obj, prop_name_var.string_id, &v);
+					
+					if (special_object)
+					{
+						PUSH_VAR(&v);
+					}
+					
+					break;
+				}
 			}
 			
 			if (special_object)
@@ -3432,7 +3449,7 @@ void getAndCallMethod(SWFAppContext* app_context, ASObject* this, u32 method_nam
 	callFunction(app_context, this, &meth_v, num_args);
 }
 
-void getAndCallMethodIfExists(SWFAppContext* app_context, ASObject* this, u32 method_name, u32 num_args)
+bool getAndCallMethodIfExists(SWFAppContext* app_context, ASObject* this, u32 method_name, u32 num_args)
 {
 	ActionVar meth_v;
 	getPropertyVarWithPrototype(this, method_name, NULL, 0, &meth_v);
@@ -3440,7 +3457,10 @@ void getAndCallMethodIfExists(SWFAppContext* app_context, ASObject* this, u32 me
 	if (meth_v.type != ACTION_STACK_VALUE_UNDEFINED)
 	{
 		callFunction(app_context, this, &meth_v, num_args);
+		return true;
 	}
+	
+	return false;
 }
 
 void actionNewObject(SWFAppContext* app_context)
