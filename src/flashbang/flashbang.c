@@ -67,7 +67,7 @@ void flashbang_reset_currents(FlashbangContext* context, SWFAppContext* app_cont
 
 void flashbang_init(FlashbangContext* context, SWFAppContext* app_context)
 {
-	if (!once && !SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD))
+	if (!once && !SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_GAMEPAD))
 	{
 		SDL_Log("Failed to initialize SDL: %s", SDL_GetError());
 		exit(EXIT_FAILURE);
@@ -76,6 +76,16 @@ void flashbang_init(FlashbangContext* context, SWFAppContext* app_context)
 	once = 1;
 	
 	context->current_bitmap = 0;
+	
+	SDL_AudioSpec spec;
+	spec.format = SDL_AUDIO_S16LE;
+	spec.channels = 2;
+	spec.freq = 44100;
+	
+	context->audio_device = SDL_OpenAudioDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, NULL);
+	context->audio_stream = SDL_CreateAudioStream(&spec, NULL);
+	
+	SDL_BindAudioStream(context->audio_device, context->audio_stream);
 	
 	// create a window
 	context->window = SDL_CreateWindow("TestSWFRecompiled", context->width, context->height, SDL_WINDOW_RESIZABLE);
@@ -646,6 +656,9 @@ void flashbang_init(FlashbangContext* context, SWFAppContext* app_context)
 	context->vertex_buffer_to_free = NULL;
 	context->transfer_buffer_to_free = NULL;
 	
+	context->uninv_buffer_to_free = NULL;
+	context->inv_buffer_to_free = NULL;
+	
 	triInit(app_context);
 }
 
@@ -666,6 +679,12 @@ int flashbang_poll()
 	}
 	
 	return 0;
+}
+
+void flashbang_put_audio(FlashbangContext* context, char* buffer, size_t size)
+{
+	SDL_PutAudioStreamData(context->audio_stream, buffer, (int) size);
+	SDL_ResumeAudioDevice(context->audio_device);
 }
 
 void flashbang_set_window_background(FlashbangContext* context, u8 r, u8 g, u8 b)
@@ -1185,6 +1204,9 @@ void flashbang_close_pass(FlashbangContext* context, SWFAppContext* app_context)
 
 void flashbang_release(FlashbangContext* context, SWFAppContext* app_context)
 {
+	SDL_DestroyAudioStream(context->audio_stream);
+	SDL_CloseAudioDevice(context->audio_device);
+	
 	SDL_ReleaseGPUTransferBuffer(context->device, context->vertex_transfer_buffer);
 	
 	// release the pipelines

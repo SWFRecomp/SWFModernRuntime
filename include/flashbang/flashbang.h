@@ -8,6 +8,7 @@ extern const float identity_cxform[20];
 
 void flashbang_init(FlashbangContext* context, SWFAppContext* app_context);
 int flashbang_poll();
+void flashbang_put_audio(FlashbangContext* context, char* buffer, size_t size);
 void flashbang_set_window_background(FlashbangContext* context, u8 r, u8 g, u8 b);
 void flashbang_upload_bitmap(FlashbangContext* context, size_t offset, size_t size, u32 width, u32 height);
 void flashbang_finalize_bitmaps(FlashbangContext* context);

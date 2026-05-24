@@ -59,6 +59,8 @@ typedef struct
 	
 	void* window;
 	void* device;
+	u32 audio_device;
+	void* audio_stream;
 	
 	void* dummy_tex;
 	void* dummy_sampler;

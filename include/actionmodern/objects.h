@@ -107,6 +107,8 @@ ASProperty* getOrCreateProperty(SWFAppContext* app_context, ASObject* this, u32 
 // Walks up the __proto__ chain to find inherited properties
 ASProperty* getPropertyWithPrototype(ASObject* this, u32 string_id, const char* name, u32 name_length);
 
+void getPropertyVarWithPrototype(ASObject* this, u32 string_id, const char* name, u32 name_length, ActionVar* out_v);
+
 // Set property by name (creates if not exists)
 // Handles refcount management if value is an object
 void setProperty(SWFAppContext* app_context, ASObject* this, u32 string_id, const char* name, u32 name_length, ActionVar* value);

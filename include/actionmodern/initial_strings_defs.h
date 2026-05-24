@@ -10,6 +10,7 @@
 #include <Array.h>
 #include <MovieClip.h>
 #include <BitmapData.h>
+#include <Sound.h>
 
 RuntimeFunc runtime_funcs[] =
 {
@@ -19,6 +20,7 @@ RuntimeFunc runtime_funcs[] =
 	{0, STR_ID_STRING, String_new, true},
 	{0, STR_ID_ARRAY, Array_new, true},
 	{0, STR_ID_MOVIECLIP, MovieClip_new, true},
+	{0, STR_ID_SOUND, Sound_new, true},
 	{0, STR_ID_ASSETPROPFLAGS, ASSetPropFlags, false},
 };
 
@@ -35,6 +37,8 @@ RuntimeFunc runtime_meths[] =
 	{STR_ID_ARRAY, STR_ID_POP, Array_pop, false},
 	{STR_ID_MOVIECLIP, STR_ID_ATTACH_BITMAP, MovieClip_attachBitmap, false},
 	{STR_ID_MOVIECLIP, STR_ID_CREATE_EMPTY_MOVIECLIP, MovieClip_createEmptyMovieClip, false},
+	{STR_ID_SOUND, STR_ID_LOAD_SOUND, Sound_loadSound, false},
+	{STR_ID_SOUND, STR_ID_START, Sound_start, false},
 };
 
 action_runtime_func static_initializers[] =

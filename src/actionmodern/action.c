@@ -3312,21 +3312,34 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v,
 			if (flags & FUNC_FLAG_PRELOAD_PARENT)
 			{
 				EXC("_parent not implemented\n");
+				
+				// REMEMBER TO RETAIN
 			}
 			
 			if (flags & FUNC_FLAG_PRELOAD_ROOT)
 			{
-				EXC("_root not implemented\n");
+				regs[next_preload].type = ACTION_STACK_VALUE_OBJECT;
+				regs[next_preload].object = app_context->_root;
+				next_preload += 1;
+				
+				OBJ_LOCK_WRITE(app_context->_root,
+				{
+					retainObject(app_context->_root);
+				});
 			}
 			
 			if ((flags & FUNC_FLAG_SUPPRESS_SUPER) == 0)
 			{
 				EXC("super not implemented\n");
+				
+				// REMEMBER TO RETAIN
 			}
 			
 			if ((flags & FUNC_FLAG_SUPPRESS_ARGUMENTS) == 0)
 			{
 				EXC("arguments not implemented\n");
+				
+				// REMEMBER TO RETAIN
 			}
 			
 			if ((flags & FUNC_FLAG_SUPPRESS_THIS) == 0)
@@ -3341,8 +3354,14 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v,
 				
 				if (flags & FUNC_FLAG_PRELOAD_THIS)
 				{
-					regs[next_preload] = this_v;
+					regs[next_preload].type = ACTION_STACK_VALUE_OBJECT;
+					regs[next_preload].object = this;
 					next_preload += 1;
+					
+					OBJ_LOCK_WRITE(this,
+					{
+						retainObject(this);
+					});
 				}
 			}
 			
@@ -3351,6 +3370,11 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v,
 				regs[next_preload].type = ACTION_STACK_VALUE_OBJECT;
 				regs[next_preload].object = _global;
 				next_preload += 1;
+				
+				OBJ_LOCK_WRITE(_global,
+				{
+					retainObject(_global);
+				});
 			}
 			
 			Function_get_func(app_context, func_obj)(app_context);
@@ -3391,7 +3415,8 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v,
 
 void getAndCallMethod(SWFAppContext* app_context, ASObject* this, u32 method_name, u32 num_args)
 {
-	ActionVar meth_v = getPropertyWithPrototype(this, method_name, NULL, 0)->value;
+	ActionVar meth_v;
+	getPropertyVarWithPrototype(this, method_name, NULL, 0, &meth_v);
 	callFunction(app_context, this, &meth_v, num_args);
 }
 

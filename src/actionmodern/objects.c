@@ -246,6 +246,57 @@ ASProperty* getPropertyWithPrototype(ASObject* this, u32 string_id, const char* 
 	return NULL;  // Property not found in entire prototype chain
 }
 
+void getPropertyVarWithPrototype(ASObject* this, u32 string_id, const char* name, u32 name_length, ActionVar* out_v)
+{
+	if (this == NULL || (string_id == 0 && name == NULL))
+	{
+		out_v->type = ACTION_STACK_VALUE_UNDEFINED;
+		return;
+	}
+	
+	ASObject* current = this;
+	ASProperty* prop;
+	
+	while (current != NULL)
+	{
+		// Search own properties first
+		
+		rwlock_lock_read(&current->lock);
+		prop = getProperty(current, string_id, name, name_length);
+		
+		if (prop != NULL)
+		{
+			break;
+		}
+		
+		rwlock_unlock_read(&current->lock);
+		
+		// Property not found on this object - walk up to __proto__
+		
+		ASProperty* proto_prop;
+		
+		rwlock_lock_read(&current->lock);
+		proto_prop = getProperty(current, STR_ID_PROTO, NULL, 0);
+		
+		if (proto_prop == NULL)
+		{
+			// No __proto__ property - end of chain
+			break;
+		}
+		
+		ASObject* next = proto_prop->value.object;
+		
+		rwlock_unlock_read(&current->lock);
+		
+		// Move to next object in prototype chain
+		current = next;
+	}
+	
+	*out_v = prop->value;
+	
+	rwlock_unlock_read(&current->lock);
+}
+
 /**
  * Set Property
  *

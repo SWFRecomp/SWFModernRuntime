@@ -19,3 +19,6 @@
 [submodule "lib/libtess2"]
 	path = lib/libtess2
 	url = https://github.com/SWFRecomp/libtess2.git
+[submodule "lib/minimp3"]
+	path = lib/minimp3
+	url = https://github.com/lieff/minimp3.git

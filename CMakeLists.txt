@@ -104,6 +104,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${PROJECT_SOURCE_DIR}/include/flashbang
     ${PROJECT_SOURCE_DIR}/include/memory
     ${PROJECT_SOURCE_DIR}/lib/libtess2/Include
+    ${PROJECT_SOURCE_DIR}/lib/minimp3
     ${PROJECT_SOURCE_DIR}/lib/c-hashmap
     ${PROJECT_SOURCE_DIR}/lib/rbtree
     ${PROJECT_SOURCE_DIR}/lib/o1heap/o1heap
