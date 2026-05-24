@@ -6,6 +6,13 @@
 
 typedef struct
 {
+	void* stream;
+	bool stopping;
+	bool playing;
+} FlashbangAudioStream;
+
+typedef struct
+{
 	int width;
 	int height;
 	
@@ -60,7 +67,9 @@ typedef struct
 	void* window;
 	void* device;
 	u32 audio_device;
-	void* audio_stream;
+	
+	FlashbangAudioStream* audio_streams;
+	size_t audio_stream_capacity;
 	
 	void* dummy_tex;
 	void* dummy_sampler;

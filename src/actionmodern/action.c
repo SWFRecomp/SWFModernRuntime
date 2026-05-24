@@ -3420,6 +3420,17 @@ void getAndCallMethod(SWFAppContext* app_context, ASObject* this, u32 method_nam
 	callFunction(app_context, this, &meth_v, num_args);
 }
 
+void getAndCallMethodIfExists(SWFAppContext* app_context, ASObject* this, u32 method_name, u32 num_args)
+{
+	ActionVar meth_v;
+	getPropertyVarWithPrototype(this, method_name, NULL, 0, &meth_v);
+	
+	if (meth_v.type != ACTION_STACK_VALUE_UNDEFINED)
+	{
+		callFunction(app_context, this, &meth_v, num_args);
+	}
+}
+
 void actionNewObject(SWFAppContext* app_context)
 {
 	// 1. Pop constructor name (string)

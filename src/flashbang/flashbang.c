@@ -59,6 +59,13 @@ const float identity_cxform[20] =
 	0.0f
 };
 
+const SDL_AudioSpec spec =
+{
+	.format = SDL_AUDIO_S16LE,
+	.channels = 2,
+	.freq = 44100,
+};
+
 void flashbang_reset_currents(FlashbangContext* context, SWFAppContext* app_context)
 {
 	context->current_vertex_offset = SHAPE_DATA_SIZE;
@@ -77,15 +84,18 @@ void flashbang_init(FlashbangContext* context, SWFAppContext* app_context)
 	
 	context->current_bitmap = 0;
 	
-	SDL_AudioSpec spec;
-	spec.format = SDL_AUDIO_S16LE;
-	spec.channels = 2;
-	spec.freq = 44100;
-	
 	context->audio_device = SDL_OpenAudioDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, NULL);
-	context->audio_stream = SDL_CreateAudioStream(&spec, NULL);
 	
-	SDL_BindAudioStream(context->audio_device, context->audio_stream);
+	context->audio_stream_capacity = 1;
+	context->audio_streams = HALLOC(context->audio_stream_capacity*sizeof(FlashbangAudioStream));
+	
+	for (size_t i = 0; i < context->audio_stream_capacity; ++i)
+	{
+		context->audio_streams[i].stream = SDL_CreateAudioStream(&spec, NULL);
+		SDL_BindAudioStream(context->audio_device, context->audio_streams[i].stream);
+		context->audio_streams[i].playing = false;
+		context->audio_streams[i].stopping = false;
+	}
 	
 	// create a window
 	context->window = SDL_CreateWindow("TestSWFRecompiled", context->width, context->height, SDL_WINDOW_RESIZABLE);
@@ -662,7 +672,7 @@ void flashbang_init(FlashbangContext* context, SWFAppContext* app_context)
 	triInit(app_context);
 }
 
-int flashbang_poll()
+int flashbang_poll(FlashbangContext* context)
 {
 	SDL_Event evt;
 	
@@ -678,13 +688,73 @@ int flashbang_poll()
 		}
 	}
 	
+	for (size_t i = 0; i < context->audio_stream_capacity; ++i)
+	{
+		if (!context->audio_streams[i].stopping)
+		{
+			continue;
+		}
+		
+		FlashbangAudioStream* stream = &context->audio_streams[i];
+		
+		if (SDL_GetAudioStreamQueued(stream->stream) == 0)
+		{
+			SDL_ClearAudioStream(stream->stream);
+			stream->playing = false;
+			stream->stopping = false;
+		}
+	}
+	
 	return 0;
 }
 
-void flashbang_put_audio(FlashbangContext* context, char* buffer, size_t size)
+size_t flashbang_create_audio_stream(FlashbangContext* context, SWFAppContext* app_context)
 {
-	SDL_PutAudioStreamData(context->audio_stream, buffer, (int) size);
+	size_t available_stream = 0;
+	
+	while (available_stream < context->audio_stream_capacity)
+	{
+		if (!context->audio_streams[available_stream].playing)
+		{
+			break;
+		}
+		
+		available_stream += 1;
+	}
+	
+	if (available_stream == context->audio_stream_capacity)
+	{
+		ENSURE_SIZE(context->audio_streams,
+					available_stream + 1,
+					context->audio_stream_capacity,
+					sizeof(FlashbangAudioStream));
+		
+		for (size_t i = available_stream; i < context->audio_stream_capacity; ++i)
+		{
+			context->audio_streams[i].stream = SDL_CreateAudioStream(&spec, NULL);
+			SDL_BindAudioStream(context->audio_device, context->audio_streams[i].stream);
+			context->audio_streams[i].playing = false;
+			context->audio_streams[i].stopping = false;
+		}
+	}
+	
+	context->audio_streams[available_stream].playing = true;
+	
+	return available_stream;
+}
+
+void flashbang_put_audio(FlashbangContext* context, size_t stream_id, char* buffer, size_t size)
+{
+	SDL_PutAudioStreamData(context->audio_streams[stream_id].stream, buffer, (int) size);
 	SDL_ResumeAudioDevice(context->audio_device);
+}
+
+void flashbang_stop_stream(FlashbangContext* context, size_t stream_id)
+{
+	FlashbangAudioStream* stream = &context->audio_streams[stream_id];
+	
+	SDL_FlushAudioStream(stream->stream);
+	stream->stopping = true;
 }
 
 void flashbang_set_window_background(FlashbangContext* context, u8 r, u8 g, u8 b)
@@ -1204,7 +1274,13 @@ void flashbang_close_pass(FlashbangContext* context, SWFAppContext* app_context)
 
 void flashbang_release(FlashbangContext* context, SWFAppContext* app_context)
 {
-	SDL_DestroyAudioStream(context->audio_stream);
+	for (size_t i = 0; i < context->audio_stream_capacity; ++i)
+	{
+		SDL_DestroyAudioStream(context->audio_streams[i].stream);
+	}
+	
+	FREE(context->audio_streams);
+	
 	SDL_CloseAudioDevice(context->audio_device);
 	
 	SDL_ReleaseGPUTransferBuffer(context->device, context->vertex_transfer_buffer);

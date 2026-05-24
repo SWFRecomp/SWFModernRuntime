@@ -145,6 +145,7 @@ void peekVar(SWFAppContext* app_context, ActionVar* var);
 void popVar(SWFAppContext* app_context, ActionVar* var);
 
 void convertNumericToNumber(SWFAppContext* app_context, ActionVar* v);
+void convertNumericToInteger(SWFAppContext* app_context, ActionVar* v);
 
 void toNumber(SWFAppContext* app_context, ActionVar* v);
 void toPrimitive(SWFAppContext* app_context, ASObject* this);
@@ -159,6 +160,7 @@ void setPropertyInThisScope(SWFAppContext* app_context, u32 string_id, const cha
 
 void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v, u32 num_args);
 void getAndCallMethod(SWFAppContext* app_context, ASObject* this, u32 method_name, u32 num_args);
+void getAndCallMethodIfExists(SWFAppContext* app_context, ASObject* this, u32 method_name, u32 num_args);
 
 bool evaluateCondition(SWFAppContext* app_context);
 

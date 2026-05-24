@@ -39,6 +39,7 @@ RuntimeFunc runtime_meths[] =
 	{STR_ID_MOVIECLIP, STR_ID_CREATE_EMPTY_MOVIECLIP, MovieClip_createEmptyMovieClip, false},
 	{STR_ID_SOUND, STR_ID_LOAD_SOUND, Sound_loadSound, false},
 	{STR_ID_SOUND, STR_ID_START, Sound_start, false},
+	{STR_ID_SOUND, STR_ID_DESTROY, Sound_destroy, false},
 };
 
 action_runtime_func static_initializers[] =

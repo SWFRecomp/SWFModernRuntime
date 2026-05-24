@@ -105,8 +105,12 @@ void releaseObject(SWFAppContext* app_context, ASObject* obj)
 	}
 }
 
+void getAndCallMethodIfExists(SWFAppContext* app_context, ASObject* this, u32 method_name, u32 num_args);
+
 void destroyObject(SWFAppContext* app_context, ASObject* obj)
 {
+	getAndCallMethodIfExists(app_context, obj, STR_ID_DESTROY, 0);
+	
 	while (obj->t.length > 0)
 	{
 		ASProperty* p = rbtree_pop_root(&obj->t);
@@ -248,16 +252,17 @@ ASProperty* getPropertyWithPrototype(ASObject* this, u32 string_id, const char* 
 
 void getPropertyVarWithPrototype(ASObject* this, u32 string_id, const char* name, u32 name_length, ActionVar* out_v)
 {
+	out_v->type = ACTION_STACK_VALUE_UNDEFINED;
+	
 	if (this == NULL || (string_id == 0 && name == NULL))
 	{
-		out_v->type = ACTION_STACK_VALUE_UNDEFINED;
 		return;
 	}
 	
 	ASObject* current = this;
 	ASProperty* prop;
 	
-	while (current != NULL)
+	while (true)
 	{
 		// Search own properties first
 		
@@ -281,6 +286,7 @@ void getPropertyVarWithPrototype(ASObject* this, u32 string_id, const char* name
 		if (proto_prop == NULL)
 		{
 			// No __proto__ property - end of chain
+			prop = NULL;
 			break;
 		}
 		
@@ -292,7 +298,10 @@ void getPropertyVarWithPrototype(ASObject* this, u32 string_id, const char* name
 		current = next;
 	}
 	
-	*out_v = prop->value;
+	if (prop != NULL)
+	{
+		*out_v = prop->value;
+	}
 	
 	rwlock_unlock_read(&current->lock);
 }

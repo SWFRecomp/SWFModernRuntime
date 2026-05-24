@@ -52,6 +52,7 @@ void Sound_loadSound(SWFAppContext* app_context, ASObject* this, u32 num_args)
 	}
 	
 	EXTDATA(loaded) = true;
+	EXTDATA(stream_id) = flashbang_create_audio_stream(FBC, app_context);
 	
 	PUSH_BOOL(true);
 	getAndCallMethod(app_context, this, STR_ID_ON_LOAD, 1);
@@ -66,9 +67,58 @@ void Sound_loadSound(SWFAppContext* app_context, ASObject* this, u32 num_args)
 
 void Sound_start(SWFAppContext* app_context, ASObject* this, u32 num_args)
 {
+	f64 offset = 0.0;
+	s32 loops = 0;
+	
+	u32 discards = 0;
+	
+	if (num_args >= 1)
+	{
+		ActionVar offset_v;
+		popVar(app_context, &offset_v);
+		
+		if (IS_OBJ_T(offset_v.type))
+		{
+			UNIMPLEMENTED("Sound.start object parameters\n");
+		}
+		
+		convertNumericToNumber(app_context, &offset_v);
+		offset = offset_v.f64;
+		
+		discards += 1;
+	}
+	
+	if (num_args >= 2)
+	{
+		ActionVar loop_v;
+		popVar(app_context, &loop_v);
+		
+		if (IS_OBJ_T(loop_v.type))
+		{
+			UNIMPLEMENTED("Sound.start object parameters\n");
+		}
+		
+		convertNumericToInteger(app_context, &loop_v);
+		loops = loop_v.s32;
+		
+		discards += 1;
+	}
+	
+	DISCARD_ARGS(num_args - discards);
+	
+	for (s32 i = 0; i < loops + 1; ++i)
+	{
+		flashbang_put_audio(FBC, EXTDATA(stream_id), EXTDATA(samples), EXTDATA(byte_count));
+	}
+	
+	RETURN_VOID();
+}
+
+void Sound_destroy(SWFAppContext* app_context, ASObject* this, u32 num_args)
+{
 	DISCARD_ARGS(num_args);
 	
-	flashbang_put_audio(FBC, EXTDATA(samples), EXTDATA(byte_count));
+	flashbang_stop_stream(FBC, EXTDATA(stream_id));
 	
 	RETURN_VOID();
 }
