@@ -5,6 +5,8 @@
 #include <SDL3/SDL.h>
 
 #include <common.h>
+#include <action.h>
+#include <initial_strings_decls.h>
 #include <flashbang.h>
 #include <triangulation.h>
 #include <heap.h>
@@ -672,7 +674,7 @@ void flashbang_init(FlashbangContext* context, SWFAppContext* app_context)
 	triInit(app_context);
 }
 
-int flashbang_poll(FlashbangContext* context)
+int flashbang_poll(FlashbangContext* context, SWFAppContext* app_context)
 {
 	SDL_Event evt;
 	
@@ -684,6 +686,41 @@ int flashbang_poll(FlashbangContext* context)
 			case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
 			{
 				return 1;
+			}
+			
+			case SDL_EVENT_KEY_DOWN:
+			{
+				u8 key;
+				
+				if (evt.key.repeat)
+				{
+					break;
+				}
+				
+				switch (evt.key.key)
+				{
+					case SDLK_ESCAPE:	  key = 27; break;
+					case SDLK_LEFT:		  key = 37; break;
+					case SDLK_UP:		  key = 38; break;
+					case SDLK_RIGHT:	  key = 39; break;
+					case SDLK_DOWN:		  key = 40; break;
+					default:			  key = 0;  break;
+				}
+				
+				if (key != 0)
+				{
+					context->last_key_pressed = key;
+					
+					ActionVar Key_v;
+					getPropertyVar(_global, STR_ID_KEY, NULL, 0, &Key_v);
+					
+					if (getAndCallMethodIfExists(app_context, Key_v.object, STR_ID_FIRE_LISTENERS, 0))
+					{
+						POP();
+					}
+				}
+				
+				break;
 			}
 		}
 	}

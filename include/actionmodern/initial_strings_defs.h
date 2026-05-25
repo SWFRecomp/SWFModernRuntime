@@ -21,7 +21,9 @@ RuntimeFunc runtime_funcs[] =
 	{0, STR_ID_ARRAY, Array_new, true},
 	{0, STR_ID_MOVIECLIP, MovieClip_new, true},
 	{0, STR_ID_SOUND, Sound_new, true},
+	
 	{0, STR_ID_ASSETPROPFLAGS, ASSetPropFlags, false},
+	{0, STR_ID_RECOMP_GET_LAST_PRESSED_KEY, recompGetLastPressedKey, false},
 };
 
 RuntimeFunc runtime_meths[] =

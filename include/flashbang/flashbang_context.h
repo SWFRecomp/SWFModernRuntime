@@ -71,6 +71,8 @@ typedef struct
 	FlashbangAudioStream* audio_streams;
 	size_t audio_stream_capacity;
 	
+	u8 last_key_pressed;
+	
 	void* dummy_tex;
 	void* dummy_sampler;
 	

@@ -59,11 +59,11 @@ void tagMain(SWFAppContext* app_context)
 		}
 		manual_next_frame = 0;
 		
-		bad_poll |= flashbang_poll(FBC);
+		bad_poll |= flashbang_poll(FBC, app_context);
 		quit_swf |= bad_poll;
 	}
 	
-	while (!(bad_poll = flashbang_poll(FBC)))
+	while (!(bad_poll = flashbang_poll(FBC, app_context)))
 	{
 		tagShowFrame(app_context);
 	}

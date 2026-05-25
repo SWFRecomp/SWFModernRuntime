@@ -3123,6 +3123,14 @@ void actionGetMember(SWFAppContext* app_context)
 			{
 				case STR_ID_ARRAY:
 				{
+					if (prop_name_var.type == ACTION_STACK_VALUE_STRING && prop_name_var.string_id == STR_ID_LENGTH)
+					{
+						PUSH_INT(AR_EXTDATA_OF(obj, length));
+						special_object = true;
+						
+						break;
+					}
+					
 					s32 i = prop_name_var.s32;
 					PUSH_VAR(Array_getElement(app_context, obj, i));
 					
@@ -3878,11 +3886,8 @@ void actionCallMethod(SWFAppContext* app_context)
 	
 	else
 	{
-		ActionVar v;
-		getPropertyVar(this, STR_ID_CONSTRUCTOR, NULL, 0, &v);
-		
 		meth_v.type = ACTION_STACK_VALUE_OBJECT;
-		meth_v.object = v.object;
+		meth_v.object = this;
 	}
 	
 	if (meth_v.type != ACTION_STACK_VALUE_UNDEFINED)

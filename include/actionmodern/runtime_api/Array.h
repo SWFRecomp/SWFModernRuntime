@@ -2,6 +2,8 @@
 
 #include <recomp.h>
 
+#define AR_EXTDATA_OF(o, member) (((ArrayData*) o->extra_data)->member)
+
 typedef struct
 {
 	ActionVar* data;

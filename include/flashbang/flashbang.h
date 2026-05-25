@@ -7,7 +7,7 @@ extern const float identity[16];
 extern const float identity_cxform[20];
 
 void flashbang_init(FlashbangContext* context, SWFAppContext* app_context);
-int flashbang_poll(FlashbangContext* context);
+int flashbang_poll(FlashbangContext* context, SWFAppContext* app_context);
 size_t flashbang_create_audio_stream(FlashbangContext* context, SWFAppContext* app_context);
 void flashbang_put_audio(FlashbangContext* context, size_t stream_id, char* buffer, size_t size);
 void flashbang_stop_stream(FlashbangContext* context, size_t stream_id);
