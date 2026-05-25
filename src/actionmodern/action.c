@@ -3369,7 +3369,7 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v,
 			if ((flags & FUNC_FLAG_SUPPRESS_SUPER) == 0)
 			{
 				ActionVar super_v;
-				getPropertyVar(this, STR_ID_CONSTRUCTOR, NULL, 0, &super_v);
+				getPropertyVar(this, STR_ID_PROTO, NULL, 0, &super_v);
 				
 				ASObject* super = super_v.object;
 				
@@ -3879,8 +3879,7 @@ void actionCallMethod(SWFAppContext* app_context)
 	else
 	{
 		ActionVar v;
-		getPropertyVar(this, STR_ID_PROTOTYPE, NULL, 0, &v);
-		getPropertyVar(v.object, STR_ID_CONSTRUCTOR, NULL, 0, &v);
+		getPropertyVar(this, STR_ID_CONSTRUCTOR, NULL, 0, &v);
 		
 		meth_v.type = ACTION_STACK_VALUE_OBJECT;
 		meth_v.object = v.object;
