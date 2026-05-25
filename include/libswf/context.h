@@ -72,6 +72,8 @@ typedef struct SWFAppContext
 	ASObject* BitmapData_prototype;
 	ASObject* BitmapData_constructor;
 	
+	ASObject* Super_constructor;
+	
 	size_t exported_chars_count;
 	u16* exported_char_ids;
 	u32* exported_string_ids;

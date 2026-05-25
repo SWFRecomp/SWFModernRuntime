@@ -24,6 +24,13 @@ typedef struct
 			u32 string_id;
 			bool owns_memory;
 		};
+		
+		// super
+		struct
+		{
+			ASObject* target;
+			ASObject* proto;
+		};
 	};
 	
 	// value

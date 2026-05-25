@@ -9,6 +9,7 @@
 
 #include <recomp.h>
 #include <initial_strings_defs.h>
+#include <Super.h>
 #include <heap.h>
 #include <objects.h>
 #include <free_thread.h>
@@ -48,6 +49,8 @@ void initActions(SWFAppContext* app_context)
 	app_context->MovieClip_constructor = allocObject(app_context);
 	
 	app_context->BitmapData_prototype = allocObject(app_context);
+	
+	app_context->Super_constructor = allocObject(app_context);
 	
 	start_time = get_elapsed_ms();
 	
@@ -451,6 +454,15 @@ void peekConvert(SWFAppContext* app_context, ActionVar* var)
 				var->value = STACK_TOP_VALUE;
 				var->owns_memory = false;
 			}
+			
+			break;
+		}
+		
+		case ACTION_STACK_VALUE_SUPER:
+		{
+			// TODO: define these
+			var->target = STACK_TOP_TARGET;
+			var->proto = STACK_TOP_PROTO;
 			
 			break;
 		}
@@ -3368,23 +3380,22 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v,
 			
 			if ((flags & FUNC_FLAG_SUPPRESS_SUPER) == 0)
 			{
-				ActionVar super_v;
-				getPropertyVar(this, STR_ID_PROTO, NULL, 0, &super_v);
+				ActionVar proto_v;
+				getPropertyVar(this, STR_ID_PROTO, NULL, 0, &proto_v);
 				
-				ASObject* super = super_v.object;
+				printf("p id: %d\n", proto_v.object->id);
+				
+				ActionVar super_v;
+				super_v.type = ACTION_STACK_VALUE_SUPER;
+				super_v.target = this;
+				super_v.proto = proto_v.object;
 				
 				setProperty(app_context, scope_chain[this_scope], STR_ID_SUPER, NULL, 0, &super_v);
 				
 				if (flags & FUNC_FLAG_PRELOAD_SUPER)
 				{
-					regs[next_preload].type = ACTION_STACK_VALUE_OBJECT;
-					regs[next_preload].object = super;
+					regs[next_preload] = super_v;
 					next_preload += 1;
-					
-					OBJ_LOCK_WRITE(super,
-					{
-						retainObject(super);
-					});
 				}
 			}
 			
@@ -3873,16 +3884,34 @@ void actionCallMethod(SWFAppContext* app_context)
 	
 	if (string_id != STR_ID_EMPTY)
 	{
-		getPropertyVarWithPrototype(this, string_id, NULL, 0, &meth_v);
+		if (this_v.type == ACTION_STACK_VALUE_SUPER)
+		{
+			printf("super call\n");
+			ASObject* proto = this_v.proto;
+			getPropertyVarWithPrototype(proto, string_id, NULL, 0, &meth_v);
+			
+			ASObject* target = this_v.target;
+			
+			callFunction(app_context, target, &meth_v, num_args);
+			
+			goto release;
+		}
+		
+		else
+		{
+			getPropertyVarWithPrototype(this, string_id, NULL, 0, &meth_v);
+		}
 	}
 	
 	else
 	{
-		ActionVar v;
-		getPropertyVar(this, STR_ID_CONSTRUCTOR, NULL, 0, &v);
+		ASObject* proto = this_v.proto;
+		
+		ActionVar ctor_v;
+		getPropertyVar(proto, STR_ID_CONSTRUCTOR, NULL, 0, &ctor_v);
 		
 		meth_v.type = ACTION_STACK_VALUE_OBJECT;
-		meth_v.object = v.object;
+		meth_v.object = ctor_v.object;
 	}
 	
 	if (meth_v.type != ACTION_STACK_VALUE_UNDEFINED)
