@@ -233,7 +233,10 @@ void tagShowFrame(SWFAppContext* app_context)
 		}
 	}
 	
-	flashbang_open_pass(app_context->fbc, app_context);
+	if (!flashbang_open_pass(app_context->fbc, app_context))
+	{
+		goto clear;
+	}
 	
 	if (app_context->vertex_tasks.length > 0)
 	{
@@ -298,6 +301,8 @@ void tagShowFrame(SWFAppContext* app_context)
 	}
 	
 	flashbang_close_pass(app_context->fbc, app_context);
+	
+	clear:
 	
 	SVEC_CLEAR(&app_context->vertex_tasks);
 	SVEC_CLEAR(&app_context->uninv_tasks);

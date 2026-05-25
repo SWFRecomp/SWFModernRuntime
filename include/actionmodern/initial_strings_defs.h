@@ -24,6 +24,7 @@ RuntimeFunc runtime_funcs[] =
 	
 	{0, STR_ID_ASSETPROPFLAGS, ASSetPropFlags, false},
 	{0, STR_ID_RECOMP_GET_LAST_KEY, recompGetLastKey, false},
+	{0, STR_ID_RECOMP_SET_DISPLAY_SCALE, recompSetDisplayScale, false},
 };
 
 RuntimeFunc runtime_meths[] =

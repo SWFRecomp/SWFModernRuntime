@@ -15,6 +15,7 @@ typedef struct
 {
 	int width;
 	int height;
+	u8 scale;
 	
 	const float* stage_to_ndc;
 	
@@ -72,6 +73,12 @@ typedef struct
 	size_t audio_stream_capacity;
 	
 	u8 last_key_pressed;
+	
+	void* swapchain;
+	void* target_texture;
+	
+	u32 swapchain_width;
+	u32 swapchain_height;
 	
 	void* dummy_tex;
 	void* dummy_sampler;

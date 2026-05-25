@@ -227,6 +227,16 @@ void flashbang_init(FlashbangContext* context, SWFAppContext* app_context)
 	
 	SDL_GPUTextureCreateInfo texture_info = {0};
 	
+	texture_info.type = SDL_GPU_TEXTURETYPE_2D;
+	texture_info.format = SDL_GetGPUSwapchainTextureFormat(context->device, context->window);
+	texture_info.usage = SDL_GPU_TEXTUREUSAGE_COLOR_TARGET | SDL_GPU_TEXTUREUSAGE_SAMPLER;
+	texture_info.sample_count = SDL_GPU_SAMPLECOUNT_1;
+	texture_info.width = context->width;
+	texture_info.height = context->height;
+	texture_info.layer_count_or_depth = 1;
+	texture_info.num_levels = 1;
+	context->target_texture = SDL_CreateGPUTexture(context->device, &texture_info);
+	
 	if (num_gradient_textures)
 	{
 		texture_info.type = SDL_GPU_TEXTURETYPE_2D_ARRAY;
@@ -980,7 +990,18 @@ void flashbang_finalize_bitmaps(FlashbangContext* context)
 	SDL_ReleaseGPUFence(context->device, fence);
 }
 
-void flashbang_open_pass(FlashbangContext* context, SWFAppContext* app_context)
+void flashbang_set_display_scale(FlashbangContext* context, u8 scale)
+{
+	context->scale = scale;
+	
+	u32 w = scale*context->width;
+	u32 h = scale*context->height;
+	
+	SDL_SetWindowSize(context->window, w, h);
+	SDL_SyncWindow(context->window);
+}
+
+bool flashbang_open_pass(FlashbangContext* context, SWFAppContext* app_context)
 {
 	// acquire the command buffer
 	context->command_buffer = SDL_AcquireGPUCommandBuffer(context->device);
@@ -988,9 +1009,12 @@ void flashbang_open_pass(FlashbangContext* context, SWFAppContext* app_context)
 	assert(context->command_buffer != NULL);
 	
 	// get the swapchain texture
-	SDL_GPUTexture* swapchainTexture;
-	Uint32 width, height;
-	SDL_WaitAndAcquireGPUSwapchainTexture(context->command_buffer, context->window, &swapchainTexture, &width, &height);
+	SDL_WaitAndAcquireGPUSwapchainTexture(context->command_buffer, context->window, (SDL_GPUTexture**) &context->swapchain, &context->swapchain_width, &context->swapchain_height);
+	
+	if (context->swapchain == NULL)
+	{
+		return false;
+	}
 	
 	// create the color target
 	SDL_GPUColorTargetInfo colorTargetInfo = {0};
@@ -1000,7 +1024,7 @@ void flashbang_open_pass(FlashbangContext* context, SWFAppContext* app_context)
 	colorTargetInfo.clear_color.a = 255/255.0f;
 	colorTargetInfo.load_op = SDL_GPU_LOADOP_CLEAR;
 	colorTargetInfo.store_op = SDL_GPU_STOREOP_STORE;
-	colorTargetInfo.texture = swapchainTexture;
+	colorTargetInfo.texture = context->target_texture;
 	
 	// begin a render pass
 	context->render_pass = SDL_BeginGPURenderPass(context->command_buffer, &colorTargetInfo, 1, NULL);
@@ -1055,6 +1079,8 @@ void flashbang_open_pass(FlashbangContext* context, SWFAppContext* app_context)
 	
 	SDL_BindGPUFragmentSamplers(context->render_pass, 0, sampler_bindings, 2);
 	SDL_BindGPUFragmentStorageBuffers(context->render_pass, 0, (SDL_GPUBuffer**) &context->cxform_buffer, 1);
+	
+	return true;
 }
 
 u32 flashbang_allocate_vertices(FlashbangContext* context, u32 num_verts)
@@ -1308,8 +1334,37 @@ void flashbang_draw_shape(FlashbangContext* context, u32 offset, u32 num_verts, 
 
 void flashbang_close_pass(FlashbangContext* context, SWFAppContext* app_context)
 {
+	if (context->swapchain == NULL)
+	{
+		return;
+	}
+	
 	// end the render pass
 	SDL_EndGPURenderPass(context->render_pass);
+	
+	SDL_GPUBlitInfo blit_info = {0};
+	blit_info.source.texture = context->target_texture;
+	blit_info.source.mip_level = 0;
+	blit_info.source.layer_or_depth_plane = 0;
+	blit_info.source.x = 0;
+	blit_info.source.y = 0;
+	blit_info.source.w = context->width;
+	blit_info.source.h = context->height;
+	
+	blit_info.destination.texture = context->swapchain;
+	blit_info.destination.mip_level = 0;
+	blit_info.destination.layer_or_depth_plane = 0;
+	blit_info.destination.x = 0;
+	blit_info.destination.y = 0;
+	blit_info.destination.w = context->swapchain_width;
+	blit_info.destination.h = context->swapchain_height;
+	
+	blit_info.load_op = SDL_GPU_LOADOP_DONT_CARE;
+	blit_info.flip_mode = SDL_FLIP_NONE;
+	blit_info.filter = SDL_GPU_FILTER_NEAREST;
+	blit_info.cycle = false;
+	
+	SDL_BlitGPUTexture(context->command_buffer, &blit_info);
 	
 	// submit the command buffer
 	SDL_SubmitGPUCommandBuffer(context->command_buffer);
