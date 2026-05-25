@@ -671,6 +671,9 @@ void flashbang_init(FlashbangContext* context, SWFAppContext* app_context)
 	context->uninv_buffer_to_free = NULL;
 	context->inv_buffer_to_free = NULL;
 	
+	SDL_SetGPUAllowedFramesInFlight(context->device, 1);
+	SDL_SetGPUSwapchainParameters(context->device, context->window, SDL_GPU_SWAPCHAINCOMPOSITION_SDR, SDL_GPU_PRESENTMODE_IMMEDIATE);
+	
 	triInit(app_context);
 }
 
@@ -678,7 +681,7 @@ int flashbang_poll(FlashbangContext* context, SWFAppContext* app_context)
 {
 	SDL_Event evt;
 	
-	if (SDL_PollEvent(&evt))
+	while (SDL_PollEvent(&evt))
 	{
 		switch (evt.type)
 		{
@@ -714,10 +717,41 @@ int flashbang_poll(FlashbangContext* context, SWFAppContext* app_context)
 					ActionVar Key_v;
 					getPropertyVar(_global, STR_ID_KEY, NULL, 0, &Key_v);
 					
-					if (getAndCallMethodIfExists(app_context, Key_v.object, STR_ID_FIRE_LISTENERS, 0))
-					{
-						POP();
-					}
+					getAndCallMethod(app_context, Key_v.object, STR_ID_FIRE_LISTENERS_DOWN, 0);
+					POP();
+				}
+				
+				break;
+			}
+			
+			case SDL_EVENT_KEY_UP:
+			{
+				u8 key;
+				
+				if (evt.key.repeat)
+				{
+					break;
+				}
+				
+				switch (evt.key.key)
+				{
+					case SDLK_ESCAPE:	  key = 27; break;
+					case SDLK_LEFT:		  key = 37; break;
+					case SDLK_UP:		  key = 38; break;
+					case SDLK_RIGHT:	  key = 39; break;
+					case SDLK_DOWN:		  key = 40; break;
+					default:			  key = 0;  break;
+				}
+				
+				if (key != 0)
+				{
+					context->last_key_pressed = key;
+					
+					ActionVar Key_v;
+					getPropertyVar(_global, STR_ID_KEY, NULL, 0, &Key_v);
+					
+					getAndCallMethod(app_context, Key_v.object, STR_ID_FIRE_LISTENERS_UP, 0);
+					POP();
 				}
 				
 				break;

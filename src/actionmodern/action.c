@@ -1418,6 +1418,13 @@ void actionEquals2(SWFAppContext* app_context)
 			convertNumericToNumber(app_context, &b);
 		}
 		
+		// TEMPORARY:
+		else if (IS_UNDEFINED(a) != IS_UNDEFINED(b))
+		{
+			PUSH_BOOL(false);
+			goto release;
+		}
+		
 		else
 		{
 			UNIMPLEMENTED("Equals2 of differing types");
