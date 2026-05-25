@@ -215,6 +215,7 @@ void actionDelete(SWFAppContext* app_context);
 void actionDelete2(SWFAppContext* app_context, char* str_buffer);
 void actionNewObject(SWFAppContext* app_context);
 void actionNewMethod(SWFAppContext* app_context);
+void actionExtends(SWFAppContext* app_context);
 void actionInitObject(SWFAppContext* app_context);
 
 // Array Operations

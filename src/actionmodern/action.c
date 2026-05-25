@@ -3336,39 +3336,6 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v,
 			
 			u8 next_preload = 1;
 			
-			if (flags & FUNC_FLAG_PRELOAD_PARENT)
-			{
-				EXC("_parent not implemented\n");
-				
-				// REMEMBER TO RETAIN
-			}
-			
-			if (flags & FUNC_FLAG_PRELOAD_ROOT)
-			{
-				regs[next_preload].type = ACTION_STACK_VALUE_OBJECT;
-				regs[next_preload].object = app_context->_root;
-				next_preload += 1;
-				
-				OBJ_LOCK_WRITE(app_context->_root,
-				{
-					retainObject(app_context->_root);
-				});
-			}
-			
-			if ((flags & FUNC_FLAG_SUPPRESS_SUPER) == 0)
-			{
-				EXC("super not implemented\n");
-				
-				// REMEMBER TO RETAIN
-			}
-			
-			if ((flags & FUNC_FLAG_SUPPRESS_ARGUMENTS) == 0)
-			{
-				EXC("arguments not implemented\n");
-				
-				// REMEMBER TO RETAIN
-			}
-			
 			if ((flags & FUNC_FLAG_SUPPRESS_THIS) == 0)
 			{
 				assert(this != NULL);
@@ -3390,6 +3357,54 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v,
 						retainObject(this);
 					});
 				}
+			}
+			
+			if ((flags & FUNC_FLAG_SUPPRESS_ARGUMENTS) == 0)
+			{
+				EXC("arguments not implemented\n");
+				
+				// REMEMBER TO RETAIN
+			}
+			
+			if ((flags & FUNC_FLAG_SUPPRESS_SUPER) == 0)
+			{
+				ActionVar super_v;
+				getPropertyVar(this, STR_ID_CONSTRUCTOR, NULL, 0, &super_v);
+				
+				ASObject* super = super_v.object;
+				
+				setProperty(app_context, scope_chain[this_scope], STR_ID_SUPER, NULL, 0, &super_v);
+				
+				if (flags & FUNC_FLAG_PRELOAD_SUPER)
+				{
+					regs[next_preload].type = ACTION_STACK_VALUE_OBJECT;
+					regs[next_preload].object = super;
+					next_preload += 1;
+					
+					OBJ_LOCK_WRITE(super,
+					{
+						retainObject(super);
+					});
+				}
+			}
+			
+			if (flags & FUNC_FLAG_PRELOAD_ROOT)
+			{
+				regs[next_preload].type = ACTION_STACK_VALUE_OBJECT;
+				regs[next_preload].object = app_context->_root;
+				next_preload += 1;
+				
+				OBJ_LOCK_WRITE(app_context->_root,
+				{
+					retainObject(app_context->_root);
+				});
+			}
+			
+			if (flags & FUNC_FLAG_PRELOAD_PARENT)
+			{
+				EXC("_parent not implemented\n");
+				
+				// REMEMBER TO RETAIN
 			}
 			
 			if (flags & FUNC_FLAG_PRELOAD_GLOBAL)
@@ -3619,6 +3634,34 @@ void actionNewMethod(SWFAppContext* app_context)
 	releaseObjectVar(app_context, &ctor_name_var);
 }
 
+void actionExtends(SWFAppContext* app_context)
+{
+	ActionVar super_v;
+	popVar(app_context, &super_v);
+	ActionVar sub_v;
+	popVar(app_context, &sub_v);
+	
+	ASObject* super = super_v.object;
+	ASObject* sub = sub_v.object;
+	
+	ASObject* prototype = allocObject(app_context);
+	
+	ActionVar prototype_v;
+	prototype_v.type = ACTION_STACK_VALUE_OBJECT;
+	prototype_v.object = prototype;
+	
+	ActionVar super_prototype_v;
+	getPropertyVar(super, STR_ID_PROTOTYPE, NULL, 0, &super_prototype_v);
+	
+	setProperty(app_context, prototype, STR_ID_PROTO, NULL, 0, &super_prototype_v);
+	setProperty(app_context, prototype, STR_ID_CONSTRUCTOR, NULL, 0, &super_v);
+	
+	setProperty(app_context, sub, STR_ID_PROTOTYPE, NULL, 0, &prototype_v);
+	
+	releaseObjectVar(app_context, &sub_v);
+	releaseObjectVar(app_context, &super_v);
+}
+
 void actionDefineFunction(SWFAppContext* app_context, u32 string_id, action_func func, u32* args, bool anonymous)
 {
 	assert(string_id != 0);
@@ -3639,7 +3682,6 @@ void actionDefineFunction(SWFAppContext* app_context, u32 string_id, action_func
 	ActionVar proto_var;
 	proto_var.type = ACTION_STACK_VALUE_OBJECT;
 	proto_var.object = allocObject(app_context);
-	
 	setProperty(app_context, func_obj, STR_ID_PROTOTYPE, NULL, 0, &proto_var);
 	
 	if (!anonymous)
@@ -3679,7 +3721,6 @@ void actionDefineFunction2(SWFAppContext* app_context, u32 string_id, action_fun
 	ActionVar proto_var;
 	proto_var.type = ACTION_STACK_VALUE_OBJECT;
 	proto_var.object = allocObject(app_context);
-	
 	setProperty(app_context, func_obj, STR_ID_PROTOTYPE, NULL, 0, &proto_var);
 	
 	if (!anonymous)
@@ -3738,9 +3779,17 @@ void actionCallMethod(SWFAppContext* app_context)
 	}
 	
 	// Pop method name (string) from stack
-	char* func_name = (char*) STACK_TOP_VALUE;
-	u32 string_id = STACK_TOP_ID;
-	POP();
+	ActionVar name_v;
+	popVar(app_context, &name_v);
+	
+	char* func_name = "UNDEFINED METHOD NAME";
+	u32 string_id = STR_ID_EMPTY;
+	
+	if (name_v.type != ACTION_STACK_VALUE_UNDEFINED)
+	{
+		func_name = name_v.str;
+		string_id = name_v.string_id;
+	}
 	
 	// Pop object from stack
 	ActionVar this_v;
@@ -3820,21 +3869,26 @@ void actionCallMethod(SWFAppContext* app_context)
 		}
 	}
 	
-	ASProperty* meth_p = NULL;
+	ActionVar meth_v;
 	
 	if (string_id != STR_ID_EMPTY)
 	{
-		meth_p = getPropertyWithPrototype(this, string_id, NULL, 0);
+		getPropertyVarWithPrototype(this, string_id, NULL, 0, &meth_v);
 	}
 	
 	else
 	{
-		EXC("Callable objects not implemented (ActionCallMethod).");
+		ActionVar v;
+		getPropertyVar(this, STR_ID_PROTOTYPE, NULL, 0, &v);
+		getPropertyVar(v.object, STR_ID_CONSTRUCTOR, NULL, 0, &v);
+		
+		meth_v.type = ACTION_STACK_VALUE_OBJECT;
+		meth_v.object = v.object;
 	}
 	
-	if (meth_p != NULL)
+	if (meth_v.type != ACTION_STACK_VALUE_UNDEFINED)
 	{
-		callFunction(app_context, this, &meth_p->value, num_args);
+		callFunction(app_context, this, &meth_v, num_args);
 	}
 	
 	else
@@ -3853,4 +3907,5 @@ void actionCallMethod(SWFAppContext* app_context)
 	
 	releaseObjectVar(app_context, &num_args_var);
 	releaseObjectVar(app_context, &this_v);
+	releaseObjectVar(app_context, &name_v);
 }
