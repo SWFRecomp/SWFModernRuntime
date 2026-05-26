@@ -185,3 +185,26 @@ void Array_setElement(SWFAppContext* app_context, ASObject* this, s32 i, ActionV
 	
 	EXTDATA(data)[i] = *v;
 }
+
+void Array_setLength(SWFAppContext* app_context, ASObject* this, size_t new_length)
+{
+	if (new_length < EXTDATA(length))
+	{
+		for (size_t i = new_length; i < EXTDATA(length); ++i)
+		{
+			ActionVar* v = &EXTDATA(data[i]);
+			
+			if (IS_OBJ_T(v->type))
+			{
+				OBJ_LOCK_WRITE(v->object,
+				{
+					releaseObject(app_context, v->object);
+				});
+			}
+			
+			EXTDATA(data)[i].type = ACTION_STACK_VALUE_UNDEFINED;
+		}
+	}
+	
+	EXTDATA(length) = new_length;
+}

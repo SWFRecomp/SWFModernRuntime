@@ -22,3 +22,4 @@ void Array_toString(SWFAppContext* app_context, ASObject* this, u32 num_args);
 
 ActionVar* Array_getElement(SWFAppContext* app_context, ASObject* this, s32 i);
 void Array_setElement(SWFAppContext* app_context, ASObject* this, s32 i, ActionVar* v);
+void Array_setLength(SWFAppContext* app_context, ASObject* this, size_t new_length);

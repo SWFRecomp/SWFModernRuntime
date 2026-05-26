@@ -2904,6 +2904,19 @@ void actionSetMember(SWFAppContext* app_context)
 		{
 			case STR_ID_ARRAY:
 			{
+				if (IS_STR_T(prop_name_var.type) && prop_name_var.string_id == STR_ID_LENGTH)
+				{
+					if (UNLIKELY(!IS_NUM_T(value_var.type)))
+					{
+						UNIMPLEMENTED("handling setting Array length to non-numeric");
+					}
+					
+					convertNumericToInteger(app_context, &value_var);
+					Array_setLength(app_context, obj, value_var.s32);
+					
+					break;
+				}
+				
 				s32 i = prop_name_var.s32;
 				Array_setElement(app_context, obj, i, &value_var);
 				
@@ -3130,7 +3143,7 @@ void actionGetMember(SWFAppContext* app_context)
 			{
 				case STR_ID_ARRAY:
 				{
-					if (prop_name_var.type == ACTION_STACK_VALUE_STRING && prop_name_var.string_id == STR_ID_LENGTH)
+					if (IS_STR_T(prop_name_var.type) && prop_name_var.string_id == STR_ID_LENGTH)
 					{
 						PUSH_INT(AR_EXTDATA_OF(obj, length));
 						special_object = true;
