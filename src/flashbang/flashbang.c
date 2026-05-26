@@ -707,11 +707,6 @@ int flashbang_poll(FlashbangContext* context, SWFAppContext* app_context)
 			{
 				u8 key;
 				
-				if (evt.key.repeat)
-				{
-					break;
-				}
-				
 				switch (evt.key.key)
 				{
 					case SDLK_ESCAPE:	  key = 27; break;
