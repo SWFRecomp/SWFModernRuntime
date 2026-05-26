@@ -3178,18 +3178,15 @@ void actionGetMember(SWFAppContext* app_context)
 				break;
 			}
 			
-			ASProperty* prop;
+			ActionVar prop_v;
 			
-			OBJ_LOCK_READ(obj,
-			{
-				// Look up property
-				prop = getPropertyWithPrototype(obj, prop_name_var.string_id, NULL, 0);
-			});
+			// Look up property
+			getPropertyVarWithPrototype(obj, prop_name_var.string_id, NULL, 0, &prop_v);
 			
-			if (prop != NULL)
+			if (prop_v.type != ACTION_STACK_VALUE_UNDEFINED)
 			{
 				// Property found - push its value
-				pushVar(app_context, &prop->value);
+				PUSH_VAR(&prop_v);
 			}
 			
 			else

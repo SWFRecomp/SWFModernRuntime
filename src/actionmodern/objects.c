@@ -203,57 +203,9 @@ ASProperty* getOrCreateProperty(SWFAppContext* app_context, ASObject* this, u32 
  * Get Property With Prototype Chain
  *
  * Retrieves a property value by name, searching up the prototype chain via __proto__.
- * Returns pointer to ActionVar, or NULL if property not found in entire chain.
  *
  * This implements proper prototype-based inheritance for ActionScript.
  */
-ASProperty* getPropertyWithPrototype(ASObject* this, u32 string_id, const char* name, u32 name_length)
-{
-	if (this == NULL || (string_id == 0 && name == NULL))
-	{
-		return NULL;
-	}
-	
-	ASObject* current = this;
-	
-	while (current != NULL)
-	{
-		// Search own properties first
-		
-		ASProperty* prop;
-		
-		OBJ_LOCK_READ(current,
-		{
-			prop = getProperty(current, string_id, name, name_length);
-		});
-		
-		if (prop != NULL)
-		{
-			return prop;
-		}
-		
-		// Property not found on this object - walk up to __proto__
-		
-		ASProperty* proto_prop;
-		
-		OBJ_LOCK_READ(current,
-		{
-			proto_prop = getProperty(current, STR_ID_PROTO, NULL, 0);
-		});
-		
-		if (proto_prop == NULL)
-		{
-			// No __proto__ property - end of chain
-			break;
-		}
-		
-		// Move to next object in prototype chain
-		current = (ASObject*) proto_prop->value.object;
-	}
-	
-	return NULL;  // Property not found in entire prototype chain
-}
-
 void getPropertyVarWithPrototype(ASObject* this, u32 string_id, const char* name, u32 name_length, ActionVar* out_v)
 {
 	out_v->type = ACTION_STACK_VALUE_UNDEFINED;
