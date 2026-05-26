@@ -3328,7 +3328,7 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v,
 			Function2Param* args2 = Function_get_args(app_context, func_obj);
 			
 			// Pop arguments from stack (in reverse order)
-			if (num_args > 0)
+			if (args2 != NULL && num_args > 0)
 			{
 				for (u32 i = 0; i < num_args; ++i)
 				{
