@@ -84,6 +84,8 @@ void flashbang_init(FlashbangContext* context, SWFAppContext* app_context)
 	
 	once = 1;
 	
+	context->scale = 1;
+	
 	context->current_bitmap = 0;
 	
 	context->audio_device = SDL_OpenAudioDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, NULL);
@@ -992,12 +994,22 @@ void flashbang_finalize_bitmaps(FlashbangContext* context)
 
 void flashbang_set_display_scale(FlashbangContext* context, u8 scale)
 {
+	u8 old_scale = context->scale;
 	context->scale = scale;
 	
 	u32 w = scale*context->width;
 	u32 h = scale*context->height;
 	
+	int x;
+	int y;
+	SDL_GetWindowPosition(context->window, &x, &y);
 	SDL_SetWindowSize(context->window, w, h);
+	
+	int sign = 1 - 2*(old_scale > scale);
+	int old_w = sign*context->width;
+	int old_h = sign*context->height;
+	SDL_SetWindowPosition(context->window, x - old_w, y - old_h);
+	
 	SDL_SyncWindow(context->window);
 }
 
