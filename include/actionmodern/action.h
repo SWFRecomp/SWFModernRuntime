@@ -199,6 +199,7 @@ void actionStringAdd(SWFAppContext* app_context, char* a_str, char* b_str);
 // Variable Operations
 void actionGetVariable(SWFAppContext* app_context);
 void actionSetVariable(SWFAppContext* app_context);
+void actionToInteger(SWFAppContext* app_context);
 void actionToNumber(SWFAppContext* app_context);
 void actionToString(SWFAppContext* app_context);
 void actionTypeOf(SWFAppContext* app_context);

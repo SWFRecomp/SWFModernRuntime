@@ -2138,6 +2138,11 @@ void actionSetVariable(SWFAppContext* app_context)
 	releaseObjectVar(app_context, &value);
 }
 
+void actionToInteger(SWFAppContext* app_context)
+{
+	convertIntECMA(app_context);
+}
+
 void actionToNumber(SWFAppContext* app_context)
 {
 	convertDouble(app_context);
