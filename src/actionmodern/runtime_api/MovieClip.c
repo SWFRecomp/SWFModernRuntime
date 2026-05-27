@@ -138,6 +138,7 @@ void MovieClip_applyTransformsParents(SWFAppContext* app_context, ASObject* this
 
 void MovieClip_setChild_internal(SWFAppContext* app_context, ASObject* this, u32 depth, ASObject* new_child)
 {
+	ENSURE_SIZE_FAR(EXTDATA(children), depth + 1, EXTDATA(display_list_capacity), sizeof(ASObject*));
 	ASObject* old_child = EXTDATA(children)[depth];
 	
 	OBJ_LOCK_WRITE(new_child,
@@ -175,8 +176,6 @@ void MovieClip_setChild_internal(SWFAppContext* app_context, ASObject* this, u32
 
 void MovieClip_placeObject2_internal(SWFAppContext* app_context, ASObject* this, u32 depth, u32 char_id, u32 transform_id)
 {
-	ENSURE_SIZE_FAR(EXTDATA(children), depth, EXTDATA(display_list_capacity), sizeof(ASObject*));
-	
 	MovieClip_setChild_internal(app_context, this, depth, MovieClip_create(app_context));
 	
 	EXTDATA_OF(EXTDATA(children)[depth], char_id) = char_id;
@@ -202,9 +201,13 @@ void MovieClip_attachBitmap(SWFAppContext* app_context, ASObject* this, u32 num_
 	popVar(app_context, &depth_v);
 	
 	u32 depth = (u32) depth_v.f64;
-	ENSURE_SIZE_FAR(EXTDATA(children), depth, EXTDATA(display_list_capacity), sizeof(ASObject*));
 	MovieClip_setChild_internal(app_context, this, depth, bitmap);
 	EXTDATA(bitmap_at) = depth;
+	
+	if (depth > EXTDATA(max_depth))
+	{
+		EXTDATA(max_depth) = depth;
+	}
 	
 	releaseObjectVar(app_context, &depth_v);
 	releaseObjectVar(app_context, &bitmap_v);
