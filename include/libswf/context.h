@@ -1,6 +1,7 @@
 #pragma once
 
 #include <object_struct.h>
+#include <variables.h>
 #include <swap_vector.h>
 #include <utils_lock.h>
 
@@ -27,6 +28,8 @@ typedef struct SWFAppContext
 	
 	char** str_table;
 	u32* str_len_table;
+	
+	VarCtx var_ctx;
 	
 	int width;
 	int height;

@@ -17,7 +17,7 @@ void Object_toString(SWFAppContext* app_context, ASObject* this, u32 num_args)
 	DISCARD_ARGS(num_args);
 	
 	ActionVar constructor;
-	getPropertyVar(this, STR_ID_CONSTRUCTOR, NULL, 0, &constructor);
+	getPropertyVar(app_context, this, STR_ID_CONSTRUCTOR, NULL, 0, &constructor);
 	
 	u32 ctor_name_id = Function_get_func_name_string_id(app_context, constructor.object);
 	u32 len = 8 + app_context->str_len_table[ctor_name_id] + 1;

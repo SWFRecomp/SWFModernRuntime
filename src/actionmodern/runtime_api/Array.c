@@ -12,7 +12,7 @@ void Array_init(SWFAppContext* app_context, ASObject* this, u32 num_args)
 {
 	DISCARD_ARGS(num_args);
 	
-	ASObject* Array = getProperty(_global, STR_ID_ARRAY, NULL, 0)->value.object;
+	ASObject* Array = getProperty(app_context, _global, STR_ID_ARRAY, NULL, 0)->value.object;
 	
 	ActionVar v;
 	v.type = ACTION_STACK_VALUE_INT;

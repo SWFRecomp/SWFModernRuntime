@@ -93,21 +93,19 @@ void destroyObject(SWFAppContext* app_context, ASObject* obj);
  */
 
 // Get property by name (returns NULL if not found)
-ASProperty* getProperty(ASObject* this, u32 string_id, const char* name, u32 name_length);
+ASProperty* getProperty(SWFAppContext* app_context, ASObject* this, u32 string_id, const char* name, u32 name_length);
 
 // Get property value, or give undefined
-void getPropertyVar(ASObject* this, u32 string_id, const char* name, u32 name_length, ActionVar* out_var);
+void getPropertyVar(SWFAppContext* app_context, ASObject* this, u32 string_id, const char* name, u32 name_length, ActionVar* out_var);
 
 // Get or create property by name
 // IMPORTANT: IF YOU CREATE A PROPERTY THAT HOLDS AN OBJECT
 //            RETAIN IT RIGHT AFTER
 ASProperty* getOrCreateProperty(SWFAppContext* app_context, ASObject* this, u32 string_id, const char* name, u32 name_length, bool* created);
 
-// Get property by name with prototype chain traversal (returns NULL if not found)
+// Get property by name with prototype chain traversal
 // Walks up the __proto__ chain to find inherited properties
-ASProperty* getPropertyWithPrototype(ASObject* this, u32 string_id, const char* name, u32 name_length);
-
-void getPropertyVarWithPrototype(ASObject* this, u32 string_id, const char* name, u32 name_length, ActionVar* out_v);
+void getPropertyVarWithPrototype(SWFAppContext* app_context, ASObject* this, u32 string_id, const char* name, u32 name_length, ActionVar* out_v);
 
 // Set property by name (creates if not exists)
 // Handles refcount management if value is an object
@@ -119,7 +117,7 @@ bool deleteProperty(SWFAppContext* app_context, ASObject* obj, const char* name,
 
 // Get the constructor function for an object
 // Returns the constructor property
-ASObject* getConstructor(ASObject* obj);
+ASObject* getConstructor(SWFAppContext* app_context, ASObject* obj);
 
 /**
  * ASArray - ActionScript Array with Reference Counting

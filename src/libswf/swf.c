@@ -115,10 +115,8 @@ void swfStart(SWFAppContext* app_context)
 	bad_poll = 0;
 	next_frame = 0;
 	
-	initVarArray(app_context, app_context->max_string_id);
-	
 	initActions(app_context);
-	initMap();
+	initMap(app_context);
 	
 	SVEC_SIZED_INIT(&app_context->vertex_tasks, sizeof(VertexTask));
 	SVEC_SIZED_INIT(&app_context->uninv_tasks, sizeof(UninvTask));

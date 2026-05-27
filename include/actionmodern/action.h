@@ -155,7 +155,7 @@ ActionStackValueType convertString(SWFAppContext* app_context);
 ActionStackValueType convertDouble(SWFAppContext* app_context);
 ActionStackValueType convertIntECMA(SWFAppContext* app_context);
 
-ASProperty* getPropertyInThisScope(u32 string_id, const char* name, u32 name_len);
+ASProperty* getPropertyInThisScope(SWFAppContext* app_context, u32 string_id, const char* name, u32 name_len);
 void setPropertyInThisScope(SWFAppContext* app_context, u32 string_id, const char* name, u32 name_len, ActionVar* value);
 
 void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v, u32 num_args);

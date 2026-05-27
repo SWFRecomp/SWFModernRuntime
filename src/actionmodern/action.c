@@ -77,7 +77,7 @@ void initActions(SWFAppContext* app_context)
 		
 		else
 		{
-			ASProperty* p = getProperty(_global, runtime_funcs[i].object_string_id, NULL, 0);
+			ASProperty* p = getProperty(app_context, _global, runtime_funcs[i].object_string_id, NULL, 0);
 			
 			if (p != NULL)
 			{
@@ -183,7 +183,7 @@ void initActions(SWFAppContext* app_context)
 	{
 		ASObject* obj;
 		
-		ASProperty* p = getProperty(_global, runtime_meths[i].object_string_id, NULL, 0);
+		ASProperty* p = getProperty(app_context, _global, runtime_meths[i].object_string_id, NULL, 0);
 		
 		if (p != NULL)
 		{
@@ -214,7 +214,7 @@ void initActions(SWFAppContext* app_context)
 			UNIMPLEMENTED("Constructor method");
 		}
 		
-		ASObject* prototype = getProperty(obj, STR_ID_PROTOTYPE, NULL, 0)->value.object;
+		ASObject* prototype = getProperty(app_context, obj, STR_ID_PROTOTYPE, NULL, 0)->value.object;
 		setProperty(app_context, prototype, runtime_meths[i].func_string_id, NULL, 0, &v);
 	}
 	
@@ -340,7 +340,7 @@ void discardArgs(SWFAppContext* app_context, u32 num_args)
 	}
 }
 
-void searchScopesForPropertyVar(u32 string_id, const char* name, u32 name_len, ActionVar* out_var)
+void searchScopesForPropertyVar(SWFAppContext* app_context, u32 string_id, const char* name, u32 name_len, ActionVar* out_var)
 {
 	ASProperty* p = NULL;
 	
@@ -350,7 +350,7 @@ void searchScopesForPropertyVar(u32 string_id, const char* name, u32 name_len, A
 		
 		OBJ_LOCK_READ(scope_chain[i],
 		{
-			p = getProperty(scope_chain[i], string_id, name, name_len);
+			p = getProperty(app_context, scope_chain[i], string_id, name, name_len);
 		});
 		
 		if (p != NULL)
@@ -363,13 +363,13 @@ void searchScopesForPropertyVar(u32 string_id, const char* name, u32 name_len, A
 	out_var->type = ACTION_STACK_VALUE_UNDEFINED;
 }
 
-ASProperty* getPropertyInThisScope(u32 string_id, const char* name, u32 name_len)
+ASProperty* getPropertyInThisScope(SWFAppContext* app_context, u32 string_id, const char* name, u32 name_len)
 {
 	ASProperty* p;
 	
 	OBJ_LOCK_READ(scope_chain[scope_top_obj],
 	{
-		p = getProperty(scope_chain[scope_top_obj], string_id, name, name_len);
+		p = getProperty(app_context, scope_chain[scope_top_obj], string_id, name, name_len);
 	});
 	
 	return p;
@@ -2001,7 +2001,7 @@ void actionGetVariable(SWFAppContext* app_context)
 			{
 				OBJ_LOCK_READ(scope_chain[i],
 				{
-					p = getProperty(scope_chain[i], string_id, var_name, var_name_len);
+					p = getProperty(app_context, scope_chain[i], string_id, var_name, var_name_len);
 				});
 				
 				if (p != NULL)
@@ -2082,7 +2082,7 @@ void actionSetVariable(SWFAppContext* app_context)
 				
 				OBJ_LOCK_READ(scope_obj,
 				{
-					p = getProperty(scope_obj, string_id, var_name, var_name_len);
+					p = getProperty(app_context, scope_obj, string_id, var_name, var_name_len);
 				});
 				
 				if (p != NULL)
@@ -2443,7 +2443,7 @@ void actionEnumerate(SWFAppContext* app_context, char* str_buffer)
 		//~ }
 		
 		//~ // Move to prototype via __proto__ property
-		//~ ActionVar* proto_var = getProperty(current_obj, 0, "__proto__", 9);
+		//~ ActionVar* proto_var = getProperty(app_context, current_obj, 0, "__proto__", 9);
 		//~ if (proto_var != NULL && proto_var->type == ACTION_STACK_VALUE_OBJECT)
 		//~ {
 			//~ current_obj = (ASObject*) proto_var->value;
@@ -2642,7 +2642,7 @@ void actionDelete2(SWFAppContext* app_context, char* str_buffer)
 		//~ if (scope_chain[i] != NULL)
 		//~ {
 			//~ // Check if property exists in this scope object
-			//~ ActionVar* prop = getProperty(scope_chain[i], string_id, var_name, var_name_len);
+			//~ ActionVar* prop = getProperty(app_context, scope_chain[i], string_id, var_name, var_name_len);
 			//~ if (prop != NULL)
 			//~ {
 				//~ // Found in scope chain - delete it
@@ -2720,7 +2720,7 @@ static int checkInstanceOf(ActionVar* obj_var, ActionVar* ctor_var)
 	//~ }
 	
 	//~ // Get the constructor's "prototype" property
-	//~ ActionVar* ctor_proto_var = getProperty(ctor, 0, "prototype", 9);
+	//~ ActionVar* ctor_proto_var = getProperty(app_context, ctor, 0, "prototype", 9);
 	//~ if (ctor_proto_var == NULL)
 	//~ {
 		//~ return 0;
@@ -2740,7 +2740,7 @@ static int checkInstanceOf(ActionVar* obj_var, ActionVar* ctor_var)
 	
 	//~ // Walk up the object's prototype chain via __proto__ property
 	//~ // Start with the object's __proto__
-	//~ ActionVar* current_proto_var = getProperty(obj, 0, "__proto__", 9);
+	//~ ActionVar* current_proto_var = getProperty(app_context, obj, 0, "__proto__", 9);
 	
 	//~ // Maximum chain depth to prevent infinite loops
 	//~ int max_depth = 100;
@@ -2762,7 +2762,7 @@ static int checkInstanceOf(ActionVar* obj_var, ActionVar* ctor_var)
 			//~ }
 			
 			//~ // Continue up the chain
-			//~ current_proto_var = getProperty(current_proto, 0, "__proto__", 9);
+			//~ current_proto_var = getProperty(app_context, current_proto, 0, "__proto__", 9);
 		//~ }
 		//~ else
 		//~ {
@@ -2898,7 +2898,7 @@ void actionSetMember(SWFAppContext* app_context)
 	{
 		ASObject* obj = (ASObject*) obj_var.value;
 		
-		ASObject* constructor = getConstructor(obj);
+		ASObject* constructor = getConstructor(app_context, obj);
 		
 		switch (Function_get_func_name_string_id(app_context, constructor))
 		{
@@ -2942,7 +2942,7 @@ void actionSetMember(SWFAppContext* app_context)
 				}
 				
 				// Set the property on the object
-				setProperty(app_context, obj, prop_name_var.string_id, NULL, 0, &value_var);
+				setProperty(app_context, obj, prop_name_var.string_id, prop_name_var.str, prop_name_var.str_size, &value_var);
 				
 				break;
 			}
@@ -3005,92 +3005,92 @@ void actionInitObject(SWFAppContext* app_context)
 
 void actionDelete(SWFAppContext* app_context)
 {
-	// Stack layout (from top to bottom):
-	// 1. property_name (string) - name of property to delete
-	// 2. object_name (string) - name of variable containing the object
+	//~ // Stack layout (from top to bottom):
+	//~ // 1. property_name (string) - name of property to delete
+	//~ // 2. object_name (string) - name of variable containing the object
 	
-	// Pop property name
-	ActionVar prop_name_var;
-	popVar(app_context, &prop_name_var);
+	//~ // Pop property name
+	//~ ActionVar prop_name_var;
+	//~ popVar(app_context, &prop_name_var);
 	
-	const char* prop_name = NULL;
-	u32 prop_name_len = 0;
+	//~ const char* prop_name = NULL;
+	//~ u32 prop_name_len = 0;
 	
-	if (prop_name_var.type == ACTION_STACK_VALUE_STRING)
-	{
-		prop_name = prop_name_var.owns_memory ?
-			prop_name_var.str :
-			(const char*) prop_name_var.value;
-		prop_name_len = prop_name_var.str_size;
-	}
-	else
-	{
-		// Property name must be a string
-		// Return true (AS2 spec: returns true for invalid operations)
-		float result = 1.0f;
-		PUSH_F32(result);
-		return;
-	}
+	//~ if (prop_name_var.type == ACTION_STACK_VALUE_STRING)
+	//~ {
+		//~ prop_name = prop_name_var.owns_memory ?
+			//~ prop_name_var.str :
+			//~ (const char*) prop_name_var.value;
+		//~ prop_name_len = prop_name_var.str_size;
+	//~ }
+	//~ else
+	//~ {
+		//~ // Property name must be a string
+		//~ // Return true (AS2 spec: returns true for invalid operations)
+		//~ float result = 1.0f;
+		//~ PUSH_F32(result);
+		//~ return;
+	//~ }
 	
-	// Pop object name (variable name)
-	ActionVar obj_name_var;
-	popVar(app_context, &obj_name_var);
+	//~ // Pop object name (variable name)
+	//~ ActionVar obj_name_var;
+	//~ popVar(app_context, &obj_name_var);
 	
-	const char* obj_name = NULL;
-	u32 obj_name_len = 0;
+	//~ const char* obj_name = NULL;
+	//~ u32 obj_name_len = 0;
 	
-	if (obj_name_var.type == ACTION_STACK_VALUE_STRING)
-	{
-		obj_name = obj_name_var.owns_memory ?
-			obj_name_var.str :
-			(const char*) obj_name_var.value;
-		obj_name_len = obj_name_var.str_size;
-	}
-	else
-	{
-		// Object name must be a string
-		// Return true (AS2 spec: returns true for invalid operations)
-		float result = 1.0f;
-		PUSH_F32(result);
-		return;
-	}
+	//~ if (obj_name_var.type == ACTION_STACK_VALUE_STRING)
+	//~ {
+		//~ obj_name = obj_name_var.owns_memory ?
+			//~ obj_name_var.str :
+			//~ (const char*) obj_name_var.value;
+		//~ obj_name_len = obj_name_var.str_size;
+	//~ }
+	//~ else
+	//~ {
+		//~ // Object name must be a string
+		//~ // Return true (AS2 spec: returns true for invalid operations)
+		//~ float result = 1.0f;
+		//~ PUSH_F32(result);
+		//~ return;
+	//~ }
 	
-	// Look up the variable to get the object
-	ActionVar* obj_var = getVariable(app_context, (char*)obj_name, obj_name_len);
+	//~ // Look up the variable to get the object
+	//~ ActionVar* obj_var = getVariable(app_context, (char*)obj_name, obj_name_len);
 	
-	// If variable doesn't exist, return true (AS2 spec)
-	if (obj_var == NULL)
-	{
-		float result = 1.0f;
-		PUSH_F32(result);
-		return;
-	}
+	//~ // If variable doesn't exist, return true (AS2 spec)
+	//~ if (obj_var == NULL)
+	//~ {
+		//~ float result = 1.0f;
+		//~ PUSH_F32(result);
+		//~ return;
+	//~ }
 	
-	// If variable is not an object, return true (AS2 spec)
-	if (obj_var->type != ACTION_STACK_VALUE_OBJECT)
-	{
-		float result = 1.0f;
-		PUSH_F32(result);
-		return;
-	}
+	//~ // If variable is not an object, return true (AS2 spec)
+	//~ if (obj_var->type != ACTION_STACK_VALUE_OBJECT)
+	//~ {
+		//~ float result = 1.0f;
+		//~ PUSH_F32(result);
+		//~ return;
+	//~ }
 	
-	// Get the object
-	ASObject* obj = (ASObject*) obj_var->value;
+	//~ // Get the object
+	//~ ASObject* obj = (ASObject*) obj_var->value;
 	
-	// If object is NULL, return true
-	if (obj == NULL)
-	{
-		float result = 1.0f;
-		PUSH_F32(result);
-		return;
-	}
+	//~ // If object is NULL, return true
+	//~ if (obj == NULL)
+	//~ {
+		//~ float result = 1.0f;
+		//~ PUSH_F32(result);
+		//~ return;
+	//~ }
 	
-	// Delete the property
-	bool success = deleteProperty(app_context, obj, prop_name, prop_name_len);
+	//~ // Delete the property
+	//~ bool success = deleteProperty(app_context, obj, prop_name, prop_name_len);
 	
-	// Push result (1.0 for success, 0.0 for failure)
-	float result = success ? 1.0f : 0.0f;
-	PUSH_F32(result);
+	//~ // Push result (1.0 for success, 0.0 for failure)
+	//~ float result = success ? 1.0f : 0.0f;
+	//~ PUSH_F32(result);
 }
 
 void actionGetMember(SWFAppContext* app_context)
@@ -3137,7 +3137,7 @@ void actionGetMember(SWFAppContext* app_context)
 	{
 		case ACTION_STACK_VALUE_OBJECT:
 		{
-			ASObject* constructor = getConstructor(obj);
+			ASObject* constructor = getConstructor(app_context, obj);
 			
 			switch (Function_get_func_name_string_id(app_context, constructor))
 			{
@@ -3194,7 +3194,7 @@ void actionGetMember(SWFAppContext* app_context)
 			ActionVar prop_v;
 			
 			// Look up property
-			getPropertyVarWithPrototype(obj, prop_name_var.string_id, NULL, 0, &prop_v);
+			getPropertyVarWithPrototype(app_context, obj, prop_name_var.string_id, prop_name_var.str, prop_name_var.str_size, &prop_v);
 			
 			if (prop_v.type != ACTION_STACK_VALUE_UNDEFINED)
 			{
@@ -3394,7 +3394,7 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v,
 			if ((flags & FUNC_FLAG_SUPPRESS_SUPER) == 0)
 			{
 				ActionVar super_v;
-				getPropertyVar(this, STR_ID_PROTO, NULL, 0, &super_v);
+				getPropertyVar(app_context, this, STR_ID_PROTO, NULL, 0, &super_v);
 				
 				ASObject* super = super_v.object;
 				
@@ -3485,14 +3485,14 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v,
 void getAndCallMethod(SWFAppContext* app_context, ASObject* this, u32 method_name, u32 num_args)
 {
 	ActionVar meth_v;
-	getPropertyVarWithPrototype(this, method_name, NULL, 0, &meth_v);
+	getPropertyVarWithPrototype(app_context, this, method_name, NULL, 0, &meth_v);
 	callFunction(app_context, this, &meth_v, num_args);
 }
 
 bool getAndCallMethodIfExists(SWFAppContext* app_context, ASObject* this, u32 method_name, u32 num_args)
 {
 	ActionVar meth_v;
-	getPropertyVarWithPrototype(this, method_name, NULL, 0, &meth_v);
+	getPropertyVarWithPrototype(app_context, this, method_name, NULL, 0, &meth_v);
 	
 	if (meth_v.type != ACTION_STACK_VALUE_UNDEFINED)
 	{
@@ -3528,7 +3528,7 @@ void actionNewObject(SWFAppContext* app_context)
 	
 	// Try to find existing constructor function
 	ActionVar func_v;
-	searchScopesForPropertyVar(ctor_name_var.string_id, NULL, 0, &func_v);
+	searchScopesForPropertyVar(app_context, ctor_name_var.string_id, ctor_name_var.str, ctor_name_var.str_size, &func_v);
 	
 	if (func_v.type != ACTION_STACK_VALUE_UNDEFINED)
 	{
@@ -3540,7 +3540,7 @@ void actionNewObject(SWFAppContext* app_context)
 			retainObject(this);
 		});
 		
-		ASProperty* prototype = getProperty(func_v.object, STR_ID_PROTOTYPE, NULL, 0);
+		ASProperty* prototype = getProperty(app_context, func_v.object, STR_ID_PROTOTYPE, NULL, 0);
 		
 		ActionVar proto_ref_var;
 		proto_ref_var.type = ACTION_STACK_VALUE_OBJECT;
@@ -3615,7 +3615,7 @@ void actionNewMethod(SWFAppContext* app_context)
 	
 	// Try to find constructor method
 	ActionVar func_v;
-	getPropertyVar(obj, ctor_name_var.string_id, NULL, 0, &func_v);
+	getPropertyVar(app_context, obj, ctor_name_var.string_id, ctor_name_var.str, ctor_name_var.str_size, &func_v);
 	
 	if (func_v.type != ACTION_STACK_VALUE_UNDEFINED)
 	{
@@ -3628,7 +3628,7 @@ void actionNewMethod(SWFAppContext* app_context)
 			retainObject(this);
 		});
 		
-		ASProperty* prototype = getProperty(func_v.object, STR_ID_PROTOTYPE, NULL, 0);
+		ASProperty* prototype = getProperty(app_context, func_v.object, STR_ID_PROTOTYPE, NULL, 0);
 		
 		ActionVar proto_ref_var;
 		proto_ref_var.type = ACTION_STACK_VALUE_OBJECT;
@@ -3676,7 +3676,7 @@ void actionExtends(SWFAppContext* app_context)
 	prototype_v.object = prototype;
 	
 	ActionVar super_prototype_v;
-	getPropertyVar(super, STR_ID_PROTOTYPE, NULL, 0, &super_prototype_v);
+	getPropertyVar(app_context, super, STR_ID_PROTOTYPE, NULL, 0, &super_prototype_v);
 	
 	setProperty(app_context, prototype, STR_ID_PROTO, NULL, 0, &super_prototype_v);
 	setProperty(app_context, prototype, STR_ID_CONSTRUCTOR, NULL, 0, &super_v);
@@ -3771,6 +3771,7 @@ void actionCallFunction(SWFAppContext* app_context)
 	
 	// 1. Pop function name (string) from stack
 	char* func_name = (char*) STACK_TOP_VALUE;
+	u32 func_n = STACK_TOP_N;
 	u32 string_id = STACK_TOP_ID;
 	POP();
 	
@@ -3780,7 +3781,7 @@ void actionCallFunction(SWFAppContext* app_context)
 	u32 num_args = (u32) num_args_var.value;
 	
 	ActionVar func_v;
-	searchScopesForPropertyVar(string_id, NULL, 0, &func_v);
+	searchScopesForPropertyVar(app_context, string_id, func_name, func_n, &func_v);
 	
 	if (func_v.type == ACTION_STACK_VALUE_UNDEFINED)
 	{
@@ -3808,11 +3809,13 @@ void actionCallMethod(SWFAppContext* app_context)
 	popVar(app_context, &name_v);
 	
 	char* func_name = "UNDEFINED METHOD NAME";
+	u32 func_n = 0;
 	u32 string_id = STR_ID_EMPTY;
 	
 	if (name_v.type != ACTION_STACK_VALUE_UNDEFINED)
 	{
 		func_name = name_v.str;
+		func_n = name_v.str_size;
 		string_id = name_v.string_id;
 	}
 	
@@ -3898,7 +3901,7 @@ void actionCallMethod(SWFAppContext* app_context)
 	
 	if (string_id != STR_ID_EMPTY)
 	{
-		getPropertyVarWithPrototype(this, string_id, NULL, 0, &meth_v);
+		getPropertyVarWithPrototype(app_context, this, string_id, func_name, func_n, &meth_v);
 	}
 	
 	else
@@ -3915,7 +3918,7 @@ void actionCallMethod(SWFAppContext* app_context)
 	else
 	{
 		ActionVar ctor_name_var;
-		getPropertyVar(this, STR_ID_CONSTRUCTOR, NULL, 0, &ctor_name_var);
+		getPropertyVar(app_context, this, STR_ID_CONSTRUCTOR, NULL, 0, &ctor_name_var);
 		
 		u32 ctor_name_id = Function_get_func_name_string_id(app_context, ctor_name_var.object);
 		

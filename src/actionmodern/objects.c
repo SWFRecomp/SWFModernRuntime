@@ -148,11 +148,26 @@ void destroyObject(SWFAppContext* app_context, ASObject* obj)
  * Retrieves a property value by name.
  * Returns pointer to the ASProperty if found, or NULL if not found.
  */
-ASProperty* getProperty(ASObject* this, u32 string_id, const char* name, u32 name_length)
+ASProperty* getProperty(SWFAppContext* app_context, ASObject* this, u32 string_id, const char* name, u32 name_length)
 {
-	if (this == NULL || (string_id == 0 && name == NULL))
+	if (UNLIKELY(this == NULL || (string_id == 0 && name == NULL)))
 	{
+		if (this == NULL)
+		{
+			UNREACHABLE("getProperty: 'this' is null");
+		}
+		
+		if (string_id == 0 && name == NULL)
+		{
+			UNREACHABLE("getProperty: string id is 0 and name is null");
+		}
+		
 		return NULL;
+	}
+	
+	if (UNLIKELY(string_id == 0))
+	{
+		string_id = getStringId(app_context, (char*) name, name_length);
 	}
 	
 	ASProperty* p = (ASProperty*) rbtree_get(&this->t, string_id);
@@ -165,11 +180,36 @@ ASProperty* getProperty(ASObject* this, u32 string_id, const char* name, u32 nam
  * Retrieves a property var by name.
  * Copies var into output parameter. This operation is locked for you.
  */
-void getPropertyVar(ASObject* this, u32 string_id, const char* name, u32 name_length, ActionVar* out_var)
+void getPropertyVar(SWFAppContext* app_context, ASObject* this, u32 string_id, const char* name, u32 name_length, ActionVar* out_var)
 {
+	if (UNLIKELY(this == NULL || (string_id == 0 && name == NULL) || out_var == NULL))
+	{
+		if (this == NULL)
+		{
+			UNREACHABLE("getPropertyVar: 'this' is null");
+		}
+		
+		if (string_id == 0 && name == NULL)
+		{
+			UNREACHABLE("getPropertyVar: string id is 0 and name is null");
+		}
+		
+		if (out_var == NULL)
+		{
+			UNREACHABLE("getPropertyVar: out_var is null");
+		}
+		
+		return;
+	}
+	
+	if (UNLIKELY(string_id == 0))
+	{
+		string_id = getStringId(app_context, (char*) name, name_length);
+	}
+	
 	OBJ_LOCK_READ(this,
 	{
-		ASProperty* p = getProperty(this, string_id, name, name_length);
+		ASProperty* p = getProperty(app_context, this, string_id, name, name_length);
 		
 		if (p != NULL)
 		{
@@ -191,8 +231,18 @@ void getPropertyVar(ASObject* this, u32 string_id, const char* name, u32 name_le
  */
 ASProperty* getOrCreateProperty(SWFAppContext* app_context, ASObject* this, u32 string_id, const char* name, u32 name_length, bool* created)
 {
-	if (this == NULL || (string_id == 0 && name == NULL))
+	if (UNLIKELY(this == NULL || (string_id == 0 && name == NULL)))
 	{
+		if (this == NULL)
+		{
+			UNREACHABLE("getOrCreateProperty: 'this' is null");
+		}
+		
+		if (string_id == 0 && name == NULL)
+		{
+			UNREACHABLE("getOrCreateProperty: string id is 0 and name is null");
+		}
+		
 		return NULL;
 	}
 	
@@ -206,12 +256,27 @@ ASProperty* getOrCreateProperty(SWFAppContext* app_context, ASObject* this, u32 
  *
  * This implements proper prototype-based inheritance for ActionScript.
  */
-void getPropertyVarWithPrototype(ASObject* this, u32 string_id, const char* name, u32 name_length, ActionVar* out_v)
+void getPropertyVarWithPrototype(SWFAppContext* app_context, ASObject* this, u32 string_id, const char* name, u32 name_length, ActionVar* out_v)
 {
 	out_v->type = ACTION_STACK_VALUE_UNDEFINED;
 	
-	if (this == NULL || (string_id == 0 && name == NULL))
+	if (UNLIKELY(this == NULL || (string_id == 0 && name == NULL) || out_v == NULL))
 	{
+		if (this == NULL)
+		{
+			UNREACHABLE("getPropertyVarWithPrototype: 'this' is null");
+		}
+		
+		if (string_id == 0 && name == NULL)
+		{
+			UNREACHABLE("getPropertyVarWithPrototype: string id is 0 and name is null");
+		}
+		
+		if (out_v == NULL)
+		{
+			UNREACHABLE("getPropertyVarWithPrototype: out_v is null");
+		}
+		
 		return;
 	}
 	
@@ -223,7 +288,7 @@ void getPropertyVarWithPrototype(ASObject* this, u32 string_id, const char* name
 		// Search own properties first
 		
 		rwlock_lock_read(&current->lock);
-		prop = getProperty(current, string_id, name, name_length);
+		prop = getProperty(app_context, current, string_id, name, name_length);
 		
 		if (prop != NULL)
 		{
@@ -237,7 +302,7 @@ void getPropertyVarWithPrototype(ASObject* this, u32 string_id, const char* name
 		ASProperty* proto_prop;
 		
 		rwlock_lock_read(&current->lock);
-		proto_prop = getProperty(current, STR_ID_PROTO, NULL, 0);
+		proto_prop = getProperty(app_context, current, STR_ID_PROTO, NULL, 0);
 		
 		if (proto_prop == NULL)
 		{
@@ -270,16 +335,36 @@ void getPropertyVarWithPrototype(ASObject* this, u32 string_id, const char* name
  */
 void setProperty(SWFAppContext* app_context, ASObject* this, u32 string_id, const char* name, u32 name_length, ActionVar* value)
 {
-	if (this == NULL || (string_id == 0 && name == NULL) || value == NULL)
+	if (UNLIKELY(this == NULL || (string_id == 0 && name == NULL) || value == NULL))
 	{
+		if (this == NULL)
+		{
+			UNREACHABLE("setProperty: 'this' is null");
+		}
+		
+		if (string_id == 0 && name == NULL)
+		{
+			UNREACHABLE("setProperty: string id is 0 and name is null");
+		}
+		
+		if (value == NULL)
+		{
+			UNREACHABLE("setProperty: value is null");
+		}
+		
 		return;
+	}
+	
+	if (UNLIKELY(string_id == 0))
+	{
+		string_id = getStringId(app_context, (char*) name, name_length);
 	}
 	
 	ASProperty* p;
 	
 	OBJ_LOCK_READ(this,
 	{
-		p = getProperty(this, string_id, name, name_length);
+		p = getProperty(app_context, this, string_id, name, name_length);
 	});
 	
 	// Retain new value if it's an object
@@ -420,10 +505,10 @@ bool deleteProperty(SWFAppContext* app_context, ASObject* obj, const char* name,
  * Get the constructor function for an object.
  * Returns the "constructor" property if it exists, NULL otherwise.
  */
-ASObject* getConstructor(ASObject* obj)
+ASObject* getConstructor(SWFAppContext* app_context, ASObject* obj)
 {
 	// Look for "constructor" property
-	ASObject* ctor = getProperty(obj, STR_ID_CONSTRUCTOR, NULL, 0)->value.object;
+	ASObject* ctor = getProperty(app_context, obj, STR_ID_CONSTRUCTOR, NULL, 0)->value.object;
 	
 	if (LIKELY(ctor != NULL))
 	{

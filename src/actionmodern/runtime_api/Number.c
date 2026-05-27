@@ -12,7 +12,7 @@ void Number_init(SWFAppContext* app_context, ASObject* this, u32 num_args)
 {
 	DISCARD_ARGS(num_args);
 	
-	ASObject* Number = getProperty(_global, STR_ID_NUMBER, NULL, 0)->value.object;
+	ASObject* Number = getProperty(app_context, _global, STR_ID_NUMBER, NULL, 0)->value.object;
 	
 	ActionVar v;
 	v.type = ACTION_STACK_VALUE_F64;
