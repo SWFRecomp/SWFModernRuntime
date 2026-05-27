@@ -40,6 +40,7 @@ void MovieClip_placeObject2_internal(SWFAppContext* app_context, ASObject* this,
 void MovieClip_attachBitmap(SWFAppContext* app_context, ASObject* this, u32 num_args);
 void MovieClip_createTextField(SWFAppContext* app_context, ASObject* this, u32 num_args);
 void MovieClip_createEmptyMovieClip(SWFAppContext* app_context, ASObject* this, u32 num_args);
+void MovieClip_destroy(SWFAppContext* app_context, ASObject* this);
 
 bool MovieClip_getMember(SWFAppContext* app_context, ASObject* this, u32 string_id, ActionVar* out_v);
 bool MovieClip_setMember(SWFAppContext* app_context, ASObject* this, u32 string_id, ActionVar* v);

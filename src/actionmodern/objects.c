@@ -5,6 +5,9 @@
 #include <assert.h>
 
 #include <initial_strings_decls.h>
+#include <Function.h>
+#include <MovieClip.h>
+#include <Sound.h>
 #include <heap.h>
 #include <utils.h>
 #include <swap_vector.h>
@@ -110,9 +113,25 @@ bool getAndCallMethodIfExists(SWFAppContext* app_context, ASObject* this, u32 me
 
 void destroyObject(SWFAppContext* app_context, ASObject* obj)
 {
-	if (getAndCallMethodIfExists(app_context, obj, STR_ID_DESTROY, 0))
+	ASObject* ctor = getConstructor(app_context, obj);
+	
+	// TODO: implement a lock for the stack
+	//		 (or something else that doesn't suck lol)
+	switch (Function_get_func_name_string_id(app_context, ctor))
 	{
-		POP();
+		case STR_ID_MOVIECLIP:
+		{
+			MovieClip_destroy(app_context, obj);
+			
+			break;
+		}
+		
+		case STR_ID_SOUND:
+		{
+			Sound_destroy(app_context, obj);
+			
+			break;
+		}
 	}
 	
 	while (obj->t.length > 0)

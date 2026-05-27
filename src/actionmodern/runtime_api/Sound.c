@@ -40,6 +40,11 @@ void Sound_loadSound(SWFAppContext* app_context, ASObject* this, u32 num_args)
 		goto return_void;
 	}
 	
+	if (EXTDATA(samples) != NULL)
+	{
+		FREE(EXTDATA(samples));
+	}
+	
 	size_t sample_count = ctx.samples;
 	EXTDATA(byte_count) = sizeof(mp3d_sample_t)*sample_count;
 	EXTDATA(samples) = HALLOC(EXTDATA(byte_count));
@@ -115,11 +120,9 @@ void Sound_start(SWFAppContext* app_context, ASObject* this, u32 num_args)
 	RETURN_VOID();
 }
 
-void Sound_destroy(SWFAppContext* app_context, ASObject* this, u32 num_args)
+void Sound_destroy(SWFAppContext* app_context, ASObject* this)
 {
-	DISCARD_ARGS(num_args);
+	FREE(EXTDATA(samples));
 	
 	flashbang_stop_stream(FBC, EXTDATA(stream_id));
-	
-	RETURN_VOID();
 }

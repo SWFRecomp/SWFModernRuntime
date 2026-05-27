@@ -140,6 +140,11 @@ void MovieClip_setChild_internal(SWFAppContext* app_context, ASObject* this, u32
 {
 	ASObject* old_child = EXTDATA(children)[depth];
 	
+	OBJ_LOCK_WRITE(new_child,
+	{
+		retainObject(new_child);
+	});
+	
 	if (old_child != NULL)
 	{
 		OBJ_LOCK_WRITE(old_child,
@@ -150,27 +155,22 @@ void MovieClip_setChild_internal(SWFAppContext* app_context, ASObject* this, u32
 	
 	EXTDATA(children)[depth] = new_child;
 	
-	OBJ_LOCK_WRITE(new_child,
-	{
-		retainObject(new_child);
-	});
+	//~ ASObject* old_parent = EXTDATA_OF(new_child, _parent);
 	
-	ASObject* old_parent = EXTDATA_OF(new_child, _parent);
+	//~ OBJ_LOCK_WRITE(this,
+	//~ {
+		//~ retainObject(this);
+	//~ });
 	
-	if (old_parent != NULL)
-	{
-		OBJ_LOCK_WRITE(old_parent,
-		{
-			releaseObject(app_context, old_parent);
-		});
-	}
+	//~ if (old_parent != NULL)
+	//~ {
+		//~ OBJ_LOCK_WRITE(old_parent,
+		//~ {
+			//~ releaseObject(app_context, old_parent);
+		//~ });
+	//~ }
 	
 	EXTDATA_OF(new_child, _parent) = this;
-	
-	OBJ_LOCK_WRITE(this,
-	{
-		retainObject(this);
-	});
 }
 
 void MovieClip_placeObject2_internal(SWFAppContext* app_context, ASObject* this, u32 depth, u32 char_id, u32 transform_id)
@@ -249,7 +249,7 @@ ASObject* MovieClip_createEmptyMovieClip_internal(SWFAppContext* app_context, AS
 	mc_v.type = ACTION_STACK_VALUE_OBJECT;
 	mc_v.object = mc;
 	
-	setProperty(app_context, this, name_v->string_id, NULL, 0, &mc_v);
+	setProperty(app_context, this, name_v->string_id, name_v->str, name_v->str_size, &mc_v);
 	
 	releaseObjectVar(app_context, depth_v);
 	toNumber(app_context, depth_v);
@@ -282,6 +282,34 @@ void MovieClip_createEmptyMovieClip(SWFAppContext* app_context, ASObject* this, 
 	DISCARD_ARGS(num_args - 2);
 	
 	PUSH_OBJ(mc);
+}
+
+void MovieClip_destroy(SWFAppContext* app_context, ASObject* this)
+{
+	for (size_t i = 1; i <= EXTDATA(max_depth); ++i)
+	{
+		ASObject* child = EXTDATA(children)[i];
+		
+		if (child != NULL)
+		{
+			OBJ_LOCK_WRITE(child,
+			{
+				releaseObject(app_context, child);
+			});
+		}
+	}
+	
+	FREE(EXTDATA(children));
+	
+	//~ ASObject* old_parent = EXTDATA(_parent);
+	
+	//~ if (old_parent != NULL)
+	//~ {
+		//~ OBJ_LOCK_WRITE(old_parent,
+		//~ {
+			//~ releaseObject(app_context, old_parent);
+		//~ });
+	//~ }
 }
 
 bool MovieClip_getMember(SWFAppContext* app_context, ASObject* this, u32 string_id, ActionVar* out_v)

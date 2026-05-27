@@ -30,7 +30,7 @@ void* heap_alloc(SWFAppContext* app_context, size_t size)
 			//~ fprintf(stderr, "unfreed object %d\n", *o);
 		//~ }
 		
-		UNREACHABLE("Out of memory, quitting");
+		UNREACHABLE("Error allocating memory");
 	}
 	
 	return ret;
