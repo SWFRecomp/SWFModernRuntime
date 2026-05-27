@@ -136,9 +136,21 @@ void MovieClip_applyTransformsParents(SWFAppContext* app_context, ASObject* this
 	SVEC_RELEASE(&parent_chain);
 }
 
+void MovieClip_growChildren_internal(SWFAppContext* app_context, ASObject* this, u32 depth)
+{
+	size_t old_capacity = EXTDATA(display_list_capacity);
+	
+	ENSURE_SIZE_FAR(EXTDATA(children), depth + 1, EXTDATA(display_list_capacity), sizeof(ASObject*));
+	
+	for (size_t i = old_capacity; i < EXTDATA(display_list_capacity); ++i)
+	{
+		EXTDATA(children)[i] = NULL;
+	}
+}
+
 void MovieClip_setChild_internal(SWFAppContext* app_context, ASObject* this, u32 depth, ASObject* new_child)
 {
-	ENSURE_SIZE_FAR(EXTDATA(children), depth + 1, EXTDATA(display_list_capacity), sizeof(ASObject*));
+	MovieClip_growChildren_internal(app_context, this, depth);
 	ASObject* old_child = EXTDATA(children)[depth];
 	
 	OBJ_LOCK_WRITE(new_child,
