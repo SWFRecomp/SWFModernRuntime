@@ -1,5 +1,6 @@
 #include <Object.h>
 #include <Function.h>
+#include <MovieClip.h>
 
 #include <objects.h>
 

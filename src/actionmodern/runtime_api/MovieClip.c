@@ -40,6 +40,7 @@ ASObject* MovieClip_create(SWFAppContext* app_context)
 	EXTDATA(bitmap_at) = 0;
 	
 	EXTDATA(_parent) = NULL;
+	EXTDATA(parent_depth) = 0;
 	EXTDATA(_rotation) = 0.0;
 	EXTDATA(_x) = 0.0;
 	EXTDATA(_y) = 0.0;
@@ -184,6 +185,27 @@ void MovieClip_setChild_internal(SWFAppContext* app_context, ASObject* this, u32
 	//~ }
 	
 	EXTDATA_OF(new_child, _parent) = this;
+	EXTDATA_OF(new_child, parent_depth) = depth;
+}
+
+void MovieClip_removeChild_internal(SWFAppContext* app_context, ASObject* this, u32 depth)
+{
+	ASObject* old_child = EXTDATA(children)[depth];
+	
+	EXTDATA_OF(old_child, _parent) = NULL;
+	EXTDATA_OF(old_child, parent_depth) = 0;
+	
+	// TODO: also remove old child from the rbtree
+	
+	if (old_child != NULL)
+	{
+		OBJ_LOCK_WRITE(old_child,
+		{
+			releaseObject(app_context, old_child);
+		});
+	}
+	
+	EXTDATA(children)[depth] = NULL;
 }
 
 void MovieClip_placeObject2_internal(SWFAppContext* app_context, ASObject* this, u32 depth, u32 char_id, u32 transform_id)
@@ -297,6 +319,18 @@ void MovieClip_createEmptyMovieClip(SWFAppContext* app_context, ASObject* this, 
 	DISCARD_ARGS(num_args - 2);
 	
 	PUSH_OBJ(mc);
+}
+
+void MovieClip_removeMovieClip(SWFAppContext* app_context, ASObject* this, u32 num_args)
+{
+	DISCARD_ARGS(num_args);
+	
+	ASObject* parent = EXTDATA(_parent);
+	size_t depth = EXTDATA(parent_depth);
+	
+	MovieClip_removeChild_internal(app_context, parent, (u32) depth);
+	
+	RETURN_VOID();
 }
 
 void MovieClip_destroy(SWFAppContext* app_context, ASObject* this)

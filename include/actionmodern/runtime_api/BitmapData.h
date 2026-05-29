@@ -8,6 +8,7 @@ typedef struct
 {
 	u16 char_id;
 	ASObject* _parent;
+	size_t parent_depth;
 	
 	u16 bitmap_id;
 	

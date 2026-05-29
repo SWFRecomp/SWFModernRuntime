@@ -8,6 +8,8 @@ typedef struct
 {
 	u16 char_id;
 	ASObject* _parent;
+	size_t parent_depth;
+	
 	size_t max_depth;
 	
 	u32 transform_id;
@@ -40,6 +42,7 @@ void MovieClip_placeObject2_internal(SWFAppContext* app_context, ASObject* this,
 void MovieClip_attachBitmap(SWFAppContext* app_context, ASObject* this, u32 num_args);
 void MovieClip_createTextField(SWFAppContext* app_context, ASObject* this, u32 num_args);
 void MovieClip_createEmptyMovieClip(SWFAppContext* app_context, ASObject* this, u32 num_args);
+void MovieClip_removeMovieClip(SWFAppContext* app_context, ASObject* this, u32 num_args);
 void MovieClip_destroy(SWFAppContext* app_context, ASObject* this);
 
 bool MovieClip_getMember(SWFAppContext* app_context, ASObject* this, u32 string_id, ActionVar* out_v);

@@ -187,6 +187,7 @@ void actionEquals(SWFAppContext* app_context);
 void actionEquals2(SWFAppContext* app_context);
 void actionLess(SWFAppContext* app_context);
 void actionLess2(SWFAppContext* app_context);
+void actionGreater(SWFAppContext* app_context);
 void actionAnd(SWFAppContext* app_context);
 void actionOr(SWFAppContext* app_context);
 void actionNot(SWFAppContext* app_context);

@@ -1425,6 +1425,12 @@ void actionEquals2(SWFAppContext* app_context)
 			goto release;
 		}
 		
+		else if (IS_NULL(a) != IS_NULL(b))
+		{
+			PUSH_BOOL(false);
+			goto release;
+		}
+		
 		else
 		{
 			UNIMPLEMENTED("Equals2 of differing types");
@@ -1607,6 +1613,24 @@ void actionLess2(SWFAppContext* app_context)
 	
 	releaseObjectVar(app_context, &a);
 	releaseObjectVar(app_context, &b);
+}
+
+void actionGreater(SWFAppContext* app_context)
+{
+	ActionVar a;
+	convertDouble(app_context);
+	popVar(app_context, &a);
+	
+	ActionVar b;
+	convertDouble(app_context);
+	popVar(app_context, &b);
+	
+	bool greater = b.f64 > a.f64;
+	
+	releaseObjectVar(app_context, &a);
+	releaseObjectVar(app_context, &b);
+	
+	PUSH_BOOL(greater);
 }
 
 void actionAnd(SWFAppContext* app_context)
