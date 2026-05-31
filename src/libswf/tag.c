@@ -302,6 +302,8 @@ void tagShowFrame(SWFAppContext* app_context)
 	
 	flashbang_close_pass(app_context->fbc, app_context);
 	
+	recomp_sync_window();
+	
 	clear:
 	
 	SVEC_CLEAR(&app_context->vertex_tasks);

@@ -46,6 +46,27 @@ u16 swfGetBitmapId(SWFAppContext* app_context, u32 char_id)
 	return bitmap_id;
 }
 
+void swfSleepToNextFrame(SWFAppContext* app_context)
+{
+	if (LIKELY(app_context->last_frame != 0))
+	{
+		s32 diff = get_elapsed_ms() - app_context->last_frame;
+		s32 delay = 7 - diff;
+		
+		while (true)
+		{
+			if ((s32) (get_elapsed_ms() - app_context->last_frame) > delay)
+			{
+				break;
+			}
+			
+			recomp_sleep(0);
+		}
+	}
+	
+	app_context->last_frame = get_elapsed_ms();
+}
+
 void tagMain(SWFAppContext* app_context)
 {
 	frame_func* frame_funcs = app_context->frame_funcs;
@@ -66,11 +87,15 @@ void tagMain(SWFAppContext* app_context)
 	while (!(bad_poll = flashbang_poll(FBC, app_context)))
 	{
 		tagShowFrame(app_context);
+		
+		swfSleepToNextFrame(app_context);
 	}
 }
 
 void swfStart(SWFAppContext* app_context)
 {
+	recomp_init_utils();
+	
 	heap_init(app_context, HEAP_SIZE);
 	
 	FlashbangContext c;
@@ -123,6 +148,8 @@ void swfStart(SWFAppContext* app_context)
 	SVEC_SIZED_INIT(&app_context->draw_tasks, sizeof(DrawTask));
 	
 	SVEC_INIT(&app_context->movieclip_stack);
+	
+	app_context->last_frame = 0;
 	
 	tagInit(app_context);
 	

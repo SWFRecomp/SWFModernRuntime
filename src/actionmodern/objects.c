@@ -5,6 +5,7 @@
 #include <assert.h>
 
 #include <initial_strings_decls.h>
+#include <Array.h>
 #include <Function.h>
 #include <MovieClip.h>
 #include <Sound.h>
@@ -119,6 +120,13 @@ void destroyObject(SWFAppContext* app_context, ASObject* obj)
 	//		 (or something else that doesn't suck lol)
 	switch (Function_get_func_name_string_id(app_context, ctor))
 	{
+		case STR_ID_ARRAY:
+		{
+			Array_destroy(app_context, obj);
+			
+			break;
+		}
+		
 		case STR_ID_MOVIECLIP:
 		{
 			MovieClip_destroy(app_context, obj);

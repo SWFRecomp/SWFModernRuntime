@@ -55,6 +55,21 @@ void grow_ptr_far(SWFAppContext* app_context, char** ptr, size_t* capacity_ptr, 
 #include <process.h>
 #include <Winbase.h>
 
+#include <dwmapi.h>
+
+#pragma comment(lib, "winmm.lib")
+#pragma comment(lib, "dwmapi.lib")
+
+void recomp_init_utils()
+{
+	timeBeginPeriod(1);
+}
+
+void recomp_sync_window()
+{
+	DwmFlush();
+}
+
 u32 get_elapsed_ms()
 {
 	return (u32) GetTickCount();
@@ -135,6 +150,16 @@ void rwlock_destroy(recomp_rwlock_t* rwlock)
 #include <stdlib.h>
 #include <time.h>
 #include <sys/mman.h>
+
+void recomp_init_utils()
+{
+	
+}
+
+void recomp_sync_window()
+{
+	
+}
 
 u32 get_elapsed_ms()
 {

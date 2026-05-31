@@ -45,6 +45,9 @@ typedef void* (*runtime_thread_func)(SWFAppContext* arg);
 		grow_ptr_far(app_context, (char**) &ptr, &capac, elem_size, new_size); \
 	}
 
+void recomp_init_utils();
+void recomp_sync_window();
+
 size_t get_power_two_size(size_t old_size, size_t size);
 
 void grow_ptr(SWFAppContext* app_context, char** ptr, size_t* capacity_ptr, size_t elem_size);

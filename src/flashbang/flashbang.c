@@ -1403,8 +1403,6 @@ void flashbang_close_pass(FlashbangContext* context, SWFAppContext* app_context)
 		SDL_ReleaseGPUTransferBuffer(context->device, context->inv_buffer_to_free);
 		context->inv_buffer_to_free = NULL;
 	}
-	
-	SDL_DelayNS(10000000);
 }
 
 void flashbang_release(FlashbangContext* context, SWFAppContext* app_context)

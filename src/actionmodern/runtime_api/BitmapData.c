@@ -52,7 +52,17 @@ void BitmapData_loadBitmap(SWFAppContext* app_context, ASObject* this, u32 num_a
 	ActionVar bitmap_v;
 	popVar(app_context, &bitmap_v);
 	
-	u32 bitmap_string_id = bitmap_v.string_id;
+	u32 bitmap_string_id;
+	
+	if (bitmap_v.string_id)
+	{
+		bitmap_string_id = bitmap_v.string_id;
+	}
+	
+	else
+	{
+		bitmap_string_id = getStringId(app_context, bitmap_v.str, bitmap_v.str_size);
+	}
 	
 	releaseObjectVar(app_context, &bitmap_v);
 	

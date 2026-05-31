@@ -54,6 +54,8 @@ typedef struct SWFAppContext
 	
 	ASObject* _root;
 	
+	u32 last_frame;
+	
 	u32 frame_vertices;
 	
 	SwapVector vertex_tasks;

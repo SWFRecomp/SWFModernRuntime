@@ -104,6 +104,8 @@ void Array_push(SWFAppContext* app_context, ASObject* this, u32 num_args)
 	
 	DISCARD_ARGS(num_args);
 	
+	releaseObjectVar(app_context, &v);
+	
 	f64 length_f64 = (f64) length;
 	PUSH_F64(length_f64);
 }
@@ -207,4 +209,22 @@ void Array_setLength(SWFAppContext* app_context, ASObject* this, size_t new_leng
 	}
 	
 	EXTDATA(length) = new_length;
+}
+
+void Array_destroy(SWFAppContext* app_context, ASObject* this)
+{
+	for (size_t i = 0; i < EXTDATA(length); ++i)
+	{
+		ActionVar* v = &EXTDATA(data[i]);
+		
+		if (IS_OBJ_T(v->type))
+		{
+			OBJ_LOCK_WRITE(v->object,
+			{
+				releaseObject(app_context, v->object);
+			});
+		}
+	}
+	
+	FREE(EXTDATA(data));
 }

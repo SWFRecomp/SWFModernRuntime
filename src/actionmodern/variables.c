@@ -12,42 +12,34 @@ void initMap(SWFAppContext* app_context)
 {
 	app_context->var_ctx.var_map = hashmap_create();
 	app_context->var_ctx.next_str_id = app_context->max_string_id;
-}
-
-static int free_variable_callback(const void* key, size_t ksize, uintptr_t value, void* app_context_void)
-{
-	SWFAppContext* app_context = (SWFAppContext*) app_context_void;
 	
-	FREE((void*) value);
-	
-	return 0;
+	for (size_t i = 0; i < app_context->max_string_id; ++i)
+	{
+		hashmap_set(app_context->var_ctx.var_map, app_context->str_table[i], app_context->str_len_table[i], i);
+	}
 }
 
 void freeMap(SWFAppContext* app_context)
 {
 	// Free hashmap
-	hashmap_iterate(app_context->var_ctx.var_map, free_variable_callback, app_context);
 	hashmap_free(app_context->var_ctx.var_map);
 }
 
 u32 getStringId(SWFAppContext* app_context, char* str, size_t str_size)
 {
-	uintptr_t id_ptr;
+	uintptr_t id;
 	
-	if (hashmap_get(app_context->var_ctx.var_map, str, str_size, &id_ptr))
+	if (hashmap_get(app_context->var_ctx.var_map, str, str_size, &id))
 	{
-		return VAL(u32, id_ptr);
+		return (u32) id;
 	}
 	
-	u32 id = (u32) app_context->var_ctx.next_str_id;
+	id = app_context->var_ctx.next_str_id;
 	app_context->var_ctx.next_str_id += 1;
 	
-	id_ptr = (uintptr_t) HALLOC(sizeof(u32));
-	VAL(u32, id_ptr) = id;
+	hashmap_set(app_context->var_ctx.var_map, str, str_size, id);
 	
-	hashmap_set(app_context->var_ctx.var_map, str, str_size, id_ptr);
-	
-	return VAL(u32, id_ptr);
+	return (u32) id;
 }
 
 char* materializeStringList(SWFAppContext* app_context)
