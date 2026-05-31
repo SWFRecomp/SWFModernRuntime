@@ -94,8 +94,6 @@ void tagMain(SWFAppContext* app_context)
 
 void swfStart(SWFAppContext* app_context)
 {
-	recomp_init_utils();
-	
 	heap_init(app_context, HEAP_SIZE);
 	
 	FlashbangContext c;
@@ -128,6 +126,8 @@ void swfStart(SWFAppContext* app_context)
 	c.cxform_data_size = app_context->cxform_data_size;
 	
 	flashbang_init(&c, app_context);
+	
+	recomp_init_utils();
 	
 	dictionary = HALLOC(INITIAL_DICTIONARY_CAPACITY*sizeof(Character));
 	
@@ -167,6 +167,8 @@ void swfStart(SWFAppContext* app_context)
 	FREE(STACK);
 	
 	FREE(dictionary);
+	
+	recomp_deinit_utils();
 	
 	flashbang_release(&c, app_context);
 	

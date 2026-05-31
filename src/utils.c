@@ -60,8 +60,13 @@ void grow_ptr_far(SWFAppContext* app_context, char** ptr, size_t* capacity_ptr, 
 #pragma comment(lib, "winmm.lib")
 #pragma comment(lib, "dwmapi.lib")
 
+// windows-only machine-specific global:
+LARGE_INTEGER counter_frequency;
+
 void recomp_init_utils()
 {
+	QueryPerformanceFrequency(&counter_frequency);
+	
 	timeBeginPeriod(1);
 }
 
@@ -70,9 +75,19 @@ void recomp_sync_window()
 	DwmFlush();
 }
 
+void recomp_deinit_utils()
+{
+	timeEndPeriod(1);
+}
+
 u32 get_elapsed_ms()
 {
-	return (u32) GetTickCount();
+	LARGE_INTEGER counter;
+	QueryPerformanceCounter(&counter);
+	
+	u32 time = (u32) (1000*counter.QuadPart/counter_frequency.QuadPart);
+	
+	return time;
 }
 
 void recomp_sleep(u32 ms)
@@ -157,6 +172,11 @@ void recomp_init_utils()
 }
 
 void recomp_sync_window()
+{
+	
+}
+
+void recomp_deinit_utils()
 {
 	
 }

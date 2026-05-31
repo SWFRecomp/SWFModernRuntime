@@ -47,6 +47,7 @@ typedef void* (*runtime_thread_func)(SWFAppContext* arg);
 
 void recomp_init_utils();
 void recomp_sync_window();
+void recomp_deinit_utils();
 
 size_t get_power_two_size(size_t old_size, size_t size);
 
