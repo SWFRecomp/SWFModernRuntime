@@ -2964,10 +2964,11 @@ void actionSetMember(SWFAppContext* app_context)
 			
 			default:
 			{
-				if (UNLIKELY(IS_NUM_T(prop_name_var.type)))
+				if (IS_NUM_T(prop_name_var.type))
 				{
-					fprintf(stderr, "SetMember found Number index used on non-Array\n");
-					EXC("Please patch this to use an Array LOL");
+					toString(app_context, &prop_name_var);
+					releaseObjectVar(app_context, &prop_name_var);
+					popVar(app_context, &prop_name_var);
 				}
 				
 				// Set the property on the object
@@ -3218,6 +3219,13 @@ void actionGetMember(SWFAppContext* app_context)
 			if (special_object)
 			{
 				break;
+			}
+			
+			if (IS_NUM_T(prop_name_var.type))
+			{
+				toString(app_context, &prop_name_var);
+				releaseObjectVar(app_context, &prop_name_var);
+				popVar(app_context, &prop_name_var);
 			}
 			
 			ActionVar prop_v;
