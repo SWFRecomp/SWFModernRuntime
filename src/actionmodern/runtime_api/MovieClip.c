@@ -46,6 +46,7 @@ ASObject* MovieClip_create(SWFAppContext* app_context)
 	EXTDATA(_y) = 0.0;
 	EXTDATA(_xscale) = 100.0;
 	EXTDATA(_yscale) = 100.0;
+	EXTDATA(transform) = NULL;
 	
 	size_t capacity = 8;
 	
@@ -350,6 +351,14 @@ void MovieClip_destroy(SWFAppContext* app_context, ASObject* this)
 	
 	FREE(EXTDATA(children));
 	
+	if (EXTDATA(transform) != NULL)
+	{
+		OBJ_LOCK_WRITE(EXTDATA(transform),
+		{
+			releaseObject(app_context, EXTDATA(transform));
+		});
+	}
+	
 	//~ ASObject* old_parent = EXTDATA(_parent);
 	
 	//~ if (old_parent != NULL)
@@ -365,7 +374,7 @@ bool MovieClip_getMember(SWFAppContext* app_context, ASObject* this, u32 string_
 {
 	switch (string_id)
 	{
-		case STR_ID__PARENT:
+		case STR_ID_PARENT:
 		{
 			out_v->type = ACTION_STACK_VALUE_OBJECT;
 			out_v->object = EXTDATA(_parent);
@@ -413,6 +422,21 @@ bool MovieClip_getMember(SWFAppContext* app_context, ASObject* this, u32 string_
 			break;
 		}
 		
+		case STR_ID_TRANSFORM:
+		{
+			if (EXTDATA(transform) == NULL)
+			{
+				out_v->type = ACTION_STACK_VALUE_UNDEFINED;
+				
+				break;
+			}
+			
+			out_v->type = ACTION_STACK_VALUE_OBJECT;
+			out_v->object = EXTDATA(transform);
+			
+			break;
+		}
+		
 		default:
 		{
 			return false;
@@ -426,7 +450,7 @@ bool MovieClip_setMember(SWFAppContext* app_context, ASObject* this, u32 string_
 {
 	switch (string_id)
 	{
-		case STR_ID__PARENT:
+		case STR_ID_PARENT:
 		{
 			EXTDATA(_parent) = v->object;
 			
@@ -469,6 +493,26 @@ bool MovieClip_setMember(SWFAppContext* app_context, ASObject* this, u32 string_
 		{
 			convertNumericToNumber(app_context, v);
 			EXTDATA(_yscale) = v->f64;
+			
+			break;
+		}
+		
+		case STR_ID_TRANSFORM:
+		{
+			OBJ_LOCK_WRITE(v->object,
+			{
+				retainObject(v->object);
+			});
+			
+			if (EXTDATA(transform) != NULL)
+			{
+				OBJ_LOCK_WRITE(EXTDATA(transform),
+				{
+					releaseObject(app_context, EXTDATA(transform));
+				});
+			}
+			
+			EXTDATA(transform) = v->object;
 			
 			break;
 		}

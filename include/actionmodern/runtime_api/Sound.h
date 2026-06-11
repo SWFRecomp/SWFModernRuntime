@@ -1,9 +1,12 @@
 #pragma once
 
 #include <recomp.h>
+#include <base.h>
 
 typedef struct
 {
+	BaseExtData base;
+	
 	char* samples;
 	size_t byte_count;
 	bool loaded;

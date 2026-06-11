@@ -448,14 +448,10 @@ void setProperty(SWFAppContext* app_context, ASObject* this, u32 string_id, cons
 	
 	bool created;
 	
-	OBJ_LOCK_READ(this,
+	OBJ_LOCK_WRITE(this,
 	{
 		// Property doesn't exist - create new one
 		p = (ASProperty*) RBT_GET_OR_INS(&this->t, string_id, &created);
-	});
-	
-	OBJ_LOCK_WRITE(this,
-	{
 		p->value = *value;
 	});
 }

@@ -39,6 +39,8 @@ void Number_new(SWFAppContext* app_context, ASObject* this, u32 num_args)
 {
 	this->extra_data = HALLOC(sizeof(NumberData));
 	
+	EXTDATA(base.type) = NATIVE_NUMBER;
+	
 	EXTDATA(num).type = ACTION_STACK_VALUE_F64;
 	
 	ActionVar num;

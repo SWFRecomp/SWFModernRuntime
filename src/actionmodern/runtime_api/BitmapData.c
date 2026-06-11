@@ -4,6 +4,7 @@
 #include <heap.h>
 #include <initial_strings_decls.h>
 #include <BitmapData.h>
+#include <ColorTransform.h>
 
 #define EXTDATA(member) (((BitmapData*) this->extra_data)->member)
 #define EXTDATA_OF(o, member) (((BitmapData*) o->extra_data)->member)
@@ -21,6 +22,8 @@ void BitmapData_init(SWFAppContext* app_context, ASObject* this)
 	setProperty(app_context, this, STR_ID_CONSTRUCTOR, NULL, 0, &ctor_v);
 	
 	this->extra_data = HALLOC(sizeof(BitmapData));
+	
+	EXTDATA(base.type) = NATIVE_BITMAP_DATA;
 	
 	EXTDATA(char_id) = 0;
 	EXTDATA(_parent) = NULL;

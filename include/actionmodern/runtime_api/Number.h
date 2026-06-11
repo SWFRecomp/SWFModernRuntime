@@ -1,9 +1,12 @@
 #pragma once
 
 #include <recomp.h>
+#include <base.h>
 
 typedef struct
 {
+	BaseExtData base;
+	
 	ActionVar num;
 } NumberData;
 

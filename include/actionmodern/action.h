@@ -219,6 +219,7 @@ void actionNewObject(SWFAppContext* app_context);
 void actionNewMethod(SWFAppContext* app_context);
 void actionExtends(SWFAppContext* app_context);
 void actionInitObject(SWFAppContext* app_context);
+void actionCastOp(SWFAppContext* app_context);
 
 // Array Operations
 void actionInitArray(SWFAppContext* app_context);

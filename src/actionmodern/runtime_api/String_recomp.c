@@ -13,6 +13,8 @@ void String_new(SWFAppContext* app_context, ASObject* this, u32 num_args)
 {
 	this->extra_data = HALLOC(sizeof(StringData));
 	
+	EXTDATA(base.type) = NATIVE_STRING;
+	
 	ActionVar* str = &EXTDATA(str);
 	
 	if (num_args > 0)

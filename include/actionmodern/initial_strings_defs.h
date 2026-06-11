@@ -8,8 +8,9 @@
 #include <Number.h>
 #include <String_recomp.h>
 #include <Array.h>
-#include <MovieClip.h>
 #include <BitmapData.h>
+#include <ColorTransform.h>
+#include <MovieClip.h>
 #include <Sound.h>
 
 RuntimeFunc runtime_funcs[] =
@@ -27,6 +28,7 @@ RuntimeFunc runtime_funcs[] =
 	{0, STR_ID_RECOMP_SET_DISPLAY_SCALE, recompSetDisplayScale, false},
 	{0, STR_ID_RECOMP_SIN, recompSin, false},
 	{0, STR_ID_RECOMP_COS, recompCos, false},
+	{0, STR_ID_RECOMP_COLOR_TRANSFORM, recompColorTransform, false},
 };
 
 RuntimeFunc runtime_meths[] =

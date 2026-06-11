@@ -25,6 +25,9 @@ typedef struct
 	bool has_extra_cxform_id;
 	u32 extra_cxform_id;
 	
+	bool has_extra_cxform;
+	float colorTransform[8];
+	
 	bool has_extra_transform;
 	ASObject* obj;
 	

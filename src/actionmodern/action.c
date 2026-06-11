@@ -2952,6 +2952,16 @@ void actionSetMember(SWFAppContext* app_context)
 				break;
 			}
 			
+			case STR_ID_ColorTransform:
+			{
+				if (ColorTransform_setMember(app_context, obj, prop_name_var.string_id, &value_var))
+				{
+					break;
+				}
+				
+				// fallthrough
+			}
+			
 			case STR_ID_MOVIECLIP:
 			{
 				if (MovieClip_setMember(app_context, obj, prop_name_var.string_id, &value_var))
@@ -2975,6 +2985,19 @@ void actionSetMember(SWFAppContext* app_context)
 				setProperty(app_context, obj, prop_name_var.string_id, prop_name_var.str, prop_name_var.str_size, &value_var);
 				
 				break;
+			}
+		}
+		
+		if (UNLIKELY(IS_OBJ_T(value_var.type) && value_var.object->extra_data != NULL && FU_EXTDATA_OF(value_var.object, base.type) == NATIVE_FUNCTION))
+		{
+			if (UNLIKELY(prop_name_var.string_id == 0))
+			{
+				FU_EXTDATA_OF(value_var.object, func_name_string_id) = getStringId(app_context, prop_name_var.str, prop_name_var.str_size);
+			}
+			
+			else
+			{
+				FU_EXTDATA_OF(value_var.object, func_name_string_id) = prop_name_var.string_id;
 			}
 		}
 	}
@@ -3031,6 +3054,21 @@ void actionInitObject(SWFAppContext* app_context)
 	// Step 4: Push object reference to stack
 	// The object has refcount = 1 from allocation
 	PUSH(ACTION_STACK_VALUE_OBJECT, (u64) obj);
+}
+
+void actionCastOp(SWFAppContext* app_context)
+{
+	ActionVar obj_v;
+	popVar(app_context, &obj_v);
+	
+	ActionVar ctor_v;
+	popVar(app_context, &ctor_v);
+	
+	// TODO: fully implement CastOp
+	PUSH_OBJ(obj_v.object);
+	
+	releaseObjectVar(app_context, &ctor_v);
+	releaseObjectVar(app_context, &obj_v);
 }
 
 void actionDelete(SWFAppContext* app_context)
@@ -3185,6 +3223,19 @@ void actionGetMember(SWFAppContext* app_context)
 					PUSH_VAR(Array_getElement(app_context, obj, i));
 					
 					special_object = true;
+					
+					break;
+				}
+				
+				case STR_ID_ColorTransform:
+				{
+					ActionVar v;
+					special_object = ColorTransform_getMember(app_context, obj, prop_name_var.string_id, &v);
+					
+					if (special_object)
+					{
+						PUSH_VAR(&v);
+					}
 					
 					break;
 				}

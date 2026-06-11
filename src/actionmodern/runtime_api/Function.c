@@ -17,6 +17,8 @@ void Function_init_object(SWFAppContext* app_context, ASObject* this)
 {
 	this->extra_data = HALLOC(sizeof(FunctionData));
 	
+	EXTDATA(base.type) = NATIVE_FUNCTION;
+	
 	ActionVar ctor_v;
 	ctor_v.type = ACTION_STACK_VALUE_OBJECT;
 	ctor_v.object = app_context->Function_constructor;

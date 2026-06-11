@@ -1,11 +1,14 @@
 #pragma once
 
 #include <recomp.h>
+#include <base.h>
 
 #define AR_EXTDATA_OF(o, member) (((ArrayData*) o->extra_data)->member)
 
 typedef struct
 {
+	BaseExtData base;
+	
 	ActionVar* data;
 	size_t length;
 	size_t capacity;

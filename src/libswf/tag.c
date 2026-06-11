@@ -2,14 +2,16 @@
 
 #include <swf.h>
 #include <tag.h>
+#include <variables.h>
 #include <initial_strings_decls.h>
 #include <MovieClip.h>
 #include <BitmapData.h>
+#include <ColorTransform.h>
 #include <flashbang.h>
 #include <heap.h>
 #include <utils.h>
 
-float temp_mat_data[16] =
+float temp_mat_data[20] =
 {
 	1.000000000000000f,
 	0.000000000000000f,
@@ -27,6 +29,10 @@ float temp_mat_data[16] =
 	0.000000000000000f,
 	0.0f,
 	1.0f,
+	0.0f,
+	0.0f,
+	0.0f,
+	0.0f,
 };
 
 void tagSetBackgroundColor(SWFAppContext* app_context, u8 red, u8 green, u8 blue)
@@ -87,6 +93,7 @@ void tagShowFrame(SWFAppContext* app_context)
 					
 					dt->has_extra_transform_id = false;
 					dt->has_extra_cxform_id = false;
+					dt->has_extra_cxform = false;
 					dt->has_extra_transform = false;
 					
 					dt->offset = ch->shape_offset;
@@ -143,6 +150,7 @@ void tagShowFrame(SWFAppContext* app_context)
 				
 				dt->has_extra_transform_id = false;
 				dt->has_extra_cxform_id = false;
+				dt->has_extra_cxform = false;
 				dt->has_extra_transform = false;
 				
 				dt->offset = vertex_offset;
@@ -201,6 +209,35 @@ void tagShowFrame(SWFAppContext* app_context)
 				
 				dt->has_extra_transform_id = false;
 				dt->has_extra_cxform_id = false;
+				
+				ASObject* transform = MC_EXTDATA_OF(disp_obj, transform);
+				
+				ActionVar ct_v;
+				
+				if (transform != NULL)
+				{
+					getPropertyVar(app_context, transform, STR_ID_colorTransform, NULL, 0, &ct_v);
+					
+					if (!IS_UNDEFINED(ct_v))
+					{
+						dt->has_extra_cxform = true;
+						
+						dt->colorTransform[0] = (float) CT_EXTDATA_OF(ct_v.object, rm);
+						dt->colorTransform[1] = (float) CT_EXTDATA_OF(ct_v.object, gm);
+						dt->colorTransform[2] = (float) CT_EXTDATA_OF(ct_v.object, bm);
+						dt->colorTransform[3] = (float) CT_EXTDATA_OF(ct_v.object, am);
+						
+						dt->colorTransform[4] = (float) CT_EXTDATA_OF(ct_v.object, ro);
+						dt->colorTransform[5] = (float) CT_EXTDATA_OF(ct_v.object, go);
+						dt->colorTransform[6] = (float) CT_EXTDATA_OF(ct_v.object, bo);
+						dt->colorTransform[7] = (float) CT_EXTDATA_OF(ct_v.object, ao);
+					}
+				}
+				
+				else
+				{
+					dt->has_extra_cxform = false;
+				}
 				
 				dt->has_extra_transform = true;
 				
@@ -295,6 +332,40 @@ void tagShowFrame(SWFAppContext* app_context)
 		else
 		{
 			flashbang_upload_extra_transform(app_context->fbc, (float*) identity);
+		}
+		
+		if (t->has_extra_cxform)
+		{
+			temp_mat_data[1] = 0.0f;
+			temp_mat_data[4] = 0.0f;
+			
+			temp_mat_data[12] = 0.0f;
+			temp_mat_data[13] = 0.0f;
+			
+			temp_mat_data[0] = t->colorTransform[0];
+			temp_mat_data[5] = t->colorTransform[1];
+			temp_mat_data[10] = t->colorTransform[2];
+			temp_mat_data[15] = t->colorTransform[3];
+			temp_mat_data[16] = t->colorTransform[4];
+			temp_mat_data[17] = t->colorTransform[5];
+			temp_mat_data[18] = t->colorTransform[6];
+			temp_mat_data[19] = t->colorTransform[7];
+			
+			flashbang_upload_cxform(app_context->fbc, temp_mat_data);
+			
+			temp_mat_data[0] = 1.0f;
+			temp_mat_data[5] = 1.0f;
+			temp_mat_data[10] = 1.0f;
+			temp_mat_data[15] = 1.0f;
+			temp_mat_data[16] = 0.0f;
+			temp_mat_data[17] = 0.0f;
+			temp_mat_data[18] = 0.0f;
+			temp_mat_data[19] = 0.0f;
+		}
+		
+		else
+		{
+			flashbang_upload_cxform(app_context->fbc, (float*) identity_cxform);
 		}
 		
 		flashbang_draw_shape(app_context->fbc, t->offset, t->count, t->transform_id);

@@ -1,16 +1,21 @@
 #pragma once
 
 #include <recomp.h>
+#include <base.h>
 
 #define MC_EXTDATA_OF(o, member) (((MovieClipData*) o->extra_data)->member)
 
 typedef struct
 {
+	BaseExtData base;
+	
 	u16 char_id;
 	ASObject* _parent;
 	size_t parent_depth;
 	
 	size_t max_depth;
+	
+	ASObject* transform;
 	
 	u32 transform_id;
 	

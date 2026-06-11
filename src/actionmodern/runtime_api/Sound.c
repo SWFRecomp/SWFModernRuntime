@@ -18,6 +18,8 @@ void Sound_new(SWFAppContext* app_context, ASObject* this, u32 num_args)
 	
 	this->extra_data = HALLOC(sizeof(SoundData));
 	
+	EXTDATA(base.type) = NATIVE_SOUND;
+	
 	EXTDATA(samples) = NULL;
 	EXTDATA(loaded) = false;
 	

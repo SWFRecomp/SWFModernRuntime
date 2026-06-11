@@ -1,9 +1,14 @@
 #pragma once
 
 #include <recomp.h>
+#include <base.h>
+
+#define FU_EXTDATA_OF(o, member) (((FunctionData*) o->extra_data)->member)
 
 typedef struct
 {
+	BaseExtData base;
+	
 	action_func func;
 	void* args;
 	FunctionType func_type;

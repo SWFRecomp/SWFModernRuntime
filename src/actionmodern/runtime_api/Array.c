@@ -27,6 +27,8 @@ void Array_new(SWFAppContext* app_context, ASObject* this, u32 num_args)
 {
 	this->extra_data = HALLOC(sizeof(ArrayData));
 	
+	EXTDATA(base.type) = NATIVE_ARRAY;
+	
 	EXTDATA(undef).type = ACTION_STACK_VALUE_UNDEFINED;
 	
 	if (num_args == 0)
