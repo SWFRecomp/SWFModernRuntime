@@ -2929,6 +2929,8 @@ void actionSetMember(SWFAppContext* app_context)
 		
 		ASObject* constructor = getConstructor(app_context, obj);
 		
+		bool special_object = false;
+		
 		switch (Function_get_func_name_string_id(app_context, constructor))
 		{
 			case STR_ID_ARRAY:
@@ -2956,36 +2958,36 @@ void actionSetMember(SWFAppContext* app_context)
 			{
 				if (ColorTransform_setMember(app_context, obj, prop_name_var.string_id, &value_var))
 				{
+					special_object = true;
 					break;
 				}
 				
-				// fallthrough
+				break;
 			}
 			
 			case STR_ID_MOVIECLIP:
 			{
 				if (MovieClip_setMember(app_context, obj, prop_name_var.string_id, &value_var))
 				{
+					special_object = true;
 					break;
 				}
 				
-				// fallthrough
-			}
-			
-			default:
-			{
-				if (IS_NUM_T(prop_name_var.type))
-				{
-					toString(app_context, &prop_name_var);
-					releaseObjectVar(app_context, &prop_name_var);
-					popVar(app_context, &prop_name_var);
-				}
-				
-				// Set the property on the object
-				setProperty(app_context, obj, prop_name_var.string_id, prop_name_var.str, prop_name_var.str_size, &value_var);
-				
 				break;
 			}
+		}
+		
+		if (!special_object)
+		{
+			if (IS_NUM_T(prop_name_var.type))
+			{
+				toString(app_context, &prop_name_var);
+				releaseObjectVar(app_context, &prop_name_var);
+				popVar(app_context, &prop_name_var);
+			}
+			
+			// Set the property on the object
+			setProperty(app_context, obj, prop_name_var.string_id, prop_name_var.str, prop_name_var.str_size, &value_var);
 		}
 		
 		if (UNLIKELY(IS_OBJ_T(value_var.type) && value_var.object->extra_data != NULL && FU_EXTDATA_OF(value_var.object, base.type) == NATIVE_FUNCTION))
