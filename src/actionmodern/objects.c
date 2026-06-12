@@ -531,7 +531,10 @@ bool deleteProperty(SWFAppContext* app_context, ASObject* obj, const char* name,
 ASObject* getConstructor(SWFAppContext* app_context, ASObject* obj)
 {
 	// Look for "constructor" property
-	ASObject* ctor = getProperty(app_context, obj, STR_ID_CONSTRUCTOR, NULL, 0)->value.object;
+	ActionVar ctor_var;
+	getPropertyVar(app_context, obj, STR_ID_CONSTRUCTOR, NULL, 0, &ctor_var);
+	
+	ASObject* ctor = ctor_var.object;
 	
 	if (LIKELY(ctor != NULL))
 	{
