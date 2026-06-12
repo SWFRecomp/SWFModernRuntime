@@ -3060,17 +3060,37 @@ void actionInitObject(SWFAppContext* app_context)
 
 void actionCastOp(SWFAppContext* app_context)
 {
-	ActionVar obj_v;
-	popVar(app_context, &obj_v);
+	ActionVar this_v;
+	popVar(app_context, &this_v);
 	
 	ActionVar ctor_v;
 	popVar(app_context, &ctor_v);
 	
-	// TODO: fully implement CastOp
-	PUSH_OBJ(obj_v.object);
+	if (UNLIKELY(ctor_v.object == app_context->Object_constructor))
+	{
+		PUSH_OBJ(this_v.object);
+		goto release;
+	}
+	
+	ASObject* this_ctor = getConstructor(app_context, this_v.object);
+	
+	while (this_ctor != app_context->Object_constructor && this_ctor != ctor_v.object)
+	{
+		this_ctor = getConstructor(app_context, this_ctor);
+	}
+	
+	if (this_ctor == app_context->Object_constructor)
+	{
+		PUSH_NULL();
+		goto release;
+	}
+	
+	PUSH_OBJ(this_v.object);
+	
+	release:
 	
 	releaseObjectVar(app_context, &ctor_v);
-	releaseObjectVar(app_context, &obj_v);
+	releaseObjectVar(app_context, &this_v);
 }
 
 void actionDelete(SWFAppContext* app_context)
