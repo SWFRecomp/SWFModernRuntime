@@ -119,15 +119,17 @@ void Array_pop(SWFAppContext* app_context, ASObject* this, u32 num_args)
 	ActionVar* data = EXTDATA(data);
 	size_t length = --EXTDATA(length);
 	
+	PUSH_VAR(&data[length]);
+	
 	if (IS_OBJ_T(data[length].type))
 	{
 		OBJ_LOCK_WRITE(data[length].object,
 		{
 			releaseObject(app_context, data[length].object);
 		});
+		
+		data[length].type = ACTION_STACK_VALUE_UNDEFINED;
 	}
-	
-	PUSH_VAR(&data[length]);
 }
 
 void Array_toString(SWFAppContext* app_context, ASObject* this, u32 num_args)
@@ -215,6 +217,8 @@ void Array_setLength(SWFAppContext* app_context, ASObject* this, size_t new_leng
 
 void Array_destroy(SWFAppContext* app_context, ASObject* this)
 {
+	// TODO: make sure destroying Array objects is done correctly
+	
 	for (size_t i = 0; i < EXTDATA(length); ++i)
 	{
 		ActionVar* v = &EXTDATA(data[i]);
