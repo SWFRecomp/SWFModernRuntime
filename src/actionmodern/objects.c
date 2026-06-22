@@ -534,11 +534,9 @@ ASObject* getConstructor(SWFAppContext* app_context, ASObject* obj)
 	ActionVar ctor_var;
 	getPropertyVar(app_context, obj, STR_ID_CONSTRUCTOR, NULL, 0, &ctor_var);
 	
-	ASObject* ctor = ctor_var.object;
-	
-	if (LIKELY(ctor != NULL))
+	if (LIKELY(IS_OBJ_T(ctor_var.type)))
 	{
-		return ctor;
+		return ctor_var.object;
 	}
 	
 	UNREACHABLE("Object without constructor");
