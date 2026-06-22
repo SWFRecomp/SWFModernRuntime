@@ -3445,30 +3445,6 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v,
 				regs[i].type = ACTION_STACK_VALUE_UNDEFINED;
 			}
 			
-			Function2Param* args2 = Function_get_args(app_context, func_obj);
-			
-			// Pop arguments from stack (in reverse order)
-			if (args2 != NULL && num_args > 0)
-			{
-				for (u32 i = 0; i < num_args; ++i)
-				{
-					Function2Param* arg = &args2[i];
-					
-					if (arg->reg == 0)
-					{
-						ActionVar v;
-						popVar(app_context, &v);
-						setProperty(app_context, scope_chain[this_scope], arg->string_id, NULL, 0, &v);
-						releaseObjectVar(app_context, &v);
-					}
-					
-					else
-					{
-						popVar(app_context, &regs[arg->reg]);
-					}
-				}
-			}
-			
 			u8 next_preload = 1;
 			
 			if ((flags & FUNC_FLAG_SUPPRESS_THIS) == 0)
@@ -3552,6 +3528,40 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v,
 				{
 					retainObject(_global);
 				});
+			}
+			
+			Function2Param* args2 = Function_get_args(app_context, func_obj);
+			
+			u32 true_num_args = reg_count - next_preload;
+			
+			if (args2 != NULL && num_args > 0)
+			{
+				for (u32 i = 0; i < num_args; ++i)
+				{
+					Function2Param* arg = &args2[i];
+					
+					if (UNLIKELY(i >= true_num_args))
+					{
+						ActionVar v;
+						popVar(app_context, &v);
+						releaseObjectVar(app_context, &v);
+						
+						continue;
+					}
+					
+					if (arg->reg == 0)
+					{
+						ActionVar v;
+						popVar(app_context, &v);
+						setProperty(app_context, scope_chain[this_scope], arg->string_id, NULL, 0, &v);
+						releaseObjectVar(app_context, &v);
+					}
+					
+					else
+					{
+						popVar(app_context, &regs[arg->reg]);
+					}
+				}
 			}
 			
 			scope_top_obj = this_scope;
