@@ -82,6 +82,7 @@ typedef enum
 	STR_ID_NEGATIVE_INFINITY,
 	STR_ID_MAX_VALUE,
 	STR_ID_MIN_VALUE,
+	STR_ID_recompToml,
 } StringIds;
 
 typedef struct

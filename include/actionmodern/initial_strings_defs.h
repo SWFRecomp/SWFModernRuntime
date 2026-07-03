@@ -13,6 +13,8 @@
 #include <MovieClip.h>
 #include <Sound.h>
 
+#include <Toml.h>
+
 RuntimeFunc runtime_funcs[] =
 {
 	{0, STR_ID_OBJECT, Object_new, true},
@@ -29,6 +31,8 @@ RuntimeFunc runtime_funcs[] =
 	{0, STR_ID_RECOMP_SIN, recompSin, false},
 	{0, STR_ID_RECOMP_COS, recompCos, false},
 	{0, STR_ID_RECOMP_COLOR_TRANSFORM, recompColorTransform, false},
+	
+	{0, STR_ID_recompToml, recompToml, false},
 };
 
 RuntimeFunc runtime_meths[] =

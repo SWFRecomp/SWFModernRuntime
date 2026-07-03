@@ -10,6 +10,7 @@ typedef enum
 	NATIVE_NUMBER,
 	NATIVE_SOUND,
 	NATIVE_STRING,
+	NATIVE_TOML,
 } NativeType;
 
 typedef struct

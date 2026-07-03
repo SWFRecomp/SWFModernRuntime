@@ -14,24 +14,10 @@
 #include <free_thread.h>
 #include <utils.h>
 
-u32 start_time;
-
-// ==================================================================
-// Scope Chain for WITH statement
-// ==================================================================
-
-#define MAX_SCOPE_DEPTH 16
-static ASObject* scope_chain[MAX_SCOPE_DEPTH];
-static ActionVar* scope_registers[MAX_SCOPE_DEPTH];
-static u32 scope_top_obj = 1;
-
-// ==================================================================
-// Global object for ActionScript
-// This is initialized from initActions and persists for the lifetime of the runtime
-ASObject* _global;
-
 void initActions(SWFAppContext* app_context)
 {
+	app_context->scope_top_obj = 1;
+	
 	SVEC_INIT(&app_context->active_objects);
 	
 	rwlock_init(&object_queue_lock);
@@ -49,22 +35,20 @@ void initActions(SWFAppContext* app_context)
 	
 	app_context->BitmapData_prototype = allocObject(app_context);
 	
-	start_time = get_elapsed_ms();
+	app_context->start_time = get_elapsed_ms();
 	
 	for (u32 i = 0; i < 2; ++i)
 	{
-		scope_chain[i] = allocObject(app_context);
-		retainObject(scope_chain[i]);
+		app_context->scope_chain[i] = allocObject(app_context);
+		retainObject(app_context->scope_chain[i]);
 		
-		scope_registers[i] = HALLOC(4*sizeof(ActionVar));
+		app_context->scope_registers[i] = HALLOC(4*sizeof(ActionVar));
 		
 		for (u32 j = 0; j < 4; ++j)
 		{
-			scope_registers[i][j].type = ACTION_STACK_VALUE_UNDEFINED;
+			app_context->scope_registers[i][j].type = ACTION_STACK_VALUE_UNDEFINED;
 		}
 	}
-	
-	_global = scope_chain[0];
 	
 	for (int i = 0; i < sizeof(runtime_funcs)/sizeof(RuntimeFunc); ++i)
 	{
@@ -72,12 +56,12 @@ void initActions(SWFAppContext* app_context)
 		
 		if (runtime_funcs[i].object_string_id == 0)
 		{
-			obj = _global;
+			obj = _GLOBAL;
 		}
 		
 		else
 		{
-			ASProperty* p = getProperty(app_context, _global, runtime_funcs[i].object_string_id, NULL, 0);
+			ASProperty* p = getProperty(app_context, _GLOBAL, runtime_funcs[i].object_string_id, NULL, 0);
 			
 			if (p != NULL)
 			{
@@ -90,7 +74,7 @@ void initActions(SWFAppContext* app_context)
 				ActionVar obj_v;
 				obj_v.type = ACTION_STACK_VALUE_OBJECT;
 				obj_v.value = (u64) obj;
-				setProperty(app_context, _global, runtime_funcs[i].object_string_id, NULL, 0, &obj_v);
+				setProperty(app_context, _GLOBAL, runtime_funcs[i].object_string_id, NULL, 0, &obj_v);
 			}
 		}
 		
@@ -183,7 +167,7 @@ void initActions(SWFAppContext* app_context)
 	{
 		ASObject* obj;
 		
-		ASProperty* p = getProperty(app_context, _global, runtime_meths[i].object_string_id, NULL, 0);
+		ASProperty* p = getProperty(app_context, _GLOBAL, runtime_meths[i].object_string_id, NULL, 0);
 		
 		if (p != NULL)
 		{
@@ -224,7 +208,7 @@ void initActions(SWFAppContext* app_context)
 	ActionVar flash_v;
 	flash_v.type = ACTION_STACK_VALUE_OBJECT;
 	flash_v.object = flash;
-	setProperty(app_context, _global, STR_ID_FLASH, NULL, 0, &flash_v);
+	setProperty(app_context, _GLOBAL, STR_ID_FLASH, NULL, 0, &flash_v);
 	
 	ASObject* display = allocObject(app_context);
 	ActionVar display_v;
@@ -275,19 +259,19 @@ void initActions(SWFAppContext* app_context)
 	
 	for (int i = 0; i < sizeof(static_initializers)/sizeof(action_runtime_func); ++i)
 	{
-		scope_top_obj += 1;
-		scope_chain[scope_top_obj] = allocObject(app_context);
-		retainObject(scope_chain[scope_top_obj]);
+		app_context->scope_top_obj += 1;
+		app_context->scope_chain[app_context->scope_top_obj] = allocObject(app_context);
+		retainObject(app_context->scope_chain[app_context->scope_top_obj]);
 		
 		static_initializers[i](app_context, NULL, 0);
 		POP();
 		
-		OBJ_LOCK_WRITE(scope_chain[scope_top_obj],
+		OBJ_LOCK_WRITE(app_context->scope_chain[app_context->scope_top_obj],
 		{
-			releaseObject(app_context, scope_chain[scope_top_obj]);
+			releaseObject(app_context, app_context->scope_chain[app_context->scope_top_obj]);
 		});
 		
-		scope_top_obj -= 1;
+		app_context->scope_top_obj -= 1;
 	}
 	
 	app_context->stop_free = false;
@@ -299,7 +283,7 @@ void initActions(SWFAppContext* app_context)
 	root_v.type = ACTION_STACK_VALUE_OBJECT;
 	root_v.object = app_context->_root;
 	
-	setProperty(app_context, scope_chain[1], STR_ID_THIS, NULL, 0, &root_v);
+	setProperty(app_context, app_context->scope_chain[1], STR_ID_THIS, NULL, 0, &root_v);
 	
 	thread_start(app_context, freeThread, &free_thread_handle);
 }
@@ -324,7 +308,7 @@ void freeActions(SWFAppContext* app_context)
 	
 	for (u32 i = 0; i < 2; ++i)
 	{
-		FREE(scope_registers[i]);
+		FREE(app_context->scope_registers[i]);
 	}
 	
 	SVEC_RELEASE(&app_context->active_objects);
@@ -344,13 +328,13 @@ void searchScopesForPropertyVar(SWFAppContext* app_context, u32 string_id, const
 {
 	ASProperty* p = NULL;
 	
-	for (u32 j = 0; j <= scope_top_obj; ++j)
+	for (u32 j = 0; j <= app_context->scope_top_obj; ++j)
 	{
-		u32 i = scope_top_obj - j;
+		u32 i = app_context->scope_top_obj - j;
 		
-		OBJ_LOCK_READ(scope_chain[i],
+		OBJ_LOCK_READ(app_context->scope_chain[i],
 		{
-			p = getProperty(app_context, scope_chain[i], string_id, name, name_len);
+			p = getProperty(app_context, app_context->scope_chain[i], string_id, name, name_len);
 		});
 		
 		if (p != NULL)
@@ -367,9 +351,9 @@ ASProperty* getPropertyInThisScope(SWFAppContext* app_context, u32 string_id, co
 {
 	ASProperty* p;
 	
-	OBJ_LOCK_READ(scope_chain[scope_top_obj],
+	OBJ_LOCK_READ(app_context->scope_chain[app_context->scope_top_obj],
 	{
-		p = getProperty(app_context, scope_chain[scope_top_obj], string_id, name, name_len);
+		p = getProperty(app_context, app_context->scope_chain[app_context->scope_top_obj], string_id, name, name_len);
 	});
 	
 	return p;
@@ -377,7 +361,7 @@ ASProperty* getPropertyInThisScope(SWFAppContext* app_context, u32 string_id, co
 
 void setPropertyInThisScope(SWFAppContext* app_context, u32 string_id, const char* name, u32 name_len, ActionVar* value)
 {
-	setProperty(app_context, scope_chain[scope_top_obj], string_id, name, name_len, value);
+	setProperty(app_context, app_context->scope_chain[app_context->scope_top_obj], string_id, name, name_len, value);
 }
 
 void pushVar(SWFAppContext* app_context, ActionVar* var)
@@ -418,7 +402,7 @@ void pushVar(SWFAppContext* app_context, ActionVar* var)
 
 void pushReg(SWFAppContext* app_context, u8 reg)
 {
-	pushVar(app_context, &scope_registers[scope_top_obj][reg]);
+	pushVar(app_context, &app_context->scope_registers[app_context->scope_top_obj][reg]);
 }
 
 void peekConvert(SWFAppContext* app_context, ActionVar* var)
@@ -2006,7 +1990,7 @@ void actionGetVariable(SWFAppContext* app_context)
 		
 		case STR_ID_GLOBAL:
 		{
-			PUSH_OBJ(_global);
+			PUSH_OBJ(_GLOBAL);
 			
 			return;
 		}
@@ -2021,11 +2005,11 @@ void actionGetVariable(SWFAppContext* app_context)
 		default:
 		{
 			// Constant string - use scope object (O(lg(n)))
-			for (u32 i = scope_top_obj; i < MAX_SCOPE_DEPTH; --i)
+			for (u32 i = app_context->scope_top_obj; i < MAX_SCOPE_DEPTH; --i)
 			{
-				OBJ_LOCK_READ(scope_chain[i],
+				OBJ_LOCK_READ(app_context->scope_chain[i],
 				{
-					p = getProperty(app_context, scope_chain[i], string_id, var_name, var_name_len);
+					p = getProperty(app_context, app_context->scope_chain[i], string_id, var_name, var_name_len);
 				});
 				
 				if (p != NULL)
@@ -2100,9 +2084,9 @@ void actionSetVariable(SWFAppContext* app_context)
 		default:
 		{
 			// Constant string - use scope object (O(lg(n)))
-			for (u32 i = scope_top_obj; i < MAX_SCOPE_DEPTH; --i)
+			for (u32 i = app_context->scope_top_obj; i < MAX_SCOPE_DEPTH; --i)
 			{
-				scope_obj = scope_chain[i];
+				scope_obj = app_context->scope_chain[i];
 				
 				OBJ_LOCK_READ(scope_obj,
 				{
@@ -2154,7 +2138,7 @@ void actionSetVariable(SWFAppContext* app_context)
 	
 	else
 	{
-		setProperty(app_context, scope_chain[1], string_id, var_name, var_name_len, &value);
+		setProperty(app_context, app_context->scope_chain[1], string_id, var_name, var_name_len, &value);
 	}
 	
 	release_value:
@@ -2276,7 +2260,7 @@ void actionTrace(SWFAppContext* app_context)
 
 void actionGetTime(SWFAppContext* app_context)
 {
-	u32 delta_ms = get_elapsed_ms() - start_time;
+	u32 delta_ms = get_elapsed_ms() - app_context->start_time;
 	float delta_ms_f32 = (float) delta_ms;
 	
 	PUSH_F32(delta_ms_f32);
@@ -2531,7 +2515,7 @@ void actionDefineLocal(SWFAppContext* app_context)
 	
 	// DefineLocal ALWAYS creates/updates in the local scope
 	// We have a local scope object - define variable as a property
-	ASObject* local_scope = scope_chain[scope_top_obj];
+	ASObject* local_scope = app_context->scope_chain[app_context->scope_top_obj];
 	ActionVar value_var;
 	popVar(app_context, &value_var);
 	
@@ -2570,7 +2554,7 @@ void actionDefineLocal2(SWFAppContext* app_context)
 	POP();
 	
 	// Declare variable as undefined property at top of scope
-	ASObject* local_scope = scope_chain[scope_top_obj];
+	ASObject* local_scope = app_context->scope_chain[app_context->scope_top_obj];
 	
 	// Create an undefined value
 	ActionVar undefined_var;
@@ -2668,14 +2652,14 @@ void actionDelete2(SWFAppContext* app_context, char* str_buffer)
 	//~ // Try to delete from scope chain (innermost to outermost)
 	//~ for (int i = scope_depth - 1; i >= 0; i--)
 	//~ {
-		//~ if (scope_chain[i] != NULL)
+		//~ if (app_context->scope_chain[i] != NULL)
 		//~ {
 			//~ // Check if property exists in this scope object
-			//~ ActionVar* prop = getProperty(app_context, scope_chain[i], string_id, var_name, var_name_len);
+			//~ ActionVar* prop = getProperty(app_context, app_context->scope_chain[i], string_id, var_name, var_name_len);
 			//~ if (prop != NULL)
 			//~ {
 				//~ // Found in scope chain - delete it
-				//~ success = deleteProperty(app_context, scope_chain[i], var_name, var_name_len);
+				//~ success = deleteProperty(app_context, app_context->scope_chain[i], var_name, var_name_len);
 				
 				//~ // Push result and return
 				//~ float result = success ? 1.0f : 0.0f;
@@ -2816,7 +2800,7 @@ void actionStoreRegister(SWFAppContext* app_context, u8 reg_i)
 	ActionVar value;
 	peekVar(app_context, &value);
 	
-	ActionVar* reg = &scope_registers[scope_top_obj][reg_i];
+	ActionVar* reg = &app_context->scope_registers[app_context->scope_top_obj][reg_i];
 	
 	if (IS_OBJ_T(value.type))
 	{
@@ -3359,15 +3343,15 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v,
 	{
 		case FUNC_TYPE_1:
 		{
-			// can't change scope_top_obj yet, or popVar will break on registers
-			u32 this_scope = scope_top_obj + 1;
+			// can't change app_context->scope_top_obj yet, or popVar will break on registers
+			u32 this_scope = app_context->scope_top_obj + 1;
 			
-			scope_chain[this_scope] = allocObject(app_context);
-			retainObject(scope_chain[this_scope]);
+			app_context->scope_chain[this_scope] = allocObject(app_context);
+			retainObject(app_context->scope_chain[this_scope]);
 			
-			scope_registers[this_scope] = HALLOC(4*sizeof(ActionVar));
+			app_context->scope_registers[this_scope] = HALLOC(4*sizeof(ActionVar));
 			
-			ActionVar* regs = scope_registers[this_scope];
+			ActionVar* regs = app_context->scope_registers[this_scope];
 			
 			for (u8 i = 0; i < 4; ++i)
 			{
@@ -3380,7 +3364,7 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v,
 				this_v.type = ACTION_STACK_VALUE_OBJECT;
 				this_v.object = this;
 				
-				setProperty(app_context, scope_chain[this_scope], STR_ID_THIS, NULL, 0, &this_v);
+				setProperty(app_context, app_context->scope_chain[this_scope], STR_ID_THIS, NULL, 0, &this_v);
 			}
 			
 			u32* args = Function_get_args(app_context, func_obj);
@@ -3392,12 +3376,12 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v,
 				{
 					ActionVar v;
 					popVar(app_context, &v);
-					setProperty(app_context, scope_chain[this_scope], args[i], NULL, 0, &v);
+					setProperty(app_context, app_context->scope_chain[this_scope], args[i], NULL, 0, &v);
 					releaseObjectVar(app_context, &v);
 				}
 			}
 			
-			scope_top_obj = this_scope;
+			app_context->scope_top_obj = this_scope;
 			
 			Function_get_func(app_context, func_obj)(app_context);
 			
@@ -3416,29 +3400,29 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v,
 			
 			FREE(regs);
 			
-			OBJ_LOCK_WRITE(scope_chain[scope_top_obj],
+			OBJ_LOCK_WRITE(app_context->scope_chain[app_context->scope_top_obj],
 			{
-				releaseObject(app_context, scope_chain[scope_top_obj]);
+				releaseObject(app_context, app_context->scope_chain[app_context->scope_top_obj]);
 			});
 			
-			scope_top_obj -= 1;
+			app_context->scope_top_obj -= 1;
 			break;
 		}
 		
 		case FUNC_TYPE_2:
 		{
-			// can't change scope_top_obj yet, or popVar will break on registers
-			u32 this_scope = scope_top_obj + 1;
+			// can't change app_context->scope_top_obj yet, or popVar will break on registers
+			u32 this_scope = app_context->scope_top_obj + 1;
 			
-			scope_chain[this_scope] = allocObject(app_context);
-			retainObject(scope_chain[this_scope]);
+			app_context->scope_chain[this_scope] = allocObject(app_context);
+			retainObject(app_context->scope_chain[this_scope]);
 			
 			u8 reg_count = Function_get_reg_count(app_context, func_obj);
 			u16 flags = Function_get_flags(app_context, func_obj);
 			
-			scope_registers[this_scope] = HALLOC((reg_count + 1)*sizeof(ActionVar));
+			app_context->scope_registers[this_scope] = HALLOC((reg_count + 1)*sizeof(ActionVar));
 			
-			ActionVar* regs = scope_registers[this_scope];
+			ActionVar* regs = app_context->scope_registers[this_scope];
 			
 			for (u8 i = 0; i < reg_count + 1; ++i)
 			{
@@ -3455,7 +3439,7 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v,
 				this_v.type = ACTION_STACK_VALUE_OBJECT;
 				this_v.object = this;
 				
-				setProperty(app_context, scope_chain[this_scope], STR_ID_THIS, NULL, 0, &this_v);
+				setProperty(app_context, app_context->scope_chain[this_scope], STR_ID_THIS, NULL, 0, &this_v);
 				
 				if (flags & FUNC_FLAG_PRELOAD_THIS)
 				{
@@ -3484,7 +3468,7 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v,
 				
 				ASObject* super = super_v.object;
 				
-				setProperty(app_context, scope_chain[this_scope], STR_ID_SUPER, NULL, 0, &super_v);
+				setProperty(app_context, app_context->scope_chain[this_scope], STR_ID_SUPER, NULL, 0, &super_v);
 				
 				if (flags & FUNC_FLAG_PRELOAD_SUPER)
 				{
@@ -3521,12 +3505,12 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v,
 			if (flags & FUNC_FLAG_PRELOAD_GLOBAL)
 			{
 				regs[next_preload].type = ACTION_STACK_VALUE_OBJECT;
-				regs[next_preload].object = _global;
+				regs[next_preload].object = _GLOBAL;
 				next_preload += 1;
 				
-				OBJ_LOCK_WRITE(_global,
+				OBJ_LOCK_WRITE(_GLOBAL,
 				{
-					retainObject(_global);
+					retainObject(_GLOBAL);
 				});
 			}
 			
@@ -3553,7 +3537,7 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v,
 					{
 						ActionVar v;
 						popVar(app_context, &v);
-						setProperty(app_context, scope_chain[this_scope], arg->string_id, NULL, 0, &v);
+						setProperty(app_context, app_context->scope_chain[this_scope], arg->string_id, NULL, 0, &v);
 						releaseObjectVar(app_context, &v);
 					}
 					
@@ -3564,7 +3548,7 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v,
 				}
 			}
 			
-			scope_top_obj = this_scope;
+			app_context->scope_top_obj = this_scope;
 			
 			Function_get_func(app_context, func_obj)(app_context);
 			
@@ -3583,12 +3567,12 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v,
 			
 			FREE(regs);
 			
-			OBJ_LOCK_WRITE(scope_chain[scope_top_obj],
+			OBJ_LOCK_WRITE(app_context->scope_chain[app_context->scope_top_obj],
 			{
-				releaseObject(app_context, scope_chain[scope_top_obj]);
+				releaseObject(app_context, app_context->scope_chain[app_context->scope_top_obj]);
 			});
 			
-			scope_top_obj -= 1;
+			app_context->scope_top_obj -= 1;
 			break;
 		}
 		

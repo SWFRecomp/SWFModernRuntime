@@ -121,9 +121,7 @@
 #define INITIAL_STACK_SIZE 8388608  // 8 MB
 #define INITIAL_SP INITIAL_STACK_SIZE
 
-extern ActionVar* temp_val;
-
-extern ASObject* _global;
+#define _GLOBAL app_context->scope_chain[0]
 
 typedef struct
 {

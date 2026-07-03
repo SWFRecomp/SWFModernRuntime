@@ -5,6 +5,8 @@
 #include <swap_vector.h>
 #include <utils_lock.h>
 
+#define MAX_SCOPE_DEPTH 16
+
 typedef struct SWFAppContext SWFAppContext;
 
 typedef void (*frame_func)(SWFAppContext* app_context);
@@ -65,6 +67,12 @@ typedef struct SWFAppContext
 	SwapVector movieclip_stack;
 	
 	size_t frame_vertex_count;
+	
+	u32 start_time;
+	
+	ASObject* scope_chain[MAX_SCOPE_DEPTH];
+	ActionVar* scope_registers[MAX_SCOPE_DEPTH];
+	u32 scope_top_obj;
 	
 	ASObject* Object_prototype;
 	ASObject* Object_constructor;

@@ -90,8 +90,6 @@ void queueObjectFreeCheck(SWFAppContext* app_context, ASObject* obj)
 	});
 }
 
-extern ASObject* _global;
-
 /**
  * Release Object
  *
@@ -103,7 +101,7 @@ void releaseObject(SWFAppContext* app_context, ASObject* obj)
 {
 	obj->refcount--;
 	
-	if (obj != _global || app_context->global_free_override)
+	if (obj != _GLOBAL || app_context->global_free_override)
 	{
 		// queue object for free check
 		queueObjectFreeCheck(app_context, obj);

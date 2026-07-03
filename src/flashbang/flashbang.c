@@ -722,7 +722,7 @@ int flashbang_poll(FlashbangContext* context, SWFAppContext* app_context)
 					context->last_key_pressed = key;
 					
 					ActionVar Key_v;
-					getPropertyVar(app_context, _global, STR_ID_KEY, NULL, 0, &Key_v);
+					getPropertyVar(app_context, _GLOBAL, STR_ID_KEY, NULL, 0, &Key_v);
 					
 					getAndCallMethod(app_context, Key_v.object, STR_ID_FIRE_LISTENERS_DOWN, 0);
 					POP();
@@ -755,7 +755,7 @@ int flashbang_poll(FlashbangContext* context, SWFAppContext* app_context)
 					context->last_key_pressed = key;
 					
 					ActionVar Key_v;
-					getPropertyVar(app_context, _global, STR_ID_KEY, NULL, 0, &Key_v);
+					getPropertyVar(app_context, _GLOBAL, STR_ID_KEY, NULL, 0, &Key_v);
 					
 					getAndCallMethod(app_context, Key_v.object, STR_ID_FIRE_LISTENERS_UP, 0);
 					POP();
