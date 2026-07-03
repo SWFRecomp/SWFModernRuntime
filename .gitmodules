@@ -1,9 +1,3 @@
-[submodule "lib/zlib"]
-	path = lib/zlib
-	url = https://github.com/madler/zlib.git
-[submodule "lib/lzma"]
-	path = lib/lzma
-	url = https://github.com/SWFRecomp/lzma.git
 [submodule "lib/c-hashmap"]
 	path = lib/c-hashmap
 	url = https://github.com/Mashpoe/c-hashmap.git
@@ -13,3 +7,12 @@
 [submodule "lib/o1heap"]
 	path = lib/o1heap
 	url = https://github.com/pavel-kirienko/o1heap.git
+[submodule "lib/rbtree"]
+	path = lib/rbtree
+	url = https://github.com/SWFRecomp/rb-tree.git
+[submodule "lib/libtess2"]
+	path = lib/libtess2
+	url = https://github.com/SWFRecomp/libtess2.git
+[submodule "lib/minimp3"]
+	path = lib/minimp3
+	url = https://github.com/lieff/minimp3.git

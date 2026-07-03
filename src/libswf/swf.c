@@ -1,4 +1,4 @@
-#include <swf.h>
+#include <context.h>
 #include <tag.h>
 #include <action.h>
 #include <variables.h>
@@ -14,12 +14,58 @@ ActionVar* temp_val;
 
 Character* dictionary = NULL;
 
-DisplayObject* display_list = NULL;
-size_t max_depth = 0;
+u16 swfGetExportedChar(SWFAppContext* app_context, u32 string_id)
+{
+	u16 char_id = 0;
+	
+	for (size_t i = 0; i < app_context->exported_chars_count; ++i)
+	{
+		if (app_context->exported_string_ids[i] == string_id)
+		{
+			char_id = app_context->exported_char_ids[i];
+			break;
+		}
+	}
+	
+	return char_id;
+}
 
-FlashbangContext* context;
+u16 swfGetBitmapId(SWFAppContext* app_context, u32 char_id)
+{
+	u16 bitmap_id = 0xFFFF;
+	
+	for (size_t i = 0; i < app_context->bitmap_count; ++i)
+	{
+		if (app_context->bitmap_char_ids[i] == char_id)
+		{
+			bitmap_id = app_context->bitmap_ids[i];
+			break;
+		}
+	}
+	
+	return bitmap_id;
+}
 
-void tagInit();
+void swfSleepToNextFrame(SWFAppContext* app_context)
+{
+	if (LIKELY(app_context->last_frame != 0))
+	{
+		s32 diff = get_elapsed_ms() - app_context->last_frame;
+		s32 delay = 7 - diff;
+		
+		while (true)
+		{
+			if ((s32) (get_elapsed_ms() - app_context->last_frame) > delay)
+			{
+				break;
+			}
+			
+			recomp_sleep(0);
+		}
+	}
+	
+	app_context->last_frame = get_elapsed_ms();
+}
 
 void tagMain(SWFAppContext* app_context)
 {
@@ -34,18 +80,15 @@ void tagMain(SWFAppContext* app_context)
 		}
 		manual_next_frame = 0;
 		
-		bad_poll |= flashbang_poll();
+		bad_poll |= flashbang_poll(FBC, app_context);
 		quit_swf |= bad_poll;
 	}
 	
-	if (bad_poll)
-	{
-		return;
-	}
-	
-	while (!flashbang_poll())
+	while (!(bad_poll = flashbang_poll(FBC, app_context)))
 	{
 		tagShowFrame(app_context);
+		
+		swfSleepToNextFrame(app_context);
 	}
 }
 
@@ -54,36 +97,41 @@ void swfStart(SWFAppContext* app_context)
 	heap_init(app_context, HEAP_SIZE);
 	
 	FlashbangContext c;
-	context = &c;
+	app_context->fbc = &c;
 	
-	context->width = app_context->width;
-	context->height = app_context->height;
+	c.width = app_context->width;
+	c.height = app_context->height;
 	
-	context->stage_to_ndc = app_context->stage_to_ndc;
+	c.stage_to_ndc = app_context->stage_to_ndc;
 	
-	context->bitmap_count = app_context->bitmap_count;
-	context->bitmap_highest_w = app_context->bitmap_highest_w;
-	context->bitmap_highest_h = app_context->bitmap_highest_h;
+	c.bitmap_count = app_context->bitmap_count;
+	c.bitmap_highest_w = app_context->bitmap_highest_w;
+	c.bitmap_highest_h = app_context->bitmap_highest_h;
 	
-	context->shape_data = app_context->shape_data;
-	context->shape_data_size = app_context->shape_data_size;
-	context->transform_data = app_context->transform_data;
-	context->transform_data_size = app_context->transform_data_size;
-	context->color_data = app_context->color_data;
-	context->color_data_size = app_context->color_data_size;
-	context->uninv_mat_data = app_context->uninv_mat_data;
-	context->uninv_mat_data_size = app_context->uninv_mat_data_size;
-	context->gradient_data = app_context->gradient_data;
-	context->gradient_data_size = app_context->gradient_data_size;
-	context->bitmap_data = app_context->bitmap_data;
-	context->bitmap_data_size = app_context->bitmap_data_size;
-	context->cxform_data = app_context->cxform_data;
-	context->cxform_data_size = app_context->cxform_data_size;
+	c.shape_data_exists = app_context->shape_data_exists;
 	
-	flashbang_init(context, app_context);
+	c.shape_data = app_context->shape_data;
+	c.shape_data_size = app_context->shape_data_size;
+	c.transform_data = app_context->transform_data;
+	c.transform_data_size = app_context->transform_data_size;
+	c.color_data = app_context->color_data;
+	c.color_data_size = app_context->color_data_size;
+	c.uninv_mat_data = app_context->uninv_mat_data;
+	c.uninv_mat_data_size = app_context->uninv_mat_data_size;
+	c.gradient_data = app_context->gradient_data;
+	c.gradient_data_size = app_context->gradient_data_size;
+	c.bitmap_data = app_context->bitmap_data;
+	c.bitmap_data_size = app_context->bitmap_data_size;
+	c.cxform_data = app_context->cxform_data;
+	c.cxform_data_size = app_context->cxform_data_size;
+	
+	flashbang_init(&c, app_context);
+	
+	recomp_init_utils();
 	
 	dictionary = HALLOC(INITIAL_DICTIONARY_CAPACITY*sizeof(Character));
-	display_list = HALLOC(INITIAL_DISPLAYLIST_CAPACITY*sizeof(DisplayObject));
+	
+	app_context->dictionary_capacity = INITIAL_DICTIONARY_CAPACITY;
 	
 	STACK = (char*) HALLOC(INITIAL_STACK_SIZE);
 	SP = INITIAL_SP;
@@ -92,23 +140,37 @@ void swfStart(SWFAppContext* app_context)
 	bad_poll = 0;
 	next_frame = 0;
 	
-	initVarArray(app_context, app_context->max_string_id);
+	initActions(app_context);
+	initMap(app_context);
 	
-	initTime();
-	initMap();
+	SVEC_SIZED_INIT(&app_context->vertex_tasks, sizeof(VertexTask));
+	SVEC_SIZED_INIT(&app_context->uninv_tasks, sizeof(UninvTask));
+	SVEC_SIZED_INIT(&app_context->draw_tasks, sizeof(DrawTask));
+	
+	SVEC_INIT(&app_context->movieclip_stack);
+	
+	app_context->last_frame = 0;
 	
 	tagInit(app_context);
 	
 	tagMain(app_context);
 	
+	SVEC_RELEASE(&app_context->vertex_tasks);
+	SVEC_RELEASE(&app_context->uninv_tasks);
+	SVEC_RELEASE(&app_context->draw_tasks);
+	
+	SVEC_RELEASE(&app_context->movieclip_stack);
+	
 	freeMap(app_context);
+	freeActions(app_context);
 	
 	FREE(STACK);
 	
 	FREE(dictionary);
-	FREE(display_list);
 	
-	flashbang_release(context, app_context);
+	recomp_deinit_utils();
+	
+	flashbang_release(&c, app_context);
 	
 	heap_shutdown(app_context);
 }

@@ -14,9 +14,14 @@ layout(std430, set = 1, binding = 0) buffer InverseGradientMatrices
 	mat4 inv_gradmats[];
 };
 
+layout(set = 2, binding = 0) uniform StartOffset
+{
+	uint offset;
+};
+
 void main()
 {
 	uint mat_i = gl_GlobalInvocationID.x;
-	mat4 gradmat = gradmats[mat_i];
-	inv_gradmats[mat_i] = inverse(gradmat);
+	mat4 gradmat = gradmats[mat_i + offset];
+	inv_gradmats[mat_i + offset] = inverse(gradmat);
 }

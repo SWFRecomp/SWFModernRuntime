@@ -8,60 +8,38 @@
 
 #define VAL(type, x) *((type*) x)
 
-hashmap* var_map = NULL;
-ActionVar** var_array = NULL;
-size_t var_array_size = 0;
-
-void initMap()
+void initMap(SWFAppContext* app_context)
 {
-	var_map = hashmap_create();
-}
-
-void initVarArray(SWFAppContext* app_context, size_t max_string_id)
-{
-	var_array_size = max_string_id + 1;
-	var_array = (ActionVar**) HALLOC(var_array_size*sizeof(ActionVar*));
+	app_context->var_ctx.var_map = hashmap_create();
+	app_context->var_ctx.next_str_id = app_context->max_string_id;
 	
-	for (size_t i = 1; i < var_array_size; ++i)
+	for (size_t i = 0; i < app_context->max_string_id; ++i)
 	{
-		var_array[i] = (ActionVar*) HALLOC(sizeof(ActionVar));
+		hashmap_set(app_context->var_ctx.var_map, app_context->str_table[i], app_context->str_len_table[i], i);
 	}
 }
 
-static int free_variable_callback(const void* key, size_t ksize, uintptr_t value, void* app_context_void)
+void freeMap(SWFAppContext* app_context)
 {
-	SWFAppContext* app_context = (SWFAppContext*) app_context_void;
-	ActionVar* var = (ActionVar*) value;
-	
-	// Free heap-allocated strings
-	if (var->type == ACTION_STACK_VALUE_STRING && var->owns_memory)
-	{
-		FREE(var->heap_ptr);
-	}
-	
-	FREE(var);
-	return 0;
+	// Free hashmap
+	hashmap_free(app_context->var_ctx.var_map);
 }
 
-ActionVar* getVariableById(SWFAppContext* app_context, u32 string_id)
+u32 getStringId(SWFAppContext* app_context, char* str, size_t str_size)
 {
-	return var_array[string_id];
-}
-
-ActionVar* getVariable(SWFAppContext* app_context, char* var_name, size_t key_size)
-{
-	ActionVar* var;
+	uintptr_t id;
 	
-	if (hashmap_get(var_map, var_name, key_size, (uintptr_t*) &var))
+	if (hashmap_get(app_context->var_ctx.var_map, str, str_size, &id))
 	{
-		return var;
+		return (u32) id;
 	}
 	
-	var = (ActionVar*) HALLOC(sizeof(ActionVar));
+	id = app_context->var_ctx.next_str_id;
+	app_context->var_ctx.next_str_id += 1;
 	
-	hashmap_set(var_map, var_name, key_size, (uintptr_t) var);
+	hashmap_set(app_context->var_ctx.var_map, str, str_size, id);
 	
-	return var;
+	return (u32) id;
 }
 
 char* materializeStringList(SWFAppContext* app_context)
@@ -86,70 +64,4 @@ char* materializeStringList(SWFAppContext* app_context)
 	*dest = '\0';
 	
 	return result;
-}
-
-void setVariableWithValue(SWFAppContext* app_context, ActionVar* var)
-{
-	// Free old string if variable owns memory
-	if (var->type == ACTION_STACK_VALUE_STRING && var->owns_memory)
-	{
-		FREE(var->heap_ptr);
-		var->owns_memory = false;
-	}
-	
-	ActionStackValueType type = STACK_TOP_TYPE;
-	
-	if (type == ACTION_STACK_VALUE_STR_LIST)
-	{
-		// Materialize string to heap
-		char* heap_str = materializeStringList(app_context);
-		u32 total_size = STACK_TOP_N;
-		
-		var->type = ACTION_STACK_VALUE_STRING;
-		var->str_size = total_size;
-		var->heap_ptr = heap_str;
-		var->owns_memory = true;
-	}
-	
-	else
-	{
-		// Numeric types and regular strings - store directly
-		var->type = type;
-		var->str_size = STACK_TOP_N;
-		var->value = STACK_TOP_VALUE;
-	}
-}
-
-void freeMap(SWFAppContext* app_context)
-{
-	// Free hashmap-based variables
-	if (var_map)
-	{
-		hashmap_iterate(var_map, free_variable_callback, app_context);
-		hashmap_free(var_map);
-		var_map = NULL;
-	}
-	
-	// Free array-based variables
-	if (var_array)
-	{
-		for (size_t i = 1; i < var_array_size; i++)
-		{
-			if (var_array[i])
-			{
-				// Free heap-allocated strings
-				if (var_array[i]->type == ACTION_STACK_VALUE_STRING &&
-				    var_array[i]->owns_memory)
-				{
-					FREE(var_array[i]->heap_ptr);
-				}
-				
-				FREE(var_array[i]);
-			}
-		}
-		
-		FREE(var_array);
-		var_array = NULL;
-		var_array_size = 0;
-	}
 }

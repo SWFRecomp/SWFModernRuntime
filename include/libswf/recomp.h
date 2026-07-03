@@ -3,7 +3,7 @@
 #include <common.h>
 
 // libswf
-#include <swf.h>
+#include <context.h>
 #include <tag.h>
 
 // actionmodern

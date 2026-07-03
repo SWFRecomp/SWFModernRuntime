@@ -65,6 +65,6 @@ void main()
 	
 	v_args = (v_style_type == 0x00) ? colors[v_style_id] :
 			 ((v_style_type & 0xF0) == 0x10) ? vec4(V_GRAD_UV(v_style_id), 0.0f, 0.0f) :
-			 ((v_style_type & 0xF0) == 0x40) ? vec4(V_BITMAP_UV(style_upper, bitmap_sizes[v_style_id]), 0.0f, 0.0f) :
+			 ((v_style_type & 0xF0) == 0x40) ? vec4(V_BITMAP_UV(style_upper, bitmap_sizes[0]), 0.0f, 0.0f) :
 											   vec4(0.0f);
 }
