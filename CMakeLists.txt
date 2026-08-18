@@ -66,6 +66,7 @@ endif()
 set(RENAME_ZCONF OFF)
 
 add_subdirectory(${PROJECT_SOURCE_DIR}/lib/libtess2)
+add_subdirectory(${PROJECT_SOURCE_DIR}/lib/yyjson)
 
 if(NOT NO_GRAPHICS)
     add_subdirectory(${PROJECT_SOURCE_DIR}/lib/SDL3)
@@ -74,6 +75,7 @@ if(NOT NO_GRAPHICS)
         libtess2
         SDL3::SDL3
         $<$<PLATFORM_ID:Linux>:m>
+        yyjson
     )
 else()
     target_link_libraries(${PROJECT_NAME} PUBLIC
@@ -103,6 +105,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${PROJECT_SOURCE_DIR}/lib/rbtree
     ${PROJECT_SOURCE_DIR}/lib/o1heap/o1heap
     ${PROJECT_SOURCE_DIR}/lib/SDL3/include
+    ${PROJECT_SOURCE_DIR}/lib/yyjson/src
 )
 
 if(NOT NO_GRAPHICS)

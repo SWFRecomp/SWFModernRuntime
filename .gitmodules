@@ -16,3 +16,6 @@
 [submodule "lib/minimp3"]
 	path = lib/minimp3
 	url = https://github.com/lieff/minimp3.git
+[submodule "lib/yyjson"]
+	path = lib/yyjson
+	url = https://github.com/ibireme/yyjson.git
