@@ -251,4 +251,9 @@ void rwlock_destroy(recomp_rwlock_t* rwlock)
 	pthread_rwlock_destroy(rwlock);
 }
 
+void udp_read(u16 port)
+{
+	
+}
+
 #endif

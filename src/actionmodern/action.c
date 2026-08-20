@@ -14,6 +14,8 @@
 #include <free_thread.h>
 #include <utils.h>
 
+#include <yyjson.h>
+
 void initActions(SWFAppContext* app_context)
 {
 	app_context->scope_top_obj = 1;
@@ -2820,6 +2822,16 @@ void actionStoreRegister(SWFAppContext* app_context, u8 reg_i)
 	
 	// Store value in register
 	*reg = value;
+	
+	releaseObjectVar(app_context, &value);
+}
+
+void actionDuplicate(SWFAppContext* app_context)
+{
+	ActionVar value;
+	peekVar(app_context, &value);
+	
+	PUSH_VAR(&value);
 	
 	releaseObjectVar(app_context, &value);
 }

@@ -14,6 +14,7 @@
 #include <Sound.h>
 
 #include <Toml.h>
+#include <mavlink.h>
 
 RuntimeFunc runtime_funcs[] =
 {
@@ -30,9 +31,17 @@ RuntimeFunc runtime_funcs[] =
 	{0, STR_ID_RECOMP_SET_DISPLAY_SCALE, recompSetDisplayScale, false},
 	{0, STR_ID_RECOMP_SIN, recompSin, false},
 	{0, STR_ID_RECOMP_COS, recompCos, false},
+	{0, STR_ID_recompAtan2, recompAtan2, false},
+	{0, STR_ID_recompSqrt, recompSqrt, false},
 	{0, STR_ID_RECOMP_COLOR_TRANSFORM, recompColorTransform, false},
 	
 	{0, STR_ID_recompToml, recompToml, false},
+	
+	{0, STR_ID_recompSITLInit, recompSITLInit, false},
+	{0, STR_ID_recompSITLReadPacket, recompSITLReadPacket, false},
+	{0, STR_ID_recompSITLSendJSON, recompSITLSendJSON, false},
+	
+	{0, STR_ID_recompJSON, recompJSON, false},
 };
 
 RuntimeFunc runtime_meths[] =

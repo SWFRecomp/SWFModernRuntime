@@ -71,3 +71,5 @@ void rwlock_unlock_read(recomp_rwlock_t* rwlock);
 void rwlock_lock_write(recomp_rwlock_t* rwlock);
 void rwlock_unlock_write(recomp_rwlock_t* rwlock);
 void rwlock_destroy(recomp_rwlock_t* rwlock);
+
+void udp_read(u16 port);

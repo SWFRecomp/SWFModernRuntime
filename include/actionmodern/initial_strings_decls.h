@@ -19,6 +19,8 @@ typedef enum
 	STR_ID_RECOMP_SET_DISPLAY_SCALE,
 	STR_ID_RECOMP_SIN,
 	STR_ID_RECOMP_COS,
+	STR_ID_recompAtan2,
+	STR_ID_recompSqrt,
 	STR_ID_RECOMP_COLOR_TRANSFORM,
 	STR_ID_RED_MULTIPLIER,
 	STR_ID_GREEN_MULTIPLIER,
@@ -83,6 +85,12 @@ typedef enum
 	STR_ID_MAX_VALUE,
 	STR_ID_MIN_VALUE,
 	STR_ID_recompToml,
+	STR_ID_recompSITLInit,
+	STR_ID_recompSITLReadPacket,
+	STR_ID_recompSITLSendJSON,
+	STR_ID_recompJSON,
+	STR_ID_leftThruster,
+	STR_ID_rightThruster,
 } StringIds;
 
 typedef struct

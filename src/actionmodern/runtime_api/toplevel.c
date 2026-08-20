@@ -67,3 +67,38 @@ void recompCos(SWFAppContext* app_context, ASObject* this, u32 num_args)
 	
 	PUSH_F64(ret);
 }
+
+void recompAtan2(SWFAppContext* app_context, ASObject* this, u32 num_args)
+{
+	ActionVar numer_v;
+	popVar(app_context, &numer_v);
+	convertNumericToNumber(app_context, &numer_v);
+	
+	ActionVar denom_v;
+	popVar(app_context, &denom_v);
+	convertNumericToNumber(app_context, &denom_v);
+	
+	DISCARD_ARGS(num_args - 2);
+	
+	f64 ret = atan2(numer_v.f64, denom_v.f64);
+	
+	releaseObjectVar(app_context, &denom_v);
+	releaseObjectVar(app_context, &numer_v);
+	
+	PUSH_F64(ret);
+}
+
+void recompSqrt(SWFAppContext* app_context, ASObject* this, u32 num_args)
+{
+	ActionVar value_v;
+	popVar(app_context, &value_v);
+	convertNumericToNumber(app_context, &value_v);
+	
+	DISCARD_ARGS(num_args - 1);
+	
+	f64 ret = sqrt(value_v.f64);
+	
+	releaseObjectVar(app_context, &value_v);
+	
+	PUSH_F64(ret);
+}
