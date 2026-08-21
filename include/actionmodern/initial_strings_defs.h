@@ -14,7 +14,7 @@
 #include <Sound.h>
 
 #include <Toml.h>
-#include <mavlink.h>
+#include <mavlink_recomp.h>
 
 RuntimeFunc runtime_funcs[] =
 {
@@ -40,6 +40,7 @@ RuntimeFunc runtime_funcs[] =
 	{0, STR_ID_recompSITLInit, recompSITLInit, false},
 	{0, STR_ID_recompSITLReadPacket, recompSITLReadPacket, false},
 	{0, STR_ID_recompSITLSendJSON, recompSITLSendJSON, false},
+	{0, STR_ID_recompSITLSendSensors, recompSITLSendSensors, false},
 	
 	{0, STR_ID_recompJSON, recompJSON, false},
 };

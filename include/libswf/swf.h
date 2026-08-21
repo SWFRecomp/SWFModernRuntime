@@ -49,6 +49,8 @@ typedef struct DisplayObject
 
 extern int quit_swf;
 extern int bad_poll;
+extern int signaled;
+extern int signaled_quit;
 extern size_t next_frame;
 extern int manual_next_frame;
 

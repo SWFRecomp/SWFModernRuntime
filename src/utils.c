@@ -1,5 +1,6 @@
 #include <string.h>
 
+#include <swf.h>
 #include <heap.h>
 #include <utils.h>
 
@@ -63,7 +64,7 @@ void grow_ptr_far(SWFAppContext* app_context, char** ptr, size_t* capacity_ptr, 
 // windows-only machine-specific global:
 LARGE_INTEGER counter_frequency;
 
-void recomp_init_utils()
+void recomp_init_utils(SWFAppContext* app_context)
 {
 	QueryPerformanceFrequency(&counter_frequency);
 	
@@ -75,7 +76,7 @@ void recomp_sync_window()
 	DwmFlush();
 }
 
-void recomp_deinit_utils()
+void recomp_deinit_utils(SWFAppContext* app_context)
 {
 	timeEndPeriod(1);
 }
@@ -162,21 +163,45 @@ void rwlock_destroy(recomp_rwlock_t* rwlock)
 #elif defined(__GNUC__)
 // GCC
 
+#include <signal.h>
+#include <unistd.h>
 #include <stdlib.h>
 #include <time.h>
+#include <sys/socket.h>
 #include <sys/mman.h>
 
-void recomp_init_utils()
+void recomp_handle_exit(int sig)
 {
-	
+	signaled = 1;
 }
 
-void recomp_sync_window()
+void recomp_init_utils(SWFAppContext* app_context)
 {
-	
+	struct sigaction s;
+	s.sa_handler = recomp_handle_exit;
+	sigemptyset(&s.sa_mask);
+	s.sa_flags = 0;
+	sigaction(SIGINT, &s, NULL);
 }
 
-void recomp_deinit_utils()
+extern int tcp_sockfd;
+
+void recomp_sync_window(SWFAppContext* app_context)
+{
+	if (signaled)
+	{
+		shutdown(tcp_sockfd, SHUT_WR);
+		
+		char buf[128];
+		while (read(tcp_sockfd, buf, 128) > 0);
+		
+		close(tcp_sockfd);
+		
+		signaled_quit = true;
+	}
+}
+
+void recomp_deinit_utils(SWFAppContext* app_context)
 {
 	
 }

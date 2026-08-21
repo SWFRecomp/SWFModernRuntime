@@ -57,10 +57,12 @@ set(SOURCES ${CORE_SOURCES} ${SWF_SOURCES} ${RUNTIME_API_SOURCES})
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
 
+set (NO_WARNING_FLAGS -Wno-address-of-packed-member)
+
 if (WIN32)
-    target_compile_options(${PROJECT_NAME} PRIVATE)
+    target_compile_options(${PROJECT_NAME} PRIVATE {$NO_WARNING_FLAGS})
 else()
-    target_compile_options(${PROJECT_NAME} PRIVATE -Wno-format-truncation)
+    target_compile_options(${PROJECT_NAME} PRIVATE -Wno-format-truncation ${NO_WARNING_FLAGS})
 endif()
 
 set(RENAME_ZCONF OFF)
@@ -105,6 +107,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${PROJECT_SOURCE_DIR}/lib/rbtree
     ${PROJECT_SOURCE_DIR}/lib/o1heap/o1heap
     ${PROJECT_SOURCE_DIR}/lib/SDL3/include
+    ${PROJECT_SOURCE_DIR}/lib/mavlink
     ${PROJECT_SOURCE_DIR}/lib/yyjson/src
 )
 

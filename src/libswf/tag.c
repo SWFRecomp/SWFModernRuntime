@@ -373,7 +373,7 @@ void tagShowFrame(SWFAppContext* app_context)
 	
 	flashbang_close_pass(app_context->fbc, app_context);
 	
-	recomp_sync_window();
+	recomp_sync_window(app_context);
 	
 	clear:
 	

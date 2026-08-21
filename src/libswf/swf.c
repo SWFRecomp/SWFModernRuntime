@@ -8,6 +8,8 @@
 
 int quit_swf;
 int bad_poll;
+int signaled;
+int signaled_quit;
 size_t next_frame;
 int manual_next_frame;
 ActionVar* temp_val;
@@ -71,7 +73,7 @@ void tagMain(SWFAppContext* app_context)
 {
 	frame_func* frame_funcs = app_context->frame_funcs;
 	
-	while (!quit_swf)
+	while (!quit_swf && !signaled_quit)
 	{
 		frame_funcs[next_frame](app_context);
 		if (!manual_next_frame)
@@ -84,7 +86,7 @@ void tagMain(SWFAppContext* app_context)
 		quit_swf |= bad_poll;
 	}
 	
-	while (!(bad_poll = flashbang_poll(FBC, app_context)))
+	while (!signaled_quit && !(bad_poll = flashbang_poll(FBC, app_context)))
 	{
 		tagShowFrame(app_context);
 		
@@ -127,7 +129,7 @@ void swfStart(SWFAppContext* app_context)
 	
 	flashbang_init(&c, app_context);
 	
-	recomp_init_utils();
+	recomp_init_utils(app_context);
 	
 	dictionary = HALLOC(INITIAL_DICTIONARY_CAPACITY*sizeof(Character));
 	
@@ -138,6 +140,8 @@ void swfStart(SWFAppContext* app_context)
 	
 	quit_swf = 0;
 	bad_poll = 0;
+	signaled = 0;
+	signaled_quit = 0;
 	next_frame = 0;
 	
 	initActions(app_context);
@@ -168,7 +172,7 @@ void swfStart(SWFAppContext* app_context)
 	
 	FREE(dictionary);
 	
-	recomp_deinit_utils();
+	recomp_deinit_utils(app_context);
 	
 	flashbang_release(&c, app_context);
 	
