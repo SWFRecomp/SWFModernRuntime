@@ -479,6 +479,11 @@ void releaseObjectVar(SWFAppContext* app_context, ActionVar* var)
 			releaseObject(app_context, var->object);
 		});
 	}
+	
+	else if (IS_STR_T(var->type) && var->owns_memory)
+	{
+		FREE(var->str);
+	}
 }
 
 void copyReg(SWFAppContext* app_context)
