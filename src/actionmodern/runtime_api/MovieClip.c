@@ -82,7 +82,7 @@ void MovieClip_applyTransformsParents(SWFAppContext* app_context, ASObject* this
 	
 	f32 x = (f32) (20.0f*EXTDATA_OF(current, _x));
 	f32 y = (f32) (20.0f*EXTDATA_OF(current, _y));
-	f32 r = (f32) EXTDATA_OF(current, _rotation);
+	f32 r = (f32) -EXTDATA_OF(current, _rotation);
 	f32 sx = (f32) EXTDATA_OF(current, _xscale)/100.0f;
 	f32 sy = (f32) EXTDATA_OF(current, _yscale)/100.0f;
 	

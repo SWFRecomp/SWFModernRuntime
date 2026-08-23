@@ -88,7 +88,7 @@ typedef enum
 	STR_ID_recompSITLInit,
 	STR_ID_recompSITLReadPacket,
 	STR_ID_recompSITLSendJSON,
-	STR_ID_recompSITLSendSensors,
+	STR_ID_recompSITLSendSensor,
 	STR_ID_recompJSON,
 	STR_ID_leftThruster,
 	STR_ID_rightThruster,

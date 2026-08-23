@@ -117,15 +117,21 @@ void recompSITLSendJSON(SWFAppContext* app_context, ASObject* this, u32 num_args
 	RETURN_VOID();
 }
 
-void recompSITLSendSensors(SWFAppContext* app_context, ASObject* this, u32 num_args)
+void recompSITLSendSensor(SWFAppContext* app_context, ASObject* this, u32 num_args)
 {
 	ActionVar range_v;
 	popVar(app_context, &range_v);
 	
-	DISCARD_ARGS(num_args - 1);
+	ActionVar orientation_v;
+	popVar(app_context, &orientation_v);
+	
+	DISCARD_ARGS(num_args - 2);
 	
 	convertNumericToNumber(app_context, &range_v);
 	f64 range = range_v.f64;
+	
+	convertNumericToInteger(app_context, &orientation_v);
+	s32 orientation = orientation_v.s32;
 	
 	u8 b;
 	mavlink_message_t m;
@@ -166,8 +172,8 @@ void recompSITLSendSensors(SWFAppContext* app_context, ASObject* this, u32 num_a
 	}
 	
 	mavlink_message_t out;
-	//~ printf("s: %d, c: %d\n", target_system, target_component);
-	mavlink_msg_distance_sensor_pack(target_system, target_component, &out, get_elapsed_ms(), 0, 2000, (u16) range, MAV_DISTANCE_SENSOR_LASER, 1, MAV_SENSOR_ROTATION_PITCH_270, 0, 0, 0, 0, 100);
+	
+	mavlink_msg_distance_sensor_pack(target_system, target_component, &out, get_elapsed_ms(), 0, 2000, (u16) range, MAV_DISTANCE_SENSOR_LASER, 1, orientation, 0, 0, 0, 0, 100);
 	
 	u8 out_buffer[MAVLINK_MAX_PACKET_LEN];
 	u16 length = mavlink_msg_to_send_buffer(out_buffer, &out);
@@ -175,6 +181,7 @@ void recompSITLSendSensors(SWFAppContext* app_context, ASObject* this, u32 num_a
 	write(tcp_sockfd, out_buffer, length);
 	
 release:
+	releaseObjectVar(app_context, &orientation_v);
 	releaseObjectVar(app_context, &range_v);
 	
 	RETURN_VOID();
