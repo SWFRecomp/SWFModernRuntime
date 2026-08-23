@@ -2208,11 +2208,6 @@ void actionTrace(SWFAppContext* app_context)
 		{
 			printf("%s\n", v.str);
 			
-			if (v.owns_memory)
-			{
-				FREE(v.str);
-			}
-			
 			break;
 		}
 		
