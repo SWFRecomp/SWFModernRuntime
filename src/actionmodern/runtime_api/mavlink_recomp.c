@@ -102,17 +102,20 @@ void recompSITLReadPacket(SWFAppContext* app_context, ASObject* this, u32 num_ar
 
 void recompSITLSendJSON(SWFAppContext* app_context, ASObject* this, u32 num_args)
 {
-	ActionVar text_v;
-	popVar(app_context, &text_v);
+	ActionVar time_v;
+	popVar(app_context, &time_v);
 	
 	DISCARD_ARGS(num_args - 1);
 	
+	convertNumericToNumber(app_context, &time_v);
+	f64 time = time_v.f64;
+	
 	char out[1024];
-	snprintf(out, text_v.str_size + 1, "%s\n", text_v.str);
+	int length = snprintf(out, 1024, "{\"timestamp\":%f,\"imu\":{\"gyro\":[0,0,0],\"accel_body\":[0,0,0]},\"position\":[0,0,0],\"attitude\":[0,0,0],\"velocity\":[0,0,0]}", time);
 	
-	sendto(udp_sockfd, (const char*) out, text_v.str_size + 1, 0, (const struct sockaddr*) &client_addr, addr_len);
+	sendto(udp_sockfd, (const char*) out, length + 1, 0, (const struct sockaddr*) &client_addr, addr_len);
 	
-	releaseObjectVar(app_context, &text_v);
+	releaseObjectVar(app_context, &time_v);
 	
 	RETURN_VOID();
 }
@@ -173,7 +176,7 @@ void recompSITLSendSensor(SWFAppContext* app_context, ASObject* this, u32 num_ar
 	
 	mavlink_message_t out;
 	
-	mavlink_msg_distance_sensor_pack(target_system, target_component, &out, get_elapsed_ms(), 0, 2000, (u16) range, MAV_DISTANCE_SENSOR_LASER, 1, orientation, 0, 0, 0, 0, 100);
+	mavlink_msg_distance_sensor_pack(target_system, target_component, &out, get_elapsed_ms(), 0, 1000, (u16) range, MAV_DISTANCE_SENSOR_LASER, 1, orientation, 0, 0, 0, 0, 100);
 	
 	u8 out_buffer[MAVLINK_MAX_PACKET_LEN];
 	u16 length = mavlink_msg_to_send_buffer(out_buffer, &out);
