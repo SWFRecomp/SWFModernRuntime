@@ -57,12 +57,12 @@ set(SOURCES ${CORE_SOURCES} ${SWF_SOURCES} ${RUNTIME_API_SOURCES})
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
 
-set (NO_WARNING_FLAGS -Wno-address-of-packed-member)
+set (NO_WARNING_FLAGS)
 
 if (WIN32)
-    target_compile_options(${PROJECT_NAME} PRIVATE {$NO_WARNING_FLAGS})
+    target_compile_options(${PROJECT_NAME} PRIVATE ${NO_WARNING_FLAGS})
 else()
-    target_compile_options(${PROJECT_NAME} PRIVATE -Wno-format-truncation ${NO_WARNING_FLAGS})
+    target_compile_options(${PROJECT_NAME} PRIVATE -Wno-format-truncation -Wno-address-of-packed-member ${NO_WARNING_FLAGS})
 endif()
 
 set(RENAME_ZCONF OFF)

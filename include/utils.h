@@ -4,6 +4,7 @@
 #include <swf.h>
 
 #include <stddef.h>
+#include <stdint.h>
 
 #include <utils_lock.h>
 
@@ -72,4 +73,9 @@ void rwlock_lock_write(recomp_rwlock_t* rwlock);
 void rwlock_unlock_write(recomp_rwlock_t* rwlock);
 void rwlock_destroy(recomp_rwlock_t* rwlock);
 
-void udp_read(u16 port);
+void sitl_init(u16 port);
+int sitl_udp_recv(char* data, size_t buffer_size);
+void sitl_tcp_init(u16 port);
+void sitl_send_json(char* data, size_t data_size);
+int sitl_tcp_read(char* out, size_t out_size);
+void sitl_tcp_write(char* out, size_t out_size);

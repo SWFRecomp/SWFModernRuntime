@@ -1,11 +1,6 @@
-#include <unistd.h>
-#include <fcntl.h>
 #include <math.h>
 
-#include <arpa/inet.h>
-
 #include <mavlink/common/mavlink.h>
-#include <yyjson.h>
 
 #include <objects.h>
 #include <flashbang.h>
@@ -13,15 +8,7 @@
 
 #include <initial_strings_decls.h>
 
-#define BUFFER_SIZE 1024
-
-socklen_t addr_len = sizeof(struct sockaddr_in);
-
-int udp_sockfd;
-int tcp_sockfd;
-
-struct sockaddr_in server_addr;
-struct sockaddr_in client_addr;
+#define BUFFER_SIZE 40
 
 bool got_target;
 u8 target_system;
@@ -31,18 +18,7 @@ void recompSITLInit(SWFAppContext* app_context, ASObject* this, u32 num_args)
 {
 	DISCARD_ARGS(num_args);
 	
-	udp_sockfd = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0);
-	
-	memset(&server_addr, 0, addr_len);
-	memset(&client_addr, 0, addr_len);
-	
-	server_addr.sin_family = AF_INET;
-	server_addr.sin_addr.s_addr = INADDR_ANY;
-	server_addr.sin_port = htons(9002);
-	
-	bind(udp_sockfd, (const struct sockaddr*) &server_addr, addr_len);
-	
-	tcp_sockfd = -1;
+	sitl_init(9002);
 	got_target = false;
 	
 	RETURN_VOID();
@@ -57,23 +33,11 @@ void recompSITLReadPacket(SWFAppContext* app_context, ASObject* this, u32 num_ar
 	
 	char data[BUFFER_SIZE];
 	
-	int bytes_read = recvfrom(udp_sockfd, (char*) data, BUFFER_SIZE - 1, 0, (struct sockaddr*) &client_addr, &addr_len);
+	int bytes_read = sitl_recv_udp(data, BUFFER_SIZE);
 	
 	if (bytes_read != -1)
 	{
-		if (tcp_sockfd == -1)
-		{
-			tcp_sockfd = socket(AF_INET, SOCK_STREAM, 0);
-			
-			memset(&server_addr, 0, addr_len);
-			
-			server_addr.sin_family = AF_INET;
-			server_addr.sin_port = htons(5762);
-			
-			memcpy(&server_addr.sin_addr, &client_addr.sin_addr, sizeof(client_addr.sin_addr));
-			
-			connect(tcp_sockfd, (struct sockaddr*) &server_addr, sizeof(server_addr));
-		}
+		sitl_init_tcp(5762);
 		
 		u16 magic = VAL(u16, &data[0]);
 		u16 frame_rate = VAL(u16, &data[2]);
@@ -113,7 +77,7 @@ void recompSITLSendJSON(SWFAppContext* app_context, ASObject* this, u32 num_args
 	char out[1024];
 	int length = snprintf(out, 1024, "{\"timestamp\":%f,\"imu\":{\"gyro\":[0,0,0],\"accel_body\":[0,0,0]},\"position\":[0,0,0],\"attitude\":[0,0,0],\"velocity\":[0,0,0]}", time);
 	
-	sendto(udp_sockfd, (const char*) out, length + 1, 0, (const struct sockaddr*) &client_addr, addr_len);
+	sitl_send_json(out, length + 1);
 	
 	releaseObjectVar(app_context, &time_v);
 	
@@ -142,10 +106,7 @@ void recompSITLSendSensor(SWFAppContext* app_context, ASObject* this, u32 num_ar
 	
 	if (!got_target)
 	{
-		int prev = fcntl(tcp_sockfd, F_GETFL, 0);
-		fcntl(tcp_sockfd, F_SETFL, prev | O_NONBLOCK);
-		
-		if (read(tcp_sockfd, &b, 1) > 0)
+		if (sitl_tcp_read(&b, 1) > 0)
 		{
 			if (mavlink_parse_char(MAVLINK_COMM_0, b, &m, &s))
 			{
@@ -181,7 +142,7 @@ void recompSITLSendSensor(SWFAppContext* app_context, ASObject* this, u32 num_ar
 	u8 out_buffer[MAVLINK_MAX_PACKET_LEN];
 	u16 length = mavlink_msg_to_send_buffer(out_buffer, &out);
 	
-	write(tcp_sockfd, out_buffer, length);
+	sitl_tcp_write(out_buffer, length);
 	
 release:
 	releaseObjectVar(app_context, &orientation_v);
