@@ -78,4 +78,4 @@ int sitl_udp_recv(char* data, size_t buffer_size);
 void sitl_tcp_init(u16 port);
 void sitl_send_json(char* data, size_t data_size);
 int sitl_tcp_read(char* out, size_t out_size);
-void sitl_tcp_write(char* out, size_t out_size);
+void sitl_tcp_write(char* data, size_t data_size);
