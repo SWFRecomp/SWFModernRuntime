@@ -4,6 +4,7 @@
 
 #include <objects.h>
 #include <flashbang.h>
+#include <utils.h>
 #include <mavlink_recomp.h>
 
 #include <initial_strings_decls.h>
@@ -33,11 +34,11 @@ void recompSITLReadPacket(SWFAppContext* app_context, ASObject* this, u32 num_ar
 	
 	char data[BUFFER_SIZE];
 	
-	int bytes_read = sitl_recv_udp(data, BUFFER_SIZE);
+	int bytes_read = sitl_udp_recv(data, BUFFER_SIZE);
 	
 	if (bytes_read != -1)
 	{
-		sitl_init_tcp(5762);
+		sitl_tcp_init(5762);
 		
 		u16 magic = VAL(u16, &data[0]);
 		u16 frame_rate = VAL(u16, &data[2]);
