@@ -184,7 +184,7 @@ void sitl_init(u16 port)
 	memset(&client_addr, 0, addr_len);
 	
 	server_addr.sin_family = AF_INET;
-	server_addr.sin_addr.s_addr = INADDR_ANY;
+	server_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 	server_addr.sin_port = htons(9002);
 	
 	bind(udp_sockfd, (SOCKADDR*) &server_addr, addr_len);
@@ -366,7 +366,7 @@ void sitl_init(u16 port)
 	memset(&client_addr, 0, addr_len);
 	
 	server_addr.sin_family = AF_INET;
-	server_addr.sin_addr.s_addr = INADDR_ANY;
+	server_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 	server_addr.sin_port = htons(9002);
 	
 	bind(udp_sockfd, (const struct sockaddr*) &server_addr, addr_len);
