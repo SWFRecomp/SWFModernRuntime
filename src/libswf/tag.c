@@ -270,7 +270,7 @@ void tagShowFrame(SWFAppContext* app_context)
 		}
 	}
 	
-	if (!flashbang_open_pass(app_context->fbc, app_context))
+	if (!flashbang_acquire_swapchain(FBC))
 	{
 		goto clear;
 	}
@@ -312,6 +312,8 @@ void tagShowFrame(SWFAppContext* app_context)
 		
 		flashbang_close_vertex_transfer(app_context->fbc);
 	}
+	
+	flashbang_open_pass(FBC, app_context);
 	
 	for (size_t i = 0; i < app_context->draw_tasks.length; ++i)
 	{
