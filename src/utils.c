@@ -63,19 +63,19 @@ void grow_ptr_far(SWFAppContext* app_context, char** ptr, size_t* capacity_ptr, 
 // windows-only machine-specific global:
 LARGE_INTEGER counter_frequency;
 
-void recomp_init_utils()
+void recomp_init_utils(SWFAppContext* app_context)
 {
 	QueryPerformanceFrequency(&counter_frequency);
 	
 	timeBeginPeriod(1);
 }
 
-void recomp_sync_window()
+void recomp_sync_window(SWFAppContext* app_context)
 {
 	DwmFlush();
 }
 
-void recomp_deinit_utils()
+void recomp_deinit_utils(SWFAppContext* app_context)
 {
 	timeEndPeriod(1);
 }
@@ -163,20 +163,21 @@ void rwlock_destroy(recomp_rwlock_t* rwlock)
 // GCC
 
 #include <stdlib.h>
+#include <unistd.h>
 #include <time.h>
 #include <sys/mman.h>
 
-void recomp_init_utils()
+void recomp_init_utils(SWFAppContext* app_context)
 {
 	
 }
 
-void recomp_sync_window()
+void recomp_sync_window(SWFAppContext* app_context)
 {
 	
 }
 
-void recomp_deinit_utils()
+void recomp_deinit_utils(SWFAppContext* app_context)
 {
 	
 }

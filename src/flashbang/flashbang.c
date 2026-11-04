@@ -379,7 +379,7 @@ void flashbang_init(FlashbangContext* context, SWFAppContext* app_context)
 	color_target_descriptions[0].blend_state.dst_alpha_blendfactor = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
 	color_target_descriptions[0].format = SDL_GetGPUSwapchainTextureFormat(context->device, context->window);
 	
-	SDL_GPUSampleCount sample_count = SDL_GPU_SAMPLECOUNT_8;
+	SDL_GPUSampleCount sample_count = SDL_GPU_SAMPLECOUNT_1;
 	
 	pipeline_info.multisample_state.sample_count = sample_count;
 	
@@ -1008,7 +1008,7 @@ void flashbang_set_display_scale(FlashbangContext* context, u8 scale)
 	SDL_SyncWindow(context->window);
 }
 
-bool flashbang_open_pass(FlashbangContext* context, SWFAppContext* app_context)
+bool flashbang_acquire_swapchain(FlashbangContext* context)
 {
 	// acquire the command buffer
 	context->command_buffer = SDL_AcquireGPUCommandBuffer(context->device);
@@ -1023,6 +1023,11 @@ bool flashbang_open_pass(FlashbangContext* context, SWFAppContext* app_context)
 		return false;
 	}
 	
+	return true;
+}
+
+void flashbang_open_pass(FlashbangContext* context, SWFAppContext* app_context)
+{
 	// create the color target
 	SDL_GPUColorTargetInfo colorTargetInfo = {0};
 	colorTargetInfo.clear_color.r = context->red/255.0f;
@@ -1037,6 +1042,13 @@ bool flashbang_open_pass(FlashbangContext* context, SWFAppContext* app_context)
 	context->render_pass = SDL_BeginGPURenderPass(context->command_buffer, &colorTargetInfo, 1, NULL);
 	
 	assert(context->render_pass != NULL);
+	
+	int w;
+	int h;
+	SDL_GetWindowSizeInPixels(context->window, &w, &h);
+	
+	SDL_GPUViewport vp = {0.0f, 0.0f, (float) w, (float) h, 0.0f, 1.0f};
+	SDL_SetGPUViewport(context->render_pass, &vp);
 	
 	// bind the graphics pipeline
 	SDL_BindGPUGraphicsPipeline(context->render_pass, context->graphics_pipeline);
@@ -1086,8 +1098,6 @@ bool flashbang_open_pass(FlashbangContext* context, SWFAppContext* app_context)
 	
 	SDL_BindGPUFragmentSamplers(context->render_pass, 0, sampler_bindings, 2);
 	SDL_BindGPUFragmentStorageBuffers(context->render_pass, 0, (SDL_GPUBuffer**) &context->cxform_buffer, 1);
-	
-	return true;
 }
 
 u32 flashbang_allocate_vertices(FlashbangContext* context, u32 num_verts)
@@ -1341,13 +1351,13 @@ void flashbang_draw_shape(FlashbangContext* context, u32 offset, u32 num_verts, 
 
 void flashbang_close_pass(FlashbangContext* context, SWFAppContext* app_context)
 {
+	// end the render pass
+	SDL_EndGPURenderPass(context->render_pass);
+	
 	if (context->swapchain == NULL)
 	{
 		return;
 	}
-	
-	// end the render pass
-	SDL_EndGPURenderPass(context->render_pass);
 	
 	SDL_GPUBlitInfo blit_info = {0};
 	blit_info.source.texture = context->target_texture;

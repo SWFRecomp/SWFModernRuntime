@@ -274,6 +274,19 @@ void initActions(SWFAppContext* app_context)
 		app_context->scope_top_obj -= 1;
 	}
 	
+	for (int i = 2; i < MAX_SCOPE_DEPTH; ++i)
+	{
+		app_context->scope_chain[i] = allocObject(app_context);
+		retainObject(app_context->scope_chain[i]);
+		
+		app_context->scope_registers[i] = HALLOC(256*sizeof(ActionVar));
+		
+		for (u32 j = 0; j < 256; ++j)
+		{
+			app_context->scope_registers[i][j].type = ACTION_STACK_VALUE_UNDEFINED;
+		}
+	}
+	
 	app_context->stop_free = false;
 	app_context->global_free_override = false;
 	
@@ -2188,11 +2201,6 @@ void actionTrace(SWFAppContext* app_context)
 		{
 			printf("%s\n", v.str);
 			
-			if (v.owns_memory)
-			{
-				FREE(v.str);
-			}
-			
 			break;
 		}
 		
@@ -2824,6 +2832,16 @@ void actionStoreRegister(SWFAppContext* app_context, u8 reg_i)
 	releaseObjectVar(app_context, &value);
 }
 
+void actionDuplicate(SWFAppContext* app_context)
+{
+	ActionVar value;
+	peekVar(app_context, &value);
+	
+	PUSH_VAR(&value);
+	
+	releaseObjectVar(app_context, &value);
+}
+
 //~ void actionInitArray(SWFAppContext* app_context)
 //~ {
 	//~ // 1. Pop array element count
@@ -3335,6 +3353,25 @@ void actionGetMember(SWFAppContext* app_context)
 	releaseObjectVar(app_context, &prop_name_var);
 }
 
+void emptyScopeObject(SWFAppContext* app_context, ASObject* scope)
+{
+	while (scope->t.length > 0)
+	{
+		ASProperty* p = rbtree_pop_root(&scope->t);
+		ActionVar* p_v = &p->value;
+		
+		if (IS_OBJ_T(p_v->type))
+		{
+			OBJ_LOCK_WRITE(p_v->object,
+			{
+				releaseObject(app_context, p_v->object);
+			});
+		}
+		
+		FREE(p);
+	}
+}
+
 void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v, u32 num_args)
 {
 	ASObject* func_obj = func_v->object;
@@ -3345,11 +3382,6 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v,
 		{
 			// can't change app_context->scope_top_obj yet, or popVar will break on registers
 			u32 this_scope = app_context->scope_top_obj + 1;
-			
-			app_context->scope_chain[this_scope] = allocObject(app_context);
-			retainObject(app_context->scope_chain[this_scope]);
-			
-			app_context->scope_registers[this_scope] = HALLOC(4*sizeof(ActionVar));
 			
 			ActionVar* regs = app_context->scope_registers[this_scope];
 			
@@ -3387,6 +3419,8 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v,
 			
 			copyReg(app_context);
 			
+			emptyScopeObject(app_context, app_context->scope_chain[this_scope]);
+			
 			for (u8 i = 0; i < 4; ++i)
 			{
 				if (IS_OBJ_T(regs[i].type))
@@ -3398,13 +3432,6 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v,
 				}
 			}
 			
-			FREE(regs);
-			
-			OBJ_LOCK_WRITE(app_context->scope_chain[app_context->scope_top_obj],
-			{
-				releaseObject(app_context, app_context->scope_chain[app_context->scope_top_obj]);
-			});
-			
 			app_context->scope_top_obj -= 1;
 			break;
 		}
@@ -3414,13 +3441,8 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v,
 			// can't change app_context->scope_top_obj yet, or popVar will break on registers
 			u32 this_scope = app_context->scope_top_obj + 1;
 			
-			app_context->scope_chain[this_scope] = allocObject(app_context);
-			retainObject(app_context->scope_chain[this_scope]);
-			
 			u8 reg_count = Function_get_reg_count(app_context, func_obj);
 			u16 flags = Function_get_flags(app_context, func_obj);
-			
-			app_context->scope_registers[this_scope] = HALLOC((reg_count + 1)*sizeof(ActionVar));
 			
 			ActionVar* regs = app_context->scope_registers[this_scope];
 			
@@ -3554,6 +3576,8 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v,
 			
 			copyReg(app_context);
 			
+			emptyScopeObject(app_context, app_context->scope_chain[this_scope]);
+			
 			for (u8 i = 0; i < reg_count + 1; ++i)
 			{
 				if (IS_OBJ_T(regs[i].type))
@@ -3564,13 +3588,6 @@ void callFunction(SWFAppContext* app_context, ASObject* this, ActionVar* func_v,
 					});
 				}
 			}
-			
-			FREE(regs);
-			
-			OBJ_LOCK_WRITE(app_context->scope_chain[app_context->scope_top_obj],
-			{
-				releaseObject(app_context, app_context->scope_chain[app_context->scope_top_obj]);
-			});
 			
 			app_context->scope_top_obj -= 1;
 			break;

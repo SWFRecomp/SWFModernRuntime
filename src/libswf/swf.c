@@ -127,7 +127,7 @@ void swfStart(SWFAppContext* app_context)
 	
 	flashbang_init(&c, app_context);
 	
-	recomp_init_utils();
+	recomp_init_utils(app_context);
 	
 	dictionary = HALLOC(INITIAL_DICTIONARY_CAPACITY*sizeof(Character));
 	
@@ -168,7 +168,7 @@ void swfStart(SWFAppContext* app_context)
 	
 	FREE(dictionary);
 	
-	recomp_deinit_utils();
+	recomp_deinit_utils(app_context);
 	
 	flashbang_release(&c, app_context);
 	

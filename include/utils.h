@@ -4,6 +4,7 @@
 #include <swf.h>
 
 #include <stddef.h>
+#include <stdint.h>
 
 #include <utils_lock.h>
 
@@ -45,9 +46,9 @@ typedef void* (*runtime_thread_func)(SWFAppContext* arg);
 		grow_ptr_far(app_context, (char**) &ptr, &capac, elem_size, new_size); \
 	}
 
-void recomp_init_utils();
-void recomp_sync_window();
-void recomp_deinit_utils();
+void recomp_init_utils(SWFAppContext* app_context);
+void recomp_sync_window(SWFAppContext* app_context);
+void recomp_deinit_utils(SWFAppContext* app_context);
 
 size_t get_power_two_size(size_t old_size, size_t size);
 

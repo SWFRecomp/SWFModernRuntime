@@ -40,7 +40,7 @@ void Array_new(SWFAppContext* app_context, ASObject* this, u32 num_args)
 		EXTDATA(length) = length;
 		EXTDATA(capacity) = capacity;
 		
-		for (size_t i = 0; i < length; ++i)
+		for (size_t i = 0; i < capacity; ++i)
 		{
 			EXTDATA(data)[i].type = ACTION_STACK_VALUE_UNDEFINED;
 		}
@@ -68,7 +68,7 @@ void Array_new(SWFAppContext* app_context, ASObject* this, u32 num_args)
 		EXTDATA(length) = length;
 		EXTDATA(capacity) = capacity;
 		
-		for (size_t i = 0; i < length; ++i)
+		for (size_t i = 0; i < capacity; ++i)
 		{
 			EXTDATA(data)[i].type = ACTION_STACK_VALUE_UNDEFINED;
 		}
@@ -92,7 +92,13 @@ void Array_push(SWFAppContext* app_context, ASObject* this, u32 num_args)
 	
 	size_t length = ++EXTDATA(length);
 	
+	size_t old_capacity = EXTDATA(capacity);
 	ENSURE_SIZE(EXTDATA(data), length, EXTDATA(capacity), sizeof(ActionVar));
+	
+	for (size_t i = old_capacity; i < EXTDATA(capacity); ++i)
+	{
+		EXTDATA(data)[i].type = ACTION_STACK_VALUE_UNDEFINED;
+	}
 	
 	if (IS_OBJ_T(v.type))
 	{
@@ -166,7 +172,13 @@ ActionVar* Array_getElement(SWFAppContext* app_context, ASObject* this, s32 i)
 
 void Array_setElement(SWFAppContext* app_context, ASObject* this, s32 i, ActionVar* v)
 {
+	size_t old_capacity = EXTDATA(capacity);
 	ENSURE_SIZE_FAR(EXTDATA(data), i + 1, EXTDATA(capacity), sizeof(ActionVar));
+	
+	for (size_t i = old_capacity; i < EXTDATA(capacity); ++i)
+	{
+		EXTDATA(data)[i].type = ACTION_STACK_VALUE_UNDEFINED;
+	}
 	
 	if (i >= EXTDATA(length))
 	{

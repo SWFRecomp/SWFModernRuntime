@@ -230,6 +230,7 @@ void actionCallMethod(SWFAppContext* app_context);
 
 // Stack/Register Operations
 void actionStoreRegister(SWFAppContext* app_context, u8 register_num);
+void actionDuplicate(SWFAppContext* app_context);
 
 // Function Definitions
 void actionDefineFunction(SWFAppContext* app_context, u32 string_id, action_func func, u32* args, bool anonymous);

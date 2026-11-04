@@ -439,6 +439,8 @@ DECLARE_RUNTIME_THREAD_FUNC(freeThread)
 				break;
 			}
 			
+			recomp_sleep(16);
+			
 			continue;
 		}
 		
