@@ -61,16 +61,11 @@ void grow_ptr_far(SWFAppContext* app_context, char** ptr, size_t* capacity_ptr, 
 #pragma comment(lib, "winmm.lib")
 #pragma comment(lib, "dwmapi.lib")
 
-#pragma comment(lib, "ws2_32.lib")
-
 // windows-only machine-specific global:
 LARGE_INTEGER counter_frequency;
 
 void recomp_init_utils(SWFAppContext* app_context)
 {
-	WSADATA wsaData;
-	WSAStartup(MAKEWORD(2, 2), &wsaData);
-	
 	QueryPerformanceFrequency(&counter_frequency);
 	
 	timeBeginPeriod(1);
@@ -165,114 +160,22 @@ void rwlock_destroy(recomp_rwlock_t* rwlock)
 	
 }
 
-int addr_len = sizeof(struct sockaddr_in);
-
-SOCKET udp_sockfd;
-SOCKET tcp_sockfd;
-
-struct sockaddr_in server_addr;
-struct sockaddr_in client_addr;
-
-void sitl_init(u16 port)
-{
-	udp_sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-	
-	u_long nonblock_mode = 1;
-	ioctlsocket(udp_sockfd, FIONBIO, &nonblock_mode);
-	
-	memset(&server_addr, 0, addr_len);
-	memset(&client_addr, 0, addr_len);
-	
-	server_addr.sin_family = AF_INET;
-	server_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-	server_addr.sin_port = htons(9002);
-	
-	bind(udp_sockfd, (SOCKADDR*) &server_addr, addr_len);
-	
-	tcp_sockfd = -1;
-}
-
-int sitl_udp_recv(char* data, size_t data_size)
-{
-	return recvfrom(udp_sockfd, (char*) data, (int) data_size, 0, (SOCKADDR*) &client_addr, &addr_len);
-}
-
-void sitl_tcp_init(u16 port)
-{
-	if (tcp_sockfd == -1)
-	{
-		tcp_sockfd = socket(AF_INET, SOCK_STREAM, 0);
-		
-		memset(&server_addr, 0, addr_len);
-		
-		server_addr.sin_family = AF_INET;
-		server_addr.sin_port = htons(port);
-		
-		memcpy(&server_addr.sin_addr, &client_addr.sin_addr, sizeof(client_addr.sin_addr));
-		
-		connect(tcp_sockfd, (SOCKADDR*) &server_addr, sizeof(server_addr));
-		
-		u_long nonblock_mode = 1;
-		ioctlsocket(tcp_sockfd, FIONBIO, &nonblock_mode);
-	}
-}
-
-void sitl_send_json(char* data, size_t data_size)
-{
-	sendto(udp_sockfd, (const char*) data, (int) data_size, 0, (SOCKADDR*) &client_addr, addr_len);
-}
-
-int sitl_tcp_read(char* out, size_t out_size)
-{
-	return (int) recv(tcp_sockfd, out, (int) out_size, 0);
-}
-
-void sitl_tcp_write(char* data, size_t data_size)
-{
-	send(tcp_sockfd, data, (int) data_size, 0);
-}
-
 #elif defined(__GNUC__)
 // GCC
 
 #include <stdlib.h>
-#include <signal.h>
 #include <unistd.h>
-#include <fcntl.h>
 #include <time.h>
-#include <sys/socket.h>
 #include <sys/mman.h>
-#include <arpa/inet.h>
-
-void recomp_handle_exit(int sig)
-{
-	signaled = 1;
-}
 
 void recomp_init_utils(SWFAppContext* app_context)
 {
-	struct sigaction s;
-	s.sa_handler = recomp_handle_exit;
-	sigemptyset(&s.sa_mask);
-	s.sa_flags = 0;
-	sigaction(SIGINT, &s, NULL);
+	
 }
-
-extern int tcp_sockfd;
 
 void recomp_sync_window(SWFAppContext* app_context)
 {
-	if (signaled)
-	{
-		shutdown(tcp_sockfd, SHUT_WR);
-		
-		char buf[128];
-		while (read(tcp_sockfd, buf, 128) > 0);
-		
-		close(tcp_sockfd);
-		
-		signaled_quit = true;
-	}
+	
 }
 
 void recomp_deinit_utils(SWFAppContext* app_context)
@@ -348,70 +251,6 @@ void rwlock_unlock_write(recomp_rwlock_t* rwlock)
 void rwlock_destroy(recomp_rwlock_t* rwlock)
 {
 	pthread_rwlock_destroy(rwlock);
-}
-
-socklen_t addr_len = sizeof(struct sockaddr_in);
-
-int udp_sockfd;
-int tcp_sockfd;
-
-struct sockaddr_in server_addr;
-struct sockaddr_in client_addr;
-
-void sitl_init(u16 port)
-{
-	udp_sockfd = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0);
-	
-	memset(&server_addr, 0, addr_len);
-	memset(&client_addr, 0, addr_len);
-	
-	server_addr.sin_family = AF_INET;
-	server_addr.sin_addr.s_addr = INADDR_ANY;
-	server_addr.sin_port = htons(9002);
-	
-	bind(udp_sockfd, (const struct sockaddr*) &server_addr, addr_len);
-	
-	tcp_sockfd = -1;
-}
-
-int sitl_udp_recv(char* data, size_t data_size)
-{
-	return recvfrom(udp_sockfd, (char*) data, data_size, 0, (struct sockaddr*) &client_addr, &addr_len);
-}
-
-void sitl_tcp_init(u16 port)
-{
-	if (tcp_sockfd == -1)
-	{
-		tcp_sockfd = socket(AF_INET, SOCK_STREAM, 0);
-		
-		memset(&server_addr, 0, addr_len);
-		
-		server_addr.sin_family = AF_INET;
-		server_addr.sin_port = htons(port);
-		
-		memcpy(&server_addr.sin_addr, &client_addr.sin_addr, sizeof(client_addr.sin_addr));
-		
-		connect(tcp_sockfd, (struct sockaddr*) &server_addr, sizeof(server_addr));
-		
-		int prev = fcntl(tcp_sockfd, F_GETFL, 0);
-		fcntl(tcp_sockfd, F_SETFL, prev | O_NONBLOCK);
-	}
-}
-
-void sitl_send_json(char* data, size_t data_size)
-{
-	sendto(udp_sockfd, (const char*) data, data_size, 0, (const struct sockaddr*) &client_addr, addr_len);
-}
-
-int sitl_tcp_read(char* out, size_t out_size)
-{
-	return (int) read(tcp_sockfd, out, out_size);
-}
-
-void sitl_tcp_write(char* data, size_t data_size)
-{
-	write(tcp_sockfd, data, data_size);
 }
 
 #endif

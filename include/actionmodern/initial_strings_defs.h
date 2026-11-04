@@ -36,13 +36,6 @@ RuntimeFunc runtime_funcs[] =
 	{0, STR_ID_RECOMP_COLOR_TRANSFORM, recompColorTransform, false},
 	
 	{0, STR_ID_recompToml, recompToml, false},
-	
-	{0, STR_ID_recompSITLInit, recompSITLInit, false},
-	{0, STR_ID_recompSITLReadPacket, recompSITLReadPacket, false},
-	{0, STR_ID_recompSITLSendJSON, recompSITLSendJSON, false},
-	{0, STR_ID_recompSITLSendSensor, recompSITLSendSensor, false},
-	
-	{0, STR_ID_recompJSON, recompJSON, false},
 };
 
 RuntimeFunc runtime_meths[] =

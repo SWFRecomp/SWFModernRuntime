@@ -85,13 +85,6 @@ typedef enum
 	STR_ID_MAX_VALUE,
 	STR_ID_MIN_VALUE,
 	STR_ID_recompToml,
-	STR_ID_recompSITLInit,
-	STR_ID_recompSITLReadPacket,
-	STR_ID_recompSITLSendJSON,
-	STR_ID_recompSITLSendSensor,
-	STR_ID_recompJSON,
-	STR_ID_leftThruster,
-	STR_ID_rightThruster,
 } StringIds;
 
 typedef struct
