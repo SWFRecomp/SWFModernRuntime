@@ -14,8 +14,6 @@
 #include <free_thread.h>
 #include <utils.h>
 
-#include <yyjson.h>
-
 void initActions(SWFAppContext* app_context)
 {
 	app_context->scope_top_obj = 1;

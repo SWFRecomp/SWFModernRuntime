@@ -14,7 +14,6 @@
 #include <Sound.h>
 
 #include <Toml.h>
-#include <mavlink_recomp.h>
 
 RuntimeFunc runtime_funcs[] =
 {

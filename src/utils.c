@@ -1,6 +1,5 @@
 #include <string.h>
 
-#include <swf.h>
 #include <heap.h>
 #include <utils.h>
 
