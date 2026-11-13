@@ -1047,7 +1047,7 @@ void flashbang_open_pass(FlashbangContext* context, SWFAppContext* app_context)
 	int h;
 	SDL_GetWindowSizeInPixels(context->window, &w, &h);
 	
-	SDL_GPUViewport vp = {0.0f, 0.0f, (float) w, (float) h, 0.0f, 1.0f};
+	const SDL_GPUViewport vp = {0.0f, 0.0f, (float) context->width, (float) context->height, 0.0f, 1.0f};
 	SDL_SetGPUViewport(context->render_pass, &vp);
 	
 	// bind the graphics pipeline
