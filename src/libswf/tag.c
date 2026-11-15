@@ -113,6 +113,7 @@ void tagShowFrame(SWFAppContext* app_context)
 						dt->has_extra_cxform_id = true;
 						dt->extra_cxform_id = ch->cxform_id;
 						
+						dt->has_extra_cxform = false;
 						dt->has_extra_transform = false;
 						
 						u32 glyph_index = 2*app_context->text_data[ch->text_start + j];
