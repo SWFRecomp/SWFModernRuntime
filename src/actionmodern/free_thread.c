@@ -290,7 +290,7 @@ ASObject* findBackRef(SwapVector* v, ASObject* ref)
 		
 		if (this == ref)
 		{
-			if (UNLIKELY(i == 0))
+			if (i == 0)
 			{
 				return (ASObject*) v->data[v->length - 1];
 			}
