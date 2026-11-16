@@ -210,6 +210,7 @@ void tagShowFrame(SWFAppContext* app_context)
 				
 				dt->has_extra_transform_id = false;
 				dt->has_extra_cxform_id = false;
+				dt->has_extra_cxform = false;
 				
 				ASObject* transform = MC_EXTDATA_OF(disp_obj, transform);
 				
@@ -233,11 +234,6 @@ void tagShowFrame(SWFAppContext* app_context)
 						dt->colorTransform[6] = (float) CT_EXTDATA_OF(ct_v.object, bo);
 						dt->colorTransform[7] = (float) CT_EXTDATA_OF(ct_v.object, ao);
 					}
-				}
-				
-				else
-				{
-					dt->has_extra_cxform = false;
 				}
 				
 				dt->has_extra_transform = true;

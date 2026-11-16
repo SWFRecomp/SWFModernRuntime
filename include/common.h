@@ -7,7 +7,7 @@
 
 // TODO: use __builtin_unreachable() in EXC and EXC_ARG
 
-#define THROW *((u32*) 0) = 0;
+#define THROW abort();
 #define EXC(str) fprintf(stderr, str); THROW;
 #define EXC_ARG(str, arg) fprintf(stderr, str, arg); THROW;
 #define UNIMPLEMENTED(str) EXC_ARG("unimplemented: %s\n", str);

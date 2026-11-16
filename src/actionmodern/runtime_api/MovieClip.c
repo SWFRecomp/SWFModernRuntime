@@ -62,6 +62,108 @@ ASObject* MovieClip_create(SWFAppContext* app_context)
 	return this;
 }
 
+void MovieClip_growChildren_internal(SWFAppContext* app_context, ASObject* this, u32 depth)
+{
+	size_t old_capacity = EXTDATA(display_list_capacity);
+	
+	ENSURE_SIZE_FAR(EXTDATA(children), depth + 1, EXTDATA(display_list_capacity), sizeof(ASObject*));
+	
+	for (size_t i = old_capacity; i < EXTDATA(display_list_capacity); ++i)
+	{
+		EXTDATA(children)[i] = NULL;
+	}
+}
+
+void MovieClip_setChild_internal(SWFAppContext* app_context, ASObject* this, u32 depth, ASObject* new_child)
+{
+	MovieClip_growChildren_internal(app_context, this, depth);
+	ASObject* old_child = EXTDATA(children)[depth];
+	
+	OBJ_LOCK_WRITE(new_child,
+	{
+		retainObject(new_child);
+	});
+	
+	if (old_child != NULL)
+	{
+		OBJ_LOCK_WRITE(old_child,
+		{
+			releaseObject(app_context, old_child);
+		});
+	}
+	
+	EXTDATA(children)[depth] = new_child;
+	
+	//~ ASObject* old_parent = EXTDATA_OF(new_child, _parent);
+	
+	//~ OBJ_LOCK_WRITE(this,
+	//~ {
+		//~ retainObject(this);
+	//~ });
+	
+	//~ if (old_parent != NULL)
+	//~ {
+		//~ OBJ_LOCK_WRITE(old_parent,
+		//~ {
+			//~ releaseObject(app_context, old_parent);
+		//~ });
+	//~ }
+	
+	EXTDATA_OF(new_child, _parent) = this;
+	EXTDATA_OF(new_child, parent_depth) = depth;
+}
+
+void MovieClip_removeChild_internal(SWFAppContext* app_context, ASObject* this, u32 depth)
+{
+	ASObject* old_child = EXTDATA(children)[depth];
+	
+	EXTDATA_OF(old_child, _parent) = NULL;
+	EXTDATA_OF(old_child, parent_depth) = 0;
+	
+	// TODO: also remove old child from the rbtree
+	
+	if (old_child != NULL)
+	{
+		OBJ_LOCK_WRITE(old_child,
+		{
+			releaseObject(app_context, old_child);
+		});
+	}
+	
+	EXTDATA(children)[depth] = NULL;
+}
+
+ASObject* _MovieClip_createEmptyMovieClip_internal(SWFAppContext* app_context, ASObject* this, ActionVar* name_v, u32 depth)
+{
+	ASObject* mc = MovieClip_create(app_context);
+	
+	ActionVar mc_v;
+	mc_v.type = ACTION_STACK_VALUE_OBJECT;
+	mc_v.object = mc;
+	
+	setProperty(app_context, this, name_v->string_id, name_v->str, name_v->str_size, &mc_v);
+	
+	if (depth > EXTDATA(max_depth))
+	{
+		EXTDATA(max_depth) = depth;
+	}
+	
+	MovieClip_setChild_internal(app_context, this, depth, mc);
+	
+	return mc;
+}
+
+ASObject* MovieClip_createEmptyMovieClip_internal(SWFAppContext* app_context, ASObject* this, ActionVar* name_v, ActionVar* depth_v)
+{
+	releaseObjectVar(app_context, depth_v);
+	toNumber(app_context, depth_v);
+	popVar(app_context, depth_v);
+	
+	u32 depth = (u32) depth_v->f64;
+	
+	return _MovieClip_createEmptyMovieClip_internal(app_context, this, name_v, depth);
+}
+
 void MovieClip_applyTransformsParents(SWFAppContext* app_context, ASObject* this, f32 mat[16])
 {
 	ASObject* current = EXTDATA(_parent);
@@ -138,77 +240,6 @@ void MovieClip_applyTransformsParents(SWFAppContext* app_context, ASObject* this
 	SVEC_RELEASE(&parent_chain);
 }
 
-void MovieClip_growChildren_internal(SWFAppContext* app_context, ASObject* this, u32 depth)
-{
-	size_t old_capacity = EXTDATA(display_list_capacity);
-	
-	ENSURE_SIZE_FAR(EXTDATA(children), depth + 1, EXTDATA(display_list_capacity), sizeof(ASObject*));
-	
-	for (size_t i = old_capacity; i < EXTDATA(display_list_capacity); ++i)
-	{
-		EXTDATA(children)[i] = NULL;
-	}
-}
-
-void MovieClip_setChild_internal(SWFAppContext* app_context, ASObject* this, u32 depth, ASObject* new_child)
-{
-	MovieClip_growChildren_internal(app_context, this, depth);
-	ASObject* old_child = EXTDATA(children)[depth];
-	
-	OBJ_LOCK_WRITE(new_child,
-	{
-		retainObject(new_child);
-	});
-	
-	if (old_child != NULL)
-	{
-		OBJ_LOCK_WRITE(old_child,
-		{
-			releaseObject(app_context, old_child);
-		});
-	}
-	
-	EXTDATA(children)[depth] = new_child;
-	
-	//~ ASObject* old_parent = EXTDATA_OF(new_child, _parent);
-	
-	//~ OBJ_LOCK_WRITE(this,
-	//~ {
-		//~ retainObject(this);
-	//~ });
-	
-	//~ if (old_parent != NULL)
-	//~ {
-		//~ OBJ_LOCK_WRITE(old_parent,
-		//~ {
-			//~ releaseObject(app_context, old_parent);
-		//~ });
-	//~ }
-	
-	EXTDATA_OF(new_child, _parent) = this;
-	EXTDATA_OF(new_child, parent_depth) = depth;
-}
-
-void MovieClip_removeChild_internal(SWFAppContext* app_context, ASObject* this, u32 depth)
-{
-	ASObject* old_child = EXTDATA(children)[depth];
-	
-	EXTDATA_OF(old_child, _parent) = NULL;
-	EXTDATA_OF(old_child, parent_depth) = 0;
-	
-	// TODO: also remove old child from the rbtree
-	
-	if (old_child != NULL)
-	{
-		OBJ_LOCK_WRITE(old_child,
-		{
-			releaseObject(app_context, old_child);
-		});
-	}
-	
-	EXTDATA(children)[depth] = NULL;
-}
-
 void MovieClip_placeObject2_internal(SWFAppContext* app_context, ASObject* this, u32 depth, u32 char_id, u32 transform_id)
 {
 	MovieClip_setChild_internal(app_context, this, depth, MovieClip_create(app_context));
@@ -254,15 +285,7 @@ void MovieClip_attachBitmap(SWFAppContext* app_context, ASObject* this, u32 num_
 
 ASObject* MovieClip_createTextField_internal(SWFAppContext* app_context, ASObject* this, ActionVar* name_v)
 {
-	ASObject* tf = allocObject(app_context);
-	
-	ActionVar tf_v;
-	tf_v.type = ACTION_STACK_VALUE_OBJECT;
-	tf_v.object = tf;
-	
-	setProperty(app_context, this, name_v->string_id, NULL, 0, &tf_v);
-	
-	return tf;
+	return _MovieClip_createEmptyMovieClip_internal(app_context, this, name_v, EXTDATA(max_depth) + 1);
 }
 
 void MovieClip_createTextField(SWFAppContext* app_context, ASObject* this, u32 num_args)
@@ -277,32 +300,6 @@ void MovieClip_createTextField(SWFAppContext* app_context, ASObject* this, u32 n
 	DISCARD_ARGS(num_args - 1);
 	
 	PUSH_OBJ(tf);
-}
-
-ASObject* MovieClip_createEmptyMovieClip_internal(SWFAppContext* app_context, ASObject* this, ActionVar* name_v, ActionVar* depth_v)
-{
-	ASObject* mc = MovieClip_create(app_context);
-	
-	ActionVar mc_v;
-	mc_v.type = ACTION_STACK_VALUE_OBJECT;
-	mc_v.object = mc;
-	
-	setProperty(app_context, this, name_v->string_id, name_v->str, name_v->str_size, &mc_v);
-	
-	releaseObjectVar(app_context, depth_v);
-	toNumber(app_context, depth_v);
-	popVar(app_context, depth_v);
-	
-	u32 depth = (u32) depth_v->f64;
-	
-	if (depth > EXTDATA(max_depth))
-	{
-		EXTDATA(max_depth) = depth;
-	}
-	
-	MovieClip_setChild_internal(app_context, this, depth, mc);
-	
-	return mc;
 }
 
 void MovieClip_createEmptyMovieClip(SWFAppContext* app_context, ASObject* this, u32 num_args)

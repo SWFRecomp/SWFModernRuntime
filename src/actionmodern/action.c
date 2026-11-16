@@ -16,7 +16,7 @@
 
 void initActions(SWFAppContext* app_context)
 {
-	app_context->scope_top_obj = 1;
+	app_context->scope_top_obj = 2;
 	
 	SVEC_INIT(&app_context->active_objects);
 	
@@ -37,14 +37,40 @@ void initActions(SWFAppContext* app_context)
 	
 	app_context->start_time = get_elapsed_ms();
 	
-	for (u32 i = 0; i < 2; ++i)
+	// initialize _global, _root, and first scope
+	
+	app_context->scope_chain[0] = allocObject(app_context);
+	retainObject(app_context->scope_chain[0]);
+	
+	app_context->_root = MovieClip_create(app_context);
+	retainObject(app_context->_root);
+	app_context->scope_chain[1] = app_context->_root;
+	
+	app_context->scope_chain[2] = allocObject(app_context);
+	retainObject(app_context->scope_chain[2]);
+	
+	app_context->scope_registers[2] = HALLOC(4*sizeof(ActionVar));
+	
+	for (u32 i = 0; i < 4; ++i)
+	{
+		app_context->scope_registers[2][i].type = ACTION_STACK_VALUE_UNDEFINED;
+	}
+	
+	ActionVar root_v;
+	root_v.type = ACTION_STACK_VALUE_OBJECT;
+	root_v.object = app_context->_root;
+	
+	setProperty(app_context, app_context->scope_chain[2], STR_ID_THIS, NULL, 0, &root_v);
+	
+	// initialize all other scope objects
+	for (int i = 3; i < MAX_SCOPE_DEPTH; ++i)
 	{
 		app_context->scope_chain[i] = allocObject(app_context);
 		retainObject(app_context->scope_chain[i]);
 		
-		app_context->scope_registers[i] = HALLOC(4*sizeof(ActionVar));
+		app_context->scope_registers[i] = HALLOC(256*sizeof(ActionVar));
 		
-		for (u32 j = 0; j < 4; ++j)
+		for (u32 j = 0; j < 256; ++j)
 		{
 			app_context->scope_registers[i][j].type = ACTION_STACK_VALUE_UNDEFINED;
 		}
@@ -274,29 +300,8 @@ void initActions(SWFAppContext* app_context)
 		app_context->scope_top_obj -= 1;
 	}
 	
-	for (int i = 2; i < MAX_SCOPE_DEPTH; ++i)
-	{
-		app_context->scope_chain[i] = allocObject(app_context);
-		retainObject(app_context->scope_chain[i]);
-		
-		app_context->scope_registers[i] = HALLOC(256*sizeof(ActionVar));
-		
-		for (u32 j = 0; j < 256; ++j)
-		{
-			app_context->scope_registers[i][j].type = ACTION_STACK_VALUE_UNDEFINED;
-		}
-	}
-	
 	app_context->stop_free = false;
 	app_context->global_free_override = false;
-	
-	app_context->_root = MovieClip_create(app_context);
-	
-	ActionVar root_v;
-	root_v.type = ACTION_STACK_VALUE_OBJECT;
-	root_v.object = app_context->_root;
-	
-	setProperty(app_context, app_context->scope_chain[1], STR_ID_THIS, NULL, 0, &root_v);
 	
 	thread_start(app_context, freeThread, &free_thread_handle);
 }
@@ -1989,18 +1994,10 @@ void actionGetVariable(SWFAppContext* app_context)
 	POP();
 	
 	// Get variable (fast path for constant strings)
-	ASProperty* p = NULL;
+	ActionVar propVal;
 	
 	switch (string_id)
 	{
-		case 0:
-		{
-			// TODO: Dynamic string - use hashmap (O(n))
-			//~ var = getVariable(app_context, var_name, var_name_len);
-			EXC_ARG("Unimplemented: string %s has no id\n", var_name);
-			break;
-		}
-		
 		case STR_ID_GLOBAL:
 		{
 			PUSH_OBJ(_GLOBAL);
@@ -2020,12 +2017,9 @@ void actionGetVariable(SWFAppContext* app_context)
 			// Constant string - use scope object (O(lg(n)))
 			for (u32 i = app_context->scope_top_obj; i < MAX_SCOPE_DEPTH; --i)
 			{
-				OBJ_LOCK_READ(app_context->scope_chain[i],
-				{
-					p = getProperty(app_context, app_context->scope_chain[i], string_id, var_name, var_name_len);
-				});
+				getPropertyVar(app_context, app_context->scope_chain[i], string_id, var_name, var_name_len, &propVal);
 				
-				if (p != NULL)
+				if (!IS_UNDEFINED(propVal))
 				{
 					break;
 				}
@@ -2035,10 +2029,10 @@ void actionGetVariable(SWFAppContext* app_context)
 		}
 	}
 	
-	if (p != NULL)
+	if (!IS_UNDEFINED(propVal))
 	{
 		// Push variable value to stack
-		PUSH_VAR(&p->value);
+		PUSH_VAR(&propVal);
 	}
 	
 	else
@@ -2064,20 +2058,11 @@ void actionSetVariable(SWFAppContext* app_context)
 	
 	POP();
 	
-	ASProperty* p = NULL;
-	
+	ActionVar propVal;
 	ASObject* scope_obj;
 	
 	switch (string_id)
 	{
-		case 0:
-		{
-			// TODO: Dynamic string - use hashmap (O(n))
-			//~ var = getVariable(app_context, var_name, var_name_len);
-			EXC_ARG("Unimplemented: string %s has no id\n", var_name);
-			break;
-		}
-		
 		case STR_ID_GLOBAL:
 		{
 			EXC("can't set _global\n");
@@ -2101,12 +2086,9 @@ void actionSetVariable(SWFAppContext* app_context)
 			{
 				scope_obj = app_context->scope_chain[i];
 				
-				OBJ_LOCK_READ(scope_obj,
-				{
-					p = getProperty(app_context, scope_obj, string_id, var_name, var_name_len);
-				});
+				getPropertyVar(app_context, scope_obj, string_id, var_name, var_name_len, &propVal);
 				
-				if (p != NULL)
+				if (!IS_UNDEFINED(propVal))
 				{
 					break;
 				}
@@ -2116,15 +2098,15 @@ void actionSetVariable(SWFAppContext* app_context)
 		}
 	}
 	
-	if (p != NULL)
+	if (!IS_UNDEFINED(propVal))
 	{
 		bool should_release = false;
 		ASObject* old_obj;
 		
-		if (IS_OBJ(p->value))
+		if (IS_OBJ(propVal))
 		{
 			should_release = true;
-			old_obj = (ASObject*) p->value.value;
+			old_obj = propVal.object;
 		}
 		
 		if (IS_OBJ(value))
@@ -2135,10 +2117,7 @@ void actionSetVariable(SWFAppContext* app_context)
 			});
 		}
 		
-		OBJ_LOCK_WRITE(scope_obj,
-		{
-			p->value = value;
-		});
+		setProperty(app_context, scope_obj, string_id, var_name, var_name_len, &value);
 		
 		if (should_release)
 		{
@@ -2151,7 +2130,7 @@ void actionSetVariable(SWFAppContext* app_context)
 	
 	else
 	{
-		setProperty(app_context, app_context->scope_chain[1], string_id, var_name, var_name_len, &value);
+		setProperty(app_context, app_context->scope_chain[2], string_id, var_name, var_name_len, &value);
 	}
 	
 	release_value:

@@ -19,7 +19,7 @@ typedef enum
 	CHAR_TYPE_TEXT,
 } CharacterType;
 
-typedef struct Character
+typedef struct
 {
 	CharacterType type;
 	union
@@ -41,7 +41,7 @@ typedef struct Character
 	};
 } Character;
 
-typedef struct DisplayObject
+typedef struct
 {
 	u32 char_id;
 	u32 transform_id;

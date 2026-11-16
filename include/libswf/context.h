@@ -5,7 +5,7 @@
 #include <swap_vector.h>
 #include <utils_lock.h>
 
-#define MAX_SCOPE_DEPTH 16
+#define MAX_SCOPE_DEPTH 18
 
 typedef struct SWFAppContext SWFAppContext;
 
