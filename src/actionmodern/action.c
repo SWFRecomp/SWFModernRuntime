@@ -306,6 +306,19 @@ void initActions(SWFAppContext* app_context)
 	thread_start(app_context, freeThread, &free_thread_handle);
 }
 
+void initActionsAS2(SWFAppContext* app_context)
+{
+	ActionVar tf_ctor_v;
+	getPropertyVar(app_context, _GLOBAL, STR_ID_TextField, NULL, 0, &tf_ctor_v);
+	ASObject* tf_ctor = tf_ctor_v.object;
+	app_context->TextField_constructor = tf_ctor;
+	
+	ActionVar tf_proto_v;
+	getPropertyVar(app_context, tf_ctor, STR_ID_PROTOTYPE, NULL, 0, &tf_proto_v);
+	ASObject* tf_proto = tf_proto_v.object;
+	app_context->TextField_prototype = tf_proto;
+}
+
 void freeActions(SWFAppContext* app_context)
 {
 	LOCK_WRITE(object_queue_lock,
@@ -324,10 +337,7 @@ void freeActions(SWFAppContext* app_context)
 		//~ FREE(o);
 	//~ }
 	
-	for (u32 i = 0; i < 2; ++i)
-	{
-		FREE(app_context->scope_registers[i]);
-	}
+	FREE(app_context->scope_registers[2]);
 	
 	SVEC_RELEASE(&app_context->active_objects);
 	
@@ -2590,6 +2600,10 @@ void actionTypeOf(SWFAppContext* app_context)
 			type_str = "object";
 			break;
 			
+		case ACTION_STACK_VALUE_NULL:
+			type_str = "null";
+			break;
+			
 		case ACTION_STACK_VALUE_UNDEFINED:
 			type_str = "undefined";
 			break;
@@ -2906,8 +2920,7 @@ void actionSetMember(SWFAppContext* app_context)
 	// Check if the object is actually an object type
 	if (IS_OBJ(obj_var))
 	{
-		ASObject* obj = (ASObject*) obj_var.value;
-		
+		ASObject* obj = obj_var.object;
 		ASObject* constructor = getConstructor(app_context, obj);
 		
 		bool special_object = false;
@@ -2916,6 +2929,8 @@ void actionSetMember(SWFAppContext* app_context)
 		{
 			case STR_ID_ARRAY:
 			{
+				special_object = true;
+				
 				if (IS_STR_T(prop_name_var.type) && prop_name_var.string_id == STR_ID_LENGTH)
 				{
 					if (UNLIKELY(!IS_NUM_T(value_var.type)))
@@ -2935,24 +2950,30 @@ void actionSetMember(SWFAppContext* app_context)
 				break;
 			}
 			
+			//~ case STR_ID_BITMAP_DATA:
+			//~ {
+				//~ special_object = BitmapData_setMember(app_context, obj, prop_name_var.string_id, &value_var);
+				
+				//~ break;
+			//~ }
+			
 			case STR_ID_ColorTransform:
 			{
-				if (ColorTransform_setMember(app_context, obj, prop_name_var.string_id, &value_var))
-				{
-					special_object = true;
-					break;
-				}
+				special_object = ColorTransform_setMember(app_context, obj, prop_name_var.string_id, &value_var);
 				
 				break;
 			}
 			
 			case STR_ID_MOVIECLIP:
 			{
-				if (MovieClip_setMember(app_context, obj, prop_name_var.string_id, &value_var))
-				{
-					special_object = true;
-					break;
-				}
+				special_object = MovieClip_setMember(app_context, obj, prop_name_var.string_id, &value_var);
+				
+				break;
+			}
+			
+			case STR_ID_TextField:
+			{
+				special_object = MovieClip_setMember(app_context, obj, prop_name_var.string_id, &value_var);
 				
 				break;
 			}
@@ -3230,6 +3251,19 @@ void actionGetMember(SWFAppContext* app_context)
 					break;
 				}
 				
+				case STR_ID_BITMAP_DATA:
+				{
+					ActionVar v;
+					special_object = BitmapData_getMember(app_context, obj, prop_name_var.string_id, &v);
+					
+					if (special_object)
+					{
+						PUSH_VAR(&v);
+					}
+					
+					break;
+				}
+				
 				case STR_ID_ColorTransform:
 				{
 					ActionVar v;
@@ -3256,10 +3290,10 @@ void actionGetMember(SWFAppContext* app_context)
 					break;
 				}
 				
-				case STR_ID_BITMAP_DATA:
+				case STR_ID_TextField:
 				{
 					ActionVar v;
-					special_object = BitmapData_getMember(app_context, obj, prop_name_var.string_id, &v);
+					special_object = TextField_getMember(app_context, obj, prop_name_var.string_id, &v);
 					
 					if (special_object)
 					{
@@ -3611,7 +3645,7 @@ void actionNewObject(SWFAppContext* app_context)
 	
 	ASObject* ctor_name_obj = ctor_name_var.object;
 	
-	if (IS_OBJ_T(ctor_name_var.type))
+	if (UNLIKELY(IS_OBJ_T(ctor_name_var.type)))
 	{
 		UNIMPLEMENTED("NewObject constructor name object\n");
 	}
@@ -3621,7 +3655,7 @@ void actionNewObject(SWFAppContext* app_context)
 	popVar(app_context, &num_args_var);
 	u32 num_args = (u32) num_args_var.value;
 	
-	if (IS_OBJ_T(num_args_var.type))
+	if (UNLIKELY(IS_OBJ_T(num_args_var.type)))
 	{
 		UNIMPLEMENTED("NewObject num args object\n");
 	}

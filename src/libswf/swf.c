@@ -152,6 +152,7 @@ void swfStart(SWFAppContext* app_context)
 	app_context->last_frame = 0;
 	
 	tagInit(app_context);
+	initActionsAS2(app_context);
 	
 	tagMain(app_context);
 	

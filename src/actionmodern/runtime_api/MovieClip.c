@@ -3,6 +3,7 @@
 
 #include <MovieClip.h>
 #include <BitmapData.h>
+#include <TextField.h>
 
 #include <heap.h>
 
@@ -285,7 +286,17 @@ void MovieClip_attachBitmap(SWFAppContext* app_context, ASObject* this, u32 num_
 
 ASObject* MovieClip_createTextField_internal(SWFAppContext* app_context, ASObject* this, ActionVar* name_v)
 {
-	return _MovieClip_createEmptyMovieClip_internal(app_context, this, name_v, EXTDATA(max_depth) + 1);
+	ASObject* tf = TextField_create(app_context);
+	
+	ActionVar tf_v;
+	tf_v.type = ACTION_STACK_VALUE_OBJECT;
+	tf_v.object = tf;
+	
+	setProperty(app_context, this, name_v->string_id, name_v->str, name_v->str_size, &tf_v);
+	
+	MovieClip_setChild_internal(app_context, this, EXTDATA(max_depth) + 1, tf);
+	
+	return tf;
 }
 
 void MovieClip_createTextField(SWFAppContext* app_context, ASObject* this, u32 num_args)
@@ -434,6 +445,13 @@ bool MovieClip_getMember(SWFAppContext* app_context, ASObject* this, u32 string_
 			break;
 		}
 		
+		//~ case STR_ID__visible:
+		//~ {
+			//~ UNIMPLEMENTED("MovieClip _visible");
+			
+			//~ break;
+		//~ }
+		
 		default:
 		{
 			return false;
@@ -513,6 +531,13 @@ bool MovieClip_setMember(SWFAppContext* app_context, ASObject* this, u32 string_
 			
 			break;
 		}
+		
+		//~ case STR_ID__visible:
+		//~ {
+			//~ UNIMPLEMENTED("MovieClip _visible");
+			
+			//~ break;
+		//~ }
 		
 		default:
 		{

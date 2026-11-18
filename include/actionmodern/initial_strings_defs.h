@@ -11,6 +11,7 @@
 #include <BitmapData.h>
 #include <ColorTransform.h>
 #include <MovieClip.h>
+#include <TextField.h>
 #include <Sound.h>
 
 #include <Toml.h>
@@ -26,6 +27,7 @@ RuntimeFunc runtime_funcs[] =
 	{0, STR_ID_SOUND, Sound_new, true},
 	
 	{0, STR_ID_ASSETPROPFLAGS, ASSetPropFlags, false},
+	{0, STR_ID_recompAbort, recompAbort, false},
 	{0, STR_ID_RECOMP_GET_LAST_KEY, recompGetLastKey, false},
 	{0, STR_ID_RECOMP_SET_DISPLAY_SCALE, recompSetDisplayScale, false},
 	{0, STR_ID_RECOMP_SIN, recompSin, false},
@@ -33,6 +35,7 @@ RuntimeFunc runtime_funcs[] =
 	{0, STR_ID_recompAtan2, recompAtan2, false},
 	{0, STR_ID_recompSqrt, recompSqrt, false},
 	{0, STR_ID_RECOMP_COLOR_TRANSFORM, recompColorTransform, false},
+	{0, STR_ID_recompTextField, recompTextField, false},
 	
 	{0, STR_ID_recompToml, recompToml, false},
 };

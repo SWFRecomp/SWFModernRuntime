@@ -13,6 +13,15 @@ void ASSetPropFlags(SWFAppContext* app_context, ASObject* this, u32 num_args)
 	RETURN_VOID();
 }
 
+void recompAbort(SWFAppContext* app_context, ASObject* this, u32 num_args)
+{
+	DISCARD_ARGS(num_args);
+	
+	abort();
+	
+	RETURN_VOID();
+}
+
 void recompGetLastKey(SWFAppContext* app_context, ASObject* this, u32 num_args)
 {
 	DISCARD_ARGS(num_args);

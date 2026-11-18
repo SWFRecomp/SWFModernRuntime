@@ -82,6 +82,9 @@ typedef struct SWFAppContext
 	ASObject* MovieClip_prototype;
 	ASObject* MovieClip_constructor;
 	
+	ASObject* TextField_prototype;
+	ASObject* TextField_constructor;
+	
 	ASObject* BitmapData_prototype;
 	ASObject* BitmapData_constructor;
 	
