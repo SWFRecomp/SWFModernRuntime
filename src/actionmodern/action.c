@@ -39,42 +39,60 @@ void initActions(SWFAppContext* app_context)
 	
 	// initialize _global, _root, and first scope
 	
-	app_context->scope_chain[0] = allocObject(app_context);
-	retainObject(app_context->scope_chain[0]);
-	
-	app_context->_root = MovieClip_create(app_context);
-	retainObject(app_context->_root);
-	app_context->scope_chain[1] = app_context->_root;
-	
-	app_context->scope_chain[2] = allocObject(app_context);
-	retainObject(app_context->scope_chain[2]);
-	
-	app_context->scope_registers[2] = HALLOC(4*sizeof(ActionVar));
-	
-	for (u32 i = 0; i < 4; ++i)
+	for (int i = 0; i < 3; ++i)
 	{
-		app_context->scope_registers[2][i].type = ACTION_STACK_VALUE_UNDEFINED;
-	}
-	
-	ActionVar root_v;
-	root_v.type = ACTION_STACK_VALUE_OBJECT;
-	root_v.object = app_context->_root;
-	
-	setProperty(app_context, app_context->scope_chain[2], STR_ID_THIS, NULL, 0, &root_v);
-	
-	// initialize all other scope objects
-	for (int i = 3; i < MAX_SCOPE_DEPTH; ++i)
-	{
+		if (i == 1)
+		{
+			continue;
+		}
+		
 		app_context->scope_chain[i] = allocObject(app_context);
 		retainObject(app_context->scope_chain[i]);
 		
-		app_context->scope_registers[i] = HALLOC(256*sizeof(ActionVar));
+		app_context->scope_registers[i] = HALLOC(4*sizeof(ActionVar));
 		
-		for (u32 j = 0; j < 256; ++j)
+		for (int j = 0; j < 4; ++j)
 		{
 			app_context->scope_registers[i][j].type = ACTION_STACK_VALUE_UNDEFINED;
 		}
 	}
+	
+	//~ app_context->scope_chain[0] = allocObject(app_context);
+	//~ retainObject(app_context->scope_chain[0]);
+	
+	//~ app_context->_root = MovieClip_create(app_context);
+	//~ retainObject(app_context->_root);
+	//~ app_context->scope_chain[1] = app_context->_root;
+	
+	//~ app_context->scope_chain[2] = allocObject(app_context);
+	//~ retainObject(app_context->scope_chain[2]);
+	
+	//~ app_context->scope_registers[2] = HALLOC(4*sizeof(ActionVar));
+	
+	//~ for (u32 i = 0; i < 4; ++i)
+	//~ {
+		//~ app_context->scope_registers[2][i].type = ACTION_STACK_VALUE_UNDEFINED;
+	//~ }
+	
+	//~ ActionVar root_v;
+	//~ root_v.type = ACTION_STACK_VALUE_OBJECT;
+	//~ root_v.object = app_context->_root;
+	
+	//~ setProperty(app_context, app_context->scope_chain[2], STR_ID_THIS, NULL, 0, &root_v);
+	
+	//~ // initialize all other scope objects
+	//~ for (int i = 3; i < MAX_SCOPE_DEPTH; ++i)
+	//~ {
+		//~ app_context->scope_chain[i] = allocObject(app_context);
+		//~ retainObject(app_context->scope_chain[i]);
+		
+		//~ app_context->scope_registers[i] = HALLOC(256*sizeof(ActionVar));
+		
+		//~ for (u32 j = 0; j < 256; ++j)
+		//~ {
+			//~ app_context->scope_registers[i][j].type = ACTION_STACK_VALUE_UNDEFINED;
+		//~ }
+	//~ }
 	
 	for (int i = 0; i < sizeof(runtime_funcs)/sizeof(RuntimeFunc); ++i)
 	{
@@ -300,8 +318,30 @@ void initActions(SWFAppContext* app_context)
 		app_context->scope_top_obj -= 1;
 	}
 	
+	for (int i = 3; i < MAX_SCOPE_DEPTH; ++i)
+	{
+		app_context->scope_chain[i] = allocObject(app_context);
+		retainObject(app_context->scope_chain[i]);
+		
+		app_context->scope_registers[i] = HALLOC(256*sizeof(ActionVar));
+		
+		for (u32 j = 0; j < 256; ++j)
+		{
+			app_context->scope_registers[i][j].type = ACTION_STACK_VALUE_UNDEFINED;
+		}
+	}
+	
 	app_context->stop_free = false;
 	app_context->global_free_override = false;
+	
+	app_context->_root = MovieClip_create(app_context);
+	app_context->scope_chain[1] = app_context->_root;
+	
+	ActionVar root_v;
+	root_v.type = ACTION_STACK_VALUE_OBJECT;
+	root_v.object = app_context->_root;
+	
+	setProperty(app_context, app_context->scope_chain[2], STR_ID_THIS, NULL, 0, &root_v);
 	
 	thread_start(app_context, freeThread, &free_thread_handle);
 }
