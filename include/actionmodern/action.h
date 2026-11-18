@@ -130,6 +130,7 @@ typedef struct
 } Function2Param;
 
 void initActions(SWFAppContext* app_context);
+void initActionsAS2(SWFAppContext* app_context);
 void freeActions(SWFAppContext* app_context);
 
 void discardArgs(SWFAppContext* app_context, u32 num_args);
