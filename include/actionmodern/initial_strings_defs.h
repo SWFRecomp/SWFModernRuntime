@@ -12,6 +12,7 @@
 #include <ColorTransform.h>
 #include <MovieClip.h>
 #include <TextField.h>
+#include <TextFormat.h>
 #include <Sound.h>
 
 #include <Toml.h>
@@ -36,6 +37,7 @@ RuntimeFunc runtime_funcs[] =
 	{0, STR_ID_recompSqrt, recompSqrt, false},
 	{0, STR_ID_RECOMP_COLOR_TRANSFORM, recompColorTransform, false},
 	{0, STR_ID_recompTextField, recompTextField, false},
+	{0, STR_ID_recompTextFormat, recompTextFormat, false},
 	
 	{0, STR_ID_recompToml, recompToml, false},
 };

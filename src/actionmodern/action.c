@@ -228,6 +228,16 @@ void initActions(SWFAppContext* app_context)
 		setProperty(app_context, prototype, runtime_meths[i].func_string_id, NULL, 0, &v);
 	}
 	
+	for (int i = 0; i < sizeof(static_initializers)/sizeof(action_runtime_func); ++i)
+	{
+		app_context->scope_top_obj += 1;
+		
+		static_initializers[i](app_context, NULL, 0);
+		POP();
+		
+		app_context->scope_top_obj -= 1;
+	}
+	
 	// instantiate initial objects (for packages)
 	
 	ASObject* flash = allocObject(app_context);
@@ -282,16 +292,6 @@ void initActions(SWFAppContext* app_context)
 	loadbitmap_v.type = ACTION_STACK_VALUE_OBJECT;
 	loadbitmap_v.object = loadbitmap;
 	setProperty(app_context, bitmapdata, STR_ID_LOAD_BITMAP, NULL, 0, &loadbitmap_v);
-	
-	for (int i = 0; i < sizeof(static_initializers)/sizeof(action_runtime_func); ++i)
-	{
-		app_context->scope_top_obj += 1;
-		
-		static_initializers[i](app_context, NULL, 0);
-		POP();
-		
-		app_context->scope_top_obj -= 1;
-	}
 	
 	app_context->stop_free = false;
 	app_context->global_free_override = false;
@@ -719,6 +719,28 @@ void toString(SWFAppContext* app_context, ActionVar* v)
 	memcpy(stack_str, str, len + 1);
 }
 
+void mergeString(SWFAppContext* app_context)
+{
+	if (UNLIKELY(!IS_STR_T(STACK_TOP_TYPE)))
+	{
+		UNREACHABLE("why are you string-merging a non-string LOL");
+	}
+	
+	if (((char*) STACK_TOP_VALUE) != NULL && STACK_TOP_ID != 0)
+	{
+		return;
+	}
+	
+	if (STACK_TOP_ID == 0)
+	{
+		STACK_TOP_ID = getStringId(app_context, STACK_TOP_OWNS_MEM ? (char*) &STACK_TOP_OWNS_MEM : (char*) STACK_TOP_VALUE, STACK_TOP_N);
+		return;
+	}
+	
+	STACK_TOP_VALUE = (u64) app_context->str_table[STACK_TOP_ID];
+	STACK_TOP_N = app_context->str_len_table[STACK_TOP_ID];
+}
+
 ActionStackValueType convertString(SWFAppContext* app_context)
 {
 	copyReg(app_context);
@@ -1035,10 +1057,12 @@ void actionAdd2(SWFAppContext* app_context)
 	if (IS_STR_T(STACK_TOP_TYPE) || IS_STR_T(STACK_SECOND_TOP_TYPE))
 	{
 		convertString(app_context);
+		mergeString(app_context);
 		ActionVar a_str;
 		popVar(app_context, &a_str);
 		
 		convertString(app_context);
+		mergeString(app_context);
 		ActionVar b_str;
 		popVar(app_context, &b_str);
 		
@@ -2966,7 +2990,14 @@ void actionSetMember(SWFAppContext* app_context)
 			
 			case STR_ID_TextField:
 			{
-				special_object = MovieClip_setMember(app_context, obj, prop_name_var.string_id, &value_var);
+				special_object = TextField_setMember(app_context, obj, prop_name_var.string_id, &value_var);
+				
+				break;
+			}
+			
+			case STR_ID_TextFormat:
+			{
+				special_object = TextFormat_setMember(app_context, obj, prop_name_var.string_id, &value_var);
 				
 				break;
 			}
@@ -3287,6 +3318,19 @@ void actionGetMember(SWFAppContext* app_context)
 				{
 					ActionVar v;
 					special_object = TextField_getMember(app_context, obj, prop_name_var.string_id, &v);
+					
+					if (special_object)
+					{
+						PUSH_VAR(&v);
+					}
+					
+					break;
+				}
+				
+				case STR_ID_TextFormat:
+				{
+					ActionVar v;
+					special_object = TextFormat_getMember(app_context, obj, prop_name_var.string_id, &v);
 					
 					if (special_object)
 					{
