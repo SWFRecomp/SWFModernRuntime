@@ -42,6 +42,14 @@ u32 getStringId(SWFAppContext* app_context, char* str, size_t str_size)
 	return (u32) id;
 }
 
+void setStringFromId(SWFAppContext* app_context, ActionVar* v, u32 id)
+{
+	v->type = ACTION_STACK_VALUE_STRING;
+	v->string_id = id;
+	v->str = app_context->str_table[id];
+	v->str_size = app_context->str_len_table[id];
+}
+
 char* materializeStringList(SWFAppContext* app_context)
 {
 	// Get the string list

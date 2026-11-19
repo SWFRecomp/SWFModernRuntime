@@ -44,10 +44,7 @@ bool TextFormat_getMember(SWFAppContext* app_context, ASObject* this, u32 string
 	{
 		case STR_ID_align:
 		{
-			out_v->type = ACTION_STACK_VALUE_STRING;
-			out_v->string_id = EXTDATA(align);
-			out_v->str = app_context->str_table[EXTDATA(align)];
-			out_v->str_size = app_context->str_len_table[EXTDATA(align)];
+			setStringFromId(app_context, out_v, EXTDATA(align));
 			
 			break;
 		}
@@ -62,10 +59,7 @@ bool TextFormat_getMember(SWFAppContext* app_context, ASObject* this, u32 string
 		
 		case STR_ID_font:
 		{
-			out_v->type = ACTION_STACK_VALUE_STRING;
-			out_v->string_id = EXTDATA(font);
-			out_v->str = app_context->str_table[EXTDATA(font)];
-			out_v->str_size = app_context->str_len_table[EXTDATA(font)];
+			setStringFromId(app_context, out_v, EXTDATA(font));
 			
 			break;
 		}

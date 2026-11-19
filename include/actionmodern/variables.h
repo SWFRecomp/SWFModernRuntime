@@ -52,4 +52,5 @@ void initMap(SWFAppContext* app_context);
 void freeMap(SWFAppContext* app_context);
 
 u32 getStringId(SWFAppContext* app_context, char* str, size_t str_size);
+void setStringFromId(SWFAppContext* app_context, ActionVar* v, u32 id);
 char* materializeStringList(SWFAppContext* app_context);

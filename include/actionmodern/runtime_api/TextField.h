@@ -11,8 +11,11 @@ typedef struct
 	MovieClipData mc_base;
 	
 	bool embedFonts;
+	u32 recompFont;
 	bool multiline;
 	bool selectable;
+	u32 recompSize;
+	u32 textColor;
 	bool wordWrap;
 } TextFieldData;
 

@@ -72,6 +72,13 @@ bool TextField_getMember(SWFAppContext* app_context, ASObject* this, u32 string_
 			break;
 		}
 		
+		case STR_ID_recompFont:
+		{
+			setStringFromId(app_context, out_v, EXTDATA(recompFont));
+			
+			break;
+		}
+		
 		case STR_ID_multiline:
 		{
 			out_v->type = ACTION_STACK_VALUE_BOOLEAN;
@@ -84,6 +91,22 @@ bool TextField_getMember(SWFAppContext* app_context, ASObject* this, u32 string_
 		{
 			out_v->type = ACTION_STACK_VALUE_BOOLEAN;
 			out_v->b = EXTDATA(selectable);
+			
+			break;
+		}
+		
+		case STR_ID_recompSize:
+		{
+			out_v->type = ACTION_STACK_VALUE_INT;
+			out_v->u32 = EXTDATA(recompSize);
+			
+			break;
+		}
+		
+		case STR_ID_textColor:
+		{
+			out_v->type = ACTION_STACK_VALUE_INT;
+			out_v->u32 = EXTDATA(textColor);
 			
 			break;
 		}
@@ -123,6 +146,13 @@ bool TextField_setMember(SWFAppContext* app_context, ASObject* this, u32 string_
 			break;
 		}
 		
+		case STR_ID_recompFont:
+		{
+			EXTDATA(recompFont) = v->string_id;
+			
+			break;
+		}
+		
 		case STR_ID_multiline:
 		{
 			EXTDATA(multiline) = v->b;
@@ -133,6 +163,20 @@ bool TextField_setMember(SWFAppContext* app_context, ASObject* this, u32 string_
 		case STR_ID_selectable:
 		{
 			EXTDATA(selectable) = v->b;
+			
+			break;
+		}
+		
+		case STR_ID_recompSize:
+		{
+			EXTDATA(recompSize) = v->u32;
+			
+			break;
+		}
+		
+		case STR_ID_textColor:
+		{
+			EXTDATA(textColor) = v->u32;
 			
 			break;
 		}
